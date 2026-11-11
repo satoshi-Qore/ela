@@ -7,7 +7,8 @@ ELA is an early-stage TypeScript project for routing Turkish commands and readin
 - **Deterministic Turkish command routing.** Recognizes balance requests, latest-block queries, and transfer-draft intent. It handles Turkish casing and whitespace and returns `needs_clarification` for unsupported, ambiguous, or conflicting requests.
 - **Read-only QoreChain queries.** `getBlockNumber` checks the chain ID and synchronization status before returning the latest block height. `getBalance` validates native `qor1…` addresses and returns exact balances in `uqor` and QOR as strings. Both tools support configurable endpoints and timeouts.
 - **Agent planner (v1).** `Diana ağını kontrol et.` produces an explicit two-step plan: verify the Diana EVM chain ID (9800) with `eth_chainId`, then read the latest block with `eth_blockNumber`. The executor runs tools only through a fixed tool registry (`src/agent/registry.ts`). Each registry entry declares its id, description, allowed network (Diana testnet only), read-only status, allowed RPC methods, parameter rules, and runner, and returns a standard result or error. Unknown tools, other networks, unlisted RPC methods, and invalid parameters are refused before any request is sent. The executor reports each step as succeeded, failed, or skipped from the requests it actually sent, including partial failures. A successful check confirms that one public endpoint answered; it is not a full network health check.
-- **Automated tests.** The suite includes 45 command-routing cases, 30 native read-only tool tests, 21 EVM reader tests, and 117 agent planner, tool registry, and RPC guard tests. The read-only tool and planner tests use mocked HTTP responses and run offline.
+- **Conversation context (v1).** Within one page session, ELA remembers only the kind of the last *successful* query (latest block or Diana network check) and its network, never the block height. The follow-ups `Peki şimdi kaç oldu?` and `Tekrar kontrol et.` re-run a query with fresh RPC data through the tool registry. Without context they return *Needs clarification*. Failed or partial queries leave the context unchanged. **Clear context** resets it, and reloading the page starts with no context. Nothing is stored in the browser or on a server.
+- **Automated tests.** The suite includes 45 command-routing cases, 30 native read-only tool tests, 21 EVM reader tests, and 154 agent planner, tool registry, RPC guard, and conversation context tests. The read-only tool and planner tests use mocked HTTP responses and run offline.
 
 ## Project status
 
@@ -25,11 +26,11 @@ node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.t
 npm run build
 ```
 
-The 213 tests cover 45 routing cases, 30 native read-only tool cases, 21 EVM reader cases, and 117 agent planner, tool registry, and RPC guard cases. The tests use local fixtures and mocked HTTP responses. The build type-checks the sources and writes the static site to `dist/` with asset paths rooted at /ela/ for GitHub Pages project hosting.
+The 250 tests cover 45 routing cases, 30 native read-only tool cases, 21 EVM reader cases, and 154 agent planner, tool registry, RPC guard, and conversation context cases. The tests use local fixtures and mocked HTTP responses. The build type-checks the sources and writes the static site to `dist/` with asset paths rooted at /ela/ for GitHub Pages project hosting.
 
 ## Local web interface
 
-After running `npm ci`, start Vite with `npm run dev`. Open the local URL printed by Vite and enter `QoreChain son blok numarasını öğren.` The browser verifies EVM chain ID 9800 with `eth_chainId` before reading the block height with `eth_blockNumber` from the official EVM JSON-RPC endpoint. Enter `Diana ağını kontrol et.` to run the network check and see each executed step, its result, and the data source. The interface supports these two read-only commands only.
+After running `npm ci`, start Vite with `npm run dev`. Open the local URL printed by Vite and enter `QoreChain son blok numarasını öğren.` The browser verifies EVM chain ID 9800 with `eth_chainId` before reading the block height with `eth_blockNumber` from the official EVM JSON-RPC endpoint. Enter `Diana ağını kontrol et.` to run the network check and see each executed step, its result, and the data source. After a successful query, ask `Peki şimdi kaç oldu?` or `Tekrar kontrol et.` to re-read fresh data. The interface supports these read-only commands only.
 
 ## Diana testnet
 
