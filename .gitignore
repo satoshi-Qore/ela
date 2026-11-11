@@ -16,3 +16,6 @@ cache/
 # Local browser profiles and dependencies
 chrome-profile/
 node_modules/
+
+# Vite build output
+/dist/

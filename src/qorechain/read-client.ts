@@ -48,12 +48,13 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-async function fetchJson(url: URL, fetcher: typeof globalThis.fetch, signal: AbortSignal): Promise<unknown> {
+async function fetchJson(url: URL, fetcher: typeof globalThis.fetch, signal: AbortSignal, jsonBody?: string): Promise<unknown> {
   let response: Response;
   try {
     response = await fetcher(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
+      method: jsonBody === undefined ? 'GET' : 'POST',
+      headers: jsonBody === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: jsonBody,
       credentials: 'omit',
       redirect: 'error',
       signal,
@@ -71,7 +72,7 @@ async function fetchJson(url: URL, fetcher: typeof globalThis.fetch, signal: Abo
   }
 }
 
-export async function readJson(url: URL, options: ReadOptions): Promise<unknown> {
+export async function readJson(url: URL, options: ReadOptions, jsonBody?: string): Promise<unknown> {
   const { timeoutMs = 8000, fetch: fetcher = globalThis.fetch } = options;
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647 || typeof fetcher !== 'function') {
     throw new QoreChainReadError('invalid_configuration', 'Expected a valid request timeout and fetch implementation.');
@@ -85,7 +86,7 @@ export async function readJson(url: URL, options: ReadOptions): Promise<unknown>
     }, timeoutMs);
   });
   try {
-    return await Promise.race([fetchJson(url, fetcher, controller.signal), timeout]);
+    return await Promise.race([fetchJson(url, fetcher, controller.signal, jsonBody), timeout]);
   } finally {
     clearTimeout(timer);
   }
