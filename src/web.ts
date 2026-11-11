@@ -1,11 +1,11 @@
 import './web.css';
 import { routeCommand } from './router.ts';
-import { getEvmBlockNumber } from './qorechain/get-evm-block-number.ts';
-import { QoreChainReadError } from './qorechain/read-client.ts';
 import { planCommand } from './agent/planner.ts';
 import type { NetworkCheckPlan } from './agent/planner.ts';
-import { executePlan } from './agent/executor.ts';
 import type { StepResult } from './agent/executor.ts';
+import type { ToolError } from './agent/registry.ts';
+import { createConversation, outcomeOf, resolveFollowUp, runQuery } from './agent/conversation.ts';
+import type { FollowUp, QueryKind } from './agent/conversation.ts';
 
 type QueryState = 'Ready' | 'Querying' | 'Success' | 'Partial' | 'Needs clarification' | 'Error';
 
@@ -23,6 +23,12 @@ const plan = document.querySelector<HTMLElement>('#plan')!;
 const planTarget = document.querySelector<HTMLElement>('#plan-target')!;
 const planSteps = document.querySelector<HTMLOListElement>('#plan-steps')!;
 const planSource = document.querySelector<HTMLElement>('#plan-source')!;
+const contextStatus = document.querySelector<HTMLElement>('#context-status')!;
+const clearContext = document.querySelector<HTMLButtonElement>('#clear-context')!;
+
+// In-memory only: a page reload starts a new conversation with no context.
+const conversation = createConversation();
+const kindLabels: Record<QueryKind, string> = { block_number: 'latest block query', network_check: 'Diana network check' };
 
 function showStatus(next: QueryState, detail: string): void {
   state.dataset.state = next.toLowerCase();
@@ -30,12 +36,19 @@ function showStatus(next: QueryState, detail: string): void {
   message.textContent = detail;
 }
 
-function describeFailure(error: unknown): string {
-  if (!(error instanceof QoreChainReadError)) return 'The query failed unexpectedly.';
+function showContext(): void {
+  const current = conversation.current;
+  contextStatus.textContent = current
+    ? 'Context: last successful ' + kindLabels[current.kind] + ' · Diana testnet'
+    : 'Context: none';
+  clearContext.disabled = !current;
+}
+
+function describeFailure(error: ToolError): string {
   if (error.code === 'network_error') {
     return 'The browser could not read the testnet EVM JSON-RPC. Check your connection. The endpoint may restrict cross-origin requests (CORS).';
   }
-  return error.message;
+  return error.code === 'unexpected_error' ? 'The query failed unexpectedly.' : error.message;
 }
 
 document.querySelector<HTMLButtonElement>('#example')!.addEventListener('click', () => {
@@ -45,6 +58,12 @@ document.querySelector<HTMLButtonElement>('#example')!.addEventListener('click',
 
 document.querySelector<HTMLButtonElement>('#example-network')!.addEventListener('click', () => {
   command.value = networkExample;
+  command.focus();
+});
+
+clearContext.addEventListener('click', () => {
+  conversation.clear();
+  showContext();
   command.focus();
 });
 
@@ -70,22 +89,53 @@ function renderSteps(steps: readonly StepView[]): void {
   }));
 }
 
-async function runPlan(selected: NetworkCheckPlan): Promise<void> {
+function showPendingPlan(selected: NetworkCheckPlan): void {
   planTarget.textContent = 'Target: ' + selected.target.name + ' · EVM chain ' + selected.target.evmChainId;
   planSource.textContent = 'Source: ' + selected.target.endpoint;
   renderSteps(selected.steps.map(step => ({ ...step, status: 'pending', detail: 'Waiting to run.' })));
   plan.hidden = false;
   showStatus('Querying', 'Running ' + selected.steps.length + ' read-only steps against ' + selected.target.name + '…');
+}
 
-  const result = await executePlan(selected);
-  renderSteps(result.steps);
-  planSource.textContent = 'Source: ' + result.source + ' · checked ' + new Date(result.checkedAt).toLocaleString();
-  if (result.data) {
-    blockNumber.textContent = result.data.blockNumber;
-    chainId.textContent = result.data.chainId;
-    evmChainId.textContent = result.data.evmChainId;
+/** Runs a query with fresh RPC data, renders it, and records the outcome in the conversation. */
+async function execute(kind: QueryKind, note = ''): Promise<void> {
+  if (kind === 'network_check') {
+    const selected = planCommand(networkExample);
+    if (selected.kind === 'plan') showPendingPlan(selected);
+  } else {
+    showStatus('Querying', note + 'Reading the latest block from Diana testnet…');
   }
-  showStatus(result.status === 'success' ? 'Success' : result.status === 'partial' ? 'Partial' : 'Error', result.summary);
+
+  const outcome = await runQuery(kind);
+  conversation.record(kind, outcomeOf(outcome));
+
+  if (outcome.kind === 'network_check') {
+    const result = outcome.result;
+    renderSteps(result.steps);
+    planSource.textContent = 'Source: ' + result.source + ' · checked ' + new Date(result.checkedAt).toLocaleString();
+    if (result.data) {
+      blockNumber.textContent = result.data.blockNumber;
+      chainId.textContent = result.data.chainId;
+      evmChainId.textContent = result.data.evmChainId;
+    }
+    showStatus(result.status === 'success' ? 'Success' : result.status === 'partial' ? 'Partial' : 'Error', note + result.summary);
+    return;
+  }
+
+  const result = outcome.result;
+  if (result.ok) {
+    const data = result.data as { chainId: string; evmChainId: string; blockNumber: string };
+    blockNumber.textContent = data.blockNumber;
+    chainId.textContent = data.chainId;
+    evmChainId.textContent = data.evmChainId;
+    showStatus('Success', note + 'Latest block received from Diana testnet via EVM JSON-RPC.');
+  } else {
+    showStatus('Error', note + describeFailure(result.error));
+  }
+}
+
+function followUpNote(followUp: Extract<FollowUp, { kind: 'follow_up' }>): string {
+  return 'Follow-up to your last successful ' + kindLabels[followUp.basedOn] + '; fresh data requested. ';
 }
 
 form.addEventListener('submit', async event => {
@@ -98,40 +148,39 @@ form.addEventListener('submit', async event => {
   plan.hidden = true;
   planSteps.replaceChildren();
 
-  const selected = planCommand(command.value);
-  if (selected.kind === 'plan') {
-    run.disabled = true;
-    try {
-      await runPlan(selected);
-    } catch {
-      showStatus('Error', 'The network check failed unexpectedly.');
-    } finally {
-      run.disabled = false;
+  let kind: QueryKind;
+  let note = '';
+  const followUp = resolveFollowUp(command.value, conversation.current);
+  if (planCommand(command.value).kind === 'plan') {
+    kind = 'network_check';
+  } else if (followUp.kind === 'follow_up') {
+    kind = followUp.run;
+    note = followUpNote(followUp);
+  } else if (followUp.kind === 'needs_clarification') {
+    showStatus('Needs clarification', 'There is no earlier successful query in this page session to follow up on. Ask for the latest block number on Diana testnet or ask ELA to check the Diana network first.');
+    return;
+  } else {
+    const route = routeCommand(command.value);
+    if (route.kind !== 'route' || route.tool !== 'get_block_number') {
+      showStatus('Needs clarification', 'Ask for the latest block number on Diana testnet, ask ELA to check the Diana network, or use an example command.');
+      return;
     }
-    return;
-  }
-
-  const route = routeCommand(command.value);
-  if (route.kind !== 'route' || route.tool !== 'get_block_number') {
-    showStatus('Needs clarification', 'Ask for the latest block number on Diana testnet, ask ELA to check the Diana network, or use an example command.');
-    return;
-  }
-  if (route.network === 'mainnet') {
-    showStatus('Needs clarification', 'This interface queries Diana testnet. Please ask for the testnet block number.');
-    return;
+    if (route.network === 'mainnet') {
+      showStatus('Needs clarification', 'This interface queries Diana testnet. Please ask for the testnet block number.');
+      return;
+    }
+    kind = 'block_number';
   }
 
   run.disabled = true;
-  showStatus('Querying', 'Reading the latest block from Diana testnet…');
   try {
-    const result = await getEvmBlockNumber();
-    blockNumber.textContent = result.blockNumber;
-    chainId.textContent = result.chainId;
-    evmChainId.textContent = result.evmChainId;
-    showStatus('Success', 'Latest block received from Diana testnet via EVM JSON-RPC.');
-  } catch (error) {
-    showStatus('Error', describeFailure(error));
+    await execute(kind, note);
+  } catch {
+    showStatus('Error', kind === 'network_check' ? 'The network check failed unexpectedly.' : 'The query failed unexpectedly.');
   } finally {
     run.disabled = false;
+    showContext();
   }
 });
+
+showContext();

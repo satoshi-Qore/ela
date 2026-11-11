@@ -5,6 +5,7 @@ import { executePlan } from '../src/agent/executor.ts';
 import { routeCommand } from '../src/router.ts';
 import { DIANA_NETWORK, getTool, guardFetch, invokeTool, isAllowedRpcRequest, listTools, validateParams } from '../src/agent/registry.ts';
 import { getEvmBlockNumber } from '../src/qorechain/get-evm-block-number.ts';
+import { createConversation, outcomeOf, queryLatestBlock, resolveFollowUp, runQuery } from '../src/agent/conversation.ts';
 
 const ok = (id, result) => Response.json({ jsonrpc: '2.0', id, result });
 // Live block heights change; mocks use a fresh random height instead of a fixed number.
@@ -439,4 +440,211 @@ test('registry invocations still send only the tool methods through the guard', 
   assert.equal(result.ok, true);
   assert.deepEqual(sent, ['eth_chainId', 'eth_blockNumber']);
   assert.ok(sent.every(method => allowedMethods.includes(method)));
+});
+
+// --- Conversation context ------------------------------------------------------------------
+
+const blockContext = { kind: 'block_number', network: 'qorechain-diana' };
+const networkContext = { kind: 'network_check', network: 'qorechain-diana' };
+const liveRpc = () => {
+  const heights = [];
+  const { fetch, methods } = rpc({
+    eth_chainId: id => ok(id, '0x2648'),
+    eth_blockNumber: id => {
+      const height = randomHeight();
+      heights.push(height.toString());
+      return ok(id, '0x' + height.toString(16));
+    },
+  });
+  return { fetch, methods, heights };
+};
+
+for (const command of ['Peki şimdi kaç oldu?', 'Şimdi kaç oldu?', 'kaç oldu', 'PEKİ ŞİMDİ KAÇ OLDU?', '  peki   şimdi kaç?  ', 'Peki artık kaç oldu?']) {
+  test('follow-up ' + JSON.stringify(command) + ' re-reads the latest block', () => {
+    assert.deepEqual(resolveFollowUp(command, blockContext),
+      { kind: 'follow_up', question: 'current_value', run: 'block_number', basedOn: 'block_number' });
+    assert.deepEqual(resolveFollowUp(command, networkContext),
+      { kind: 'follow_up', question: 'current_value', run: 'block_number', basedOn: 'network_check' });
+  });
+}
+
+for (const command of ['Tekrar kontrol et.', 'Yeniden kontrol et', 'Bir daha kontrol et!', 'Tekrar sorgula.', 'Peki tekrar kontrol et?']) {
+  test('follow-up ' + JSON.stringify(command) + ' repeats the last successful query kind', () => {
+    assert.deepEqual(resolveFollowUp(command, blockContext),
+      { kind: 'follow_up', question: 'repeat', run: 'block_number', basedOn: 'block_number' });
+    assert.deepEqual(resolveFollowUp(command, networkContext),
+      { kind: 'follow_up', question: 'repeat', run: 'network_check', basedOn: 'network_check' });
+  });
+}
+
+for (const command of ['Peki şimdi kaç oldu?', 'Tekrar kontrol et.']) {
+  test('follow-up ' + JSON.stringify(command) + ' without context needs clarification', () => {
+    assert.deepEqual(resolveFollowUp(command, undefined), { kind: 'needs_clarification', reason: 'no_context' });
+  });
+}
+
+test('follow-up never resolves against a context outside Diana testnet', () => {
+  for (const network of ['mainnet', 'qorechain-mainnet', undefined]) {
+    assert.deepEqual(resolveFollowUp('Tekrar kontrol et.', { kind: 'block_number', network }),
+      { kind: 'needs_clarification', reason: 'no_context' });
+  }
+});
+
+for (const command of [
+  'Diana ağını kontrol et.',
+  'QoreChain son blok numarasını öğren.',
+  'Ana ağı tekrar kontrol et.',
+  'Tekrar transfer yap.',
+  'Tekrar kontrol etme.',
+  'Kaç QOR oldu?',
+  'Bakiyem kaç oldu?',
+  'Ne oldu?',
+  '',
+]) {
+  test('does not treat ' + JSON.stringify(command) + ' as a follow-up', () => {
+    assert.deepEqual(resolveFollowUp(command, networkContext), { kind: 'not_follow_up' });
+  });
+}
+
+test('follow-up resolution rejects non-string input', () => {
+  for (const value of [undefined, null, 42, {}]) assert.deepEqual(resolveFollowUp(value, networkContext), { kind: 'not_follow_up' });
+});
+
+test('conversation starts empty and records only successful queries', () => {
+  const conversation = createConversation();
+  assert.equal(conversation.current, undefined);
+  conversation.record('block_number', 'failed');
+  conversation.record('network_check', 'partial');
+  assert.equal(conversation.current, undefined);
+  conversation.record('network_check', 'success');
+  assert.deepEqual(conversation.current, networkContext);
+  assert.ok(Object.isFrozen(conversation.current));
+});
+
+test('failed and partial queries do not change an existing context', () => {
+  const conversation = createConversation();
+  conversation.record('network_check', 'success');
+  conversation.record('block_number', 'failed');
+  assert.deepEqual(conversation.current, networkContext);
+  conversation.record('block_number', 'partial');
+  assert.deepEqual(conversation.current, networkContext);
+  conversation.record('block_number', 'success');
+  assert.deepEqual(conversation.current, blockContext);
+});
+
+test('conversation ignores unknown query kinds', () => {
+  const conversation = createConversation();
+  conversation.record('prepare_transfer', 'success');
+  conversation.record('__proto__', 'success');
+  assert.equal(conversation.current, undefined);
+});
+
+test('context stores no block height', () => {
+  const conversation = createConversation();
+  conversation.record('block_number', 'success');
+  assert.deepEqual(Object.keys(conversation.current).sort(), ['kind', 'network']);
+});
+
+test('clearing the context removes it and follow-ups then need clarification', () => {
+  const conversation = createConversation();
+  conversation.record('block_number', 'success');
+  conversation.clear();
+  assert.equal(conversation.current, undefined);
+  assert.equal(resolveFollowUp('Peki şimdi kaç oldu?', conversation.current).kind, 'needs_clarification');
+});
+
+test('a new conversation, as after a page reload, has no context', () => {
+  const before = createConversation();
+  before.record('network_check', 'success');
+  const afterReload = createConversation();
+  assert.equal(afterReload.current, undefined);
+  assert.deepEqual(before.current, networkContext);
+});
+
+test('conversation object cannot be replaced or extended', () => {
+  const conversation = createConversation();
+  assert.ok(Object.isFrozen(conversation));
+  assert.throws(() => { conversation.current = blockContext; }, TypeError);
+});
+
+test('every block query runs fresh registry requests', async () => {
+  const { fetch, methods, heights } = liveRpc();
+  const first = await runQuery('block_number', { fetch });
+  const second = await runQuery('block_number', { fetch });
+  assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber', 'eth_chainId', 'eth_blockNumber']);
+  assert.equal(first.result.ok, true);
+  assert.equal(second.result.ok, true);
+  assert.equal(first.result.tool, 'get_evm_block_number');
+  assert.equal(first.result.data.blockNumber, heights[0]);
+  assert.equal(second.result.data.blockNumber, heights[1]);
+});
+
+test('queryLatestBlock goes through the registry on Diana testnet', async () => {
+  const { fetch, heights } = liveRpc();
+  const result = await queryLatestBlock({ fetch });
+  assert.deepEqual(result, {
+    ok: true,
+    tool: 'get_evm_block_number',
+    network: 'qorechain-diana',
+    data: { chainId: 'qorechain-diana', evmChainId: '9800', blockNumber: heights[0] },
+  });
+});
+
+test('a network error produces no data and does not change the context', async () => {
+  const conversation = createConversation();
+  conversation.record('network_check', 'success');
+  const outcome = await runQuery('block_number', { fetch: async () => { throw new TypeError('Failed to fetch'); } });
+  assert.equal(outcome.result.ok, false);
+  assert.equal(outcome.result.data, undefined);
+  assert.equal(outcome.result.error.code, 'network_error');
+  assert.equal(outcomeOf(outcome), 'failed');
+  conversation.record(outcome.kind, outcomeOf(outcome));
+  assert.deepEqual(conversation.current, networkContext);
+});
+
+test('a wrong chain ID on a follow-up is an error, not a success', async () => {
+  const outcome = await runQuery('block_number', { fetch: async (_, init) => ok(JSON.parse(init.body).id, '0x2649') });
+  assert.equal(outcomeOf(outcome), 'failed');
+  assert.equal(outcome.result.error.code, 'chain_mismatch');
+});
+
+test('network check outcomes map to success, partial, and failed', async () => {
+  const { fetch } = liveRpc();
+  assert.equal(outcomeOf(await runQuery('network_check', { fetch })), 'success');
+  const partial = await runQuery('network_check', { fetch: async (_, init) => {
+    const { id, method } = JSON.parse(init.body);
+    if (method === 'eth_chainId') return ok(id, '0x2648');
+    throw new TypeError('Failed to fetch');
+  } });
+  assert.equal(outcomeOf(partial), 'partial');
+  const failed = await runQuery('network_check', { fetch: async () => { throw new TypeError('Failed to fetch'); } });
+  assert.equal(outcomeOf(failed), 'failed');
+});
+
+test('conversation flow: check, follow up twice with fresh data, survive a failure, repeat', async () => {
+  const conversation = createConversation();
+  const { fetch, methods, heights } = liveRpc();
+
+  assert.equal(planCommand('Diana ağını kontrol et.').kind, 'plan');
+  const check = await runQuery('network_check', { fetch });
+  conversation.record(check.kind, outcomeOf(check));
+  assert.deepEqual(conversation.current, networkContext);
+
+  const followUp = resolveFollowUp('Peki şimdi kaç oldu?', conversation.current);
+  assert.equal(followUp.run, 'block_number');
+  const now = await runQuery(followUp.run, { fetch });
+  conversation.record(now.kind, outcomeOf(now));
+  assert.equal(now.result.data.blockNumber, heights[1]);
+  assert.deepEqual(conversation.current, blockContext);
+
+  const again = await runQuery(resolveFollowUp('Peki şimdi kaç oldu?', conversation.current).run, { fetch });
+  assert.equal(again.result.data.blockNumber, heights[2]);
+
+  const broken = await runQuery('block_number', { fetch: async () => { throw new TypeError('Failed to fetch'); } });
+  conversation.record(broken.kind, outcomeOf(broken));
+  assert.deepEqual(conversation.current, blockContext);
+
+  const repeat = resolveFollowUp('Tekrar kontrol et.', conversation.current);
+  assert.equal(repeat.run, 'block_number');
+  assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber', 'eth_chainId', 'eth_blockNumber', 'eth_chainId', 'eth_blockNumber']);
 });

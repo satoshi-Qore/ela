@@ -225,3 +225,17 @@ dd { overflow-wrap: anywhere; font-family: var(--mono); }
 .step-title code { color: var(--muted); font: 0.72rem var(--mono); }
 .step-detail { color: var(--muted); overflow-wrap: anywhere; }
 .plan-source { margin-top: 0.7rem; }
+
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 1rem;
+  margin-top: 0.6rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+.context-status { color: var(--muted); font: 0.72rem/1.5 var(--mono); overflow-wrap: anywhere; }
+.example:disabled { cursor: default; color: var(--muted); opacity: 0.55; text-decoration: none; }
