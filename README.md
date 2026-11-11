@@ -24,7 +24,7 @@ node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.t
 npm run build
 ```
 
-The 96 tests cover 45 routing cases, 30 native read-only tool cases, and 21 EVM reader cases. The tests use local fixtures and mocked HTTP responses. The build type-checks the sources and writes the static site to `dist/` with relative asset paths for GitHub Pages project hosting.
+The 96 tests cover 45 routing cases, 30 native read-only tool cases, and 21 EVM reader cases. The tests use local fixtures and mocked HTTP responses. The build type-checks the sources and writes the static site to `dist/` with asset paths rooted at /ela/ for GitHub Pages project hosting.
 
 ## Local web interface
 
