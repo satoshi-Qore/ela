@@ -3,61 +3,62 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f4f6f4">
+    <meta name="theme-color" content="#151819">
     <title>ELA — Execution &amp; Logic Agent</title>
   </head>
   <body>
-    <header class="topbar">
-      <div class="shell topbar-inner">
-        <span class="brand"><span class="brand-mark" aria-hidden="true">›_</span> ELA</span>
-        <span class="network"><span aria-hidden="true"></span>Diana testnet</span>
-      </div>
-    </header>
-
     <main class="shell">
       <header class="intro">
-        <h1>Execution &amp; Logic Agent</h1>
-        <p>Query the latest QoreChain block with a Turkish command.</p>
+        <span class="network">Diana Testnet</span>
+        <h1>ELA</h1>
+        <p class="subtitle">Execution &amp; Logic Agent</p>
+        <p class="intro-copy">A web agent for querying QoreChain in Turkish.</p>
       </header>
 
-      <div class="workspace">
-        <section class="panel" aria-labelledby="command-heading">
-          <h2 id="command-heading">Command</h2>
-          <form id="command-form">
-            <label for="command">Turkish command</label>
-            <textarea id="command" name="command" lang="tr" rows="3" required
-              placeholder="QoreChain son blok numarasını öğren."></textarea>
+      <section class="command-panel" aria-label="Command">
+        <form id="command-form">
+          <label for="command">Turkish command</label>
+          <textarea id="command" name="command" lang="tr" rows="2" required
+            placeholder="QoreChain son blok numarasını öğren."></textarea>
+          <div class="form-actions">
             <button type="button" id="example" class="example">Use example command</button>
-            <button type="submit" id="run" class="run">Run query <span aria-hidden="true">↗</span></button>
-          </form>
-        </section>
+            <button type="submit" id="run" class="run">Run query <span aria-hidden="true">→</span></button>
+          </div>
+        </form>
+      </section>
 
-        <section class="panel result" aria-labelledby="result-heading">
-          <div class="panel-heading">
-            <h2 id="result-heading">Query result</h2>
+      <section class="result" aria-labelledby="result-heading">
+        <div class="result-heading">
+          <h2 id="result-heading">Query result</h2>
+          <div class="status">
+            <span>Status</span>
             <span id="query-state" class="state" data-state="ready">Ready</span>
           </div>
-          <dl class="result-data">
-            <div class="height">
-              <dt>Latest block</dt>
-              <dd id="block-number">—</dd>
-            </div>
-            <div class="chain">
-              <dt>Chain ID</dt>
+        </div>
+        <dl class="result-data">
+          <div class="height">
+            <dt>Block Height</dt>
+            <dd id="block-number">—</dd>
+          </div>
+          <div class="result-meta">
+            <div>
+              <dt>Network</dt>
               <dd id="chain-id">—</dd>
             </div>
-            <div class="chain">
-              <dt>EVM chain ID</dt>
+            <div>
+              <dt>EVM Chain ID</dt>
               <dd id="evm-chain-id">—</dd>
             </div>
-            <div class="chain">
-              <dt>Data source</dt>
+            <div>
+              <dt>Data Source</dt>
               <dd>EVM JSON-RPC</dd>
             </div>
-          </dl>
-          <p id="query-message" class="message" role="status">Waiting for a command.</p>
-        </section>
-      </div>
+          </div>
+        </dl>
+        <p id="query-message" class="message" role="status">Waiting for a command.</p>
+      </section>
+
+      <footer class="footer">Read-only <span aria-hidden="true">·</span> No signing</footer>
     </main>
     <script type="module" src="/src/web.ts"></script>
   </body>
