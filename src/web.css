@@ -187,3 +187,41 @@ dd { overflow-wrap: anywhere; font-family: var(--mono); }
 @media (max-width: 22rem) {
   .run { width: 100%; }
 }
+
+.examples { display: flex; flex-wrap: wrap; gap: 0 1rem; }
+
+.state[data-state="partial"] { background: #423721; color: #ffe0a2; }
+
+.plan { margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border); }
+.plan-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 0.75rem; }
+.plan h3 { margin: 0; font-size: 0.85rem; font-weight: 650; }
+.plan-target, .plan-source { color: var(--muted); font: 0.72rem/1.5 var(--mono); overflow-wrap: anywhere; }
+.plan-steps { display: grid; gap: 0.5rem; margin: 0.7rem 0 0; padding: 0; list-style: none; }
+
+.plan-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.1rem 0.6rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.step-mark {
+  grid-row: span 2;
+  min-width: 4.6rem;
+  height: fit-content;
+  padding: 0.1rem 0.45rem;
+  border-radius: 1rem;
+  color: #c8d1d1;
+  background: #2a3234;
+  font: 0.68rem/1.5 var(--mono);
+  text-align: center;
+}
+
+.plan-steps [data-status="succeeded"] .step-mark { background: #173c37; color: #9bf4e2; }
+.plan-steps [data-status="failed"] .step-mark { background: #482e32; color: #ffc1c7; }
+.plan-steps [data-status="skipped"] .step-mark { background: #26292a; color: #8f9a9b; }
+.step-title { font-weight: 620; }
+.step-title code { color: var(--muted); font: 0.72rem var(--mono); }
+.step-detail { color: var(--muted); overflow-wrap: anywhere; }
+.plan-source { margin-top: 0.7rem; }

@@ -21,7 +21,10 @@
           <textarea id="command" name="command" lang="tr" rows="2" required
             placeholder="QoreChain son blok numarasını öğren."></textarea>
           <div class="form-actions">
-            <button type="button" id="example" class="example">Use example command</button>
+            <div class="examples">
+              <button type="button" id="example" class="example">Use example command</button>
+              <button type="button" id="example-network" class="example">Check Diana network</button>
+            </div>
             <button type="submit" id="run" class="run">Run query <span aria-hidden="true">→</span></button>
           </div>
         </form>
@@ -55,6 +58,14 @@
             </div>
           </div>
         </dl>
+        <section id="plan" class="plan" aria-labelledby="plan-heading" hidden>
+          <div class="plan-heading">
+            <h3 id="plan-heading">Executed steps</h3>
+            <span id="plan-target" class="plan-target"></span>
+          </div>
+          <ol id="plan-steps" class="plan-steps"></ol>
+          <p id="plan-source" class="plan-source"></p>
+        </section>
         <p id="query-message" class="message" role="status">Waiting for a command.</p>
       </section>
 

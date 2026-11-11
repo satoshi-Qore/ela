@@ -6,7 +6,8 @@ ELA is an early-stage TypeScript project for routing Turkish commands and readin
 
 - **Deterministic Turkish command routing.** Recognizes balance requests, latest-block queries, and transfer-draft intent. It handles Turkish casing and whitespace and returns `needs_clarification` for unsupported, ambiguous, or conflicting requests.
 - **Read-only QoreChain queries.** `getBlockNumber` checks the chain ID and synchronization status before returning the latest block height. `getBalance` validates native `qor1…` addresses and returns exact balances in `uqor` and QOR as strings. Both tools support configurable endpoints and timeouts.
-- **Automated tests.** The suite includes 45 command-routing cases, 30 native read-only tool tests, and 21 EVM reader tests. The read-only tool tests use mocked HTTP responses and run offline.
+- **Agent planner (v1).** `Diana ağını kontrol et.` produces an explicit two-step plan: verify the Diana EVM chain ID (9800) with `eth_chainId`, then read the latest block with `eth_blockNumber`. The executor runs only allow-listed read-only tools and reports each step as succeeded, failed, or skipped from the requests it actually sent, including partial failures. A successful check confirms that one public endpoint answered; it is not a full network health check.
+- **Automated tests.** The suite includes 45 command-routing cases, 30 native read-only tool tests, 21 EVM reader tests, and 41 agent planner tests. The read-only tool and planner tests use mocked HTTP responses and run offline.
 
 ## Project status
 
@@ -20,15 +21,15 @@ Install [Node.js 24 LTS](https://nodejs.org/en/download). From the project root,
 
 ```sh
 npm ci
-node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs
+node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs
 npm run build
 ```
 
-The 96 tests cover 45 routing cases, 30 native read-only tool cases, and 21 EVM reader cases. The tests use local fixtures and mocked HTTP responses. The build type-checks the sources and writes the static site to `dist/` with asset paths rooted at /ela/ for GitHub Pages project hosting.
+The 137 tests cover 45 routing cases, 30 native read-only tool cases, 21 EVM reader cases, and 41 agent planner cases. The tests use local fixtures and mocked HTTP responses. The build type-checks the sources and writes the static site to `dist/` with asset paths rooted at /ela/ for GitHub Pages project hosting.
 
 ## Local web interface
 
-After running `npm ci`, start Vite with `npm run dev`. Open the local URL printed by Vite and enter `QoreChain son blok numarasını öğren.` The browser verifies EVM chain ID 9800 with `eth_chainId` before reading the block height with `eth_blockNumber` from the official EVM JSON-RPC endpoint. The interface supports latest-block queries only.
+After running `npm ci`, start Vite with `npm run dev`. Open the local URL printed by Vite and enter `QoreChain son blok numarasını öğren.` The browser verifies EVM chain ID 9800 with `eth_chainId` before reading the block height with `eth_blockNumber` from the official EVM JSON-RPC endpoint. Enter `Diana ağını kontrol et.` to run the network check and see each executed step, its result, and the data source. The interface supports these two read-only commands only.
 
 ## Diana testnet
 
