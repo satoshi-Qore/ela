@@ -1,8 +1,8 @@
 import { isRecord, QORECHAIN_TESTNET, QoreChainReadError, readJson } from './read-client.ts';
 import type { ReadOptions } from './read-client.ts';
 
-const evmEndpoint = 'https://evm-testnet.qore.host/';
-const dianaChainHex = '0x2648';
+export const evmEndpoint = 'https://evm-testnet.qore.host/';
+export const dianaChainHex = '0x2648';
 
 type ReadMethod = 'eth_chainId' | 'eth_blockNumber';
 
