@@ -1,15 +1,7 @@
-import { getEvmBlockNumber } from '../qorechain/get-evm-block-number.ts';
-import { isRecord, QoreChainReadError } from '../qorechain/read-client.ts';
+import { isRecord } from '../qorechain/read-client.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
 import type { NetworkCheckPlan, PlanStep, RpcMethod } from './planner.ts';
-
-/** The only tools the executor may run. Each one is read-only and limited to the listed RPC methods. */
-const READ_ONLY_TOOLS = Object.freeze({
-  get_evm_block_number: Object.freeze({
-    run: getEvmBlockNumber,
-    methods: Object.freeze(['eth_chainId', 'eth_blockNumber'] as const),
-  }),
-});
+import { invokeTool } from './registry.ts';
 
 export type StepStatus = 'succeeded' | 'failed' | 'skipped';
 
@@ -68,31 +60,32 @@ function refused(plan: NetworkCheckPlan, message: string): ExecutionResult {
  * JSON-RPC requests the tool actually sent, observed through a wrapped `fetch`.
  */
 export async function executePlan(plan: NetworkCheckPlan, options: ReadOptions = {}): Promise<ExecutionResult> {
-  const tool = Object.hasOwn(READ_ONLY_TOOLS, plan.tool) ? READ_ONLY_TOOLS[plan.tool] : undefined;
-  if (!tool) return refused(plan, 'Tool "' + String(plan.tool) + '" is not an allowed read-only tool.');
-  const allowed: readonly string[] = tool.methods;
-  const disallowed = plan.steps.find(step => !allowed.includes(step.rpcMethod));
-  if (disallowed) return refused(plan, 'RPC method "' + String(disallowed.rpcMethod) + '" is not allowed for this tool.');
-
   const base = options.fetch ?? globalThis.fetch;
   const sent: string[] = [];
   const reported = new Map<string, unknown>();
   const observedFetch: typeof globalThis.fetch = async (input, init) => {
     const method = rpcMethodOf(init?.body);
-    if (!method || !allowed.includes(method)) throw new TypeError('Blocked a request outside the read-only allow list.');
-    sent.push(method);
+    if (method) sent.push(method);
     const response = await base(input, init);
     try {
       const body: unknown = await response.clone().json();
-      if (isRecord(body) && 'result' in body) reported.set(method, body.result);
+      if (method && isRecord(body) && 'result' in body) reported.set(method, body.result);
     } catch {
       // The tool reports unreadable bodies itself.
     }
     return response;
   };
 
-  try {
-    const data = await tool.run({ ...options, fetch: observedFetch });
+  // The registry validates the tool, network, RPC methods, and params before any request is sent,
+  // and blocks requests outside the tool's read-only methods at runtime.
+  const outcome = await invokeTool(
+    { tool: plan.tool, network: plan.target.chainId, params: {}, rpcMethods: plan.steps.map(step => step.rpcMethod) },
+    { ...options, fetch: observedFetch },
+  );
+  if (!outcome.ok && outcome.error.stage === 'validation') return refused(plan, outcome.error.message);
+
+  if (outcome.ok) {
+    const data = outcome.data as NonNullable<ExecutionResult['data']>;
     const details: Record<PlanStep['id'], string> = {
       verify_chain_id: 'Endpoint reported ' + data.evmChainId + ' (' + plan.target.evmChainHex + '), matching ' + plan.target.name + '.',
       read_block_height: 'Latest block height: ' + data.blockNumber + '.',
@@ -107,37 +100,37 @@ export async function executePlan(plan: NetworkCheckPlan, options: ReadOptions =
       summary: plan.target.name + ' EVM JSON-RPC answered: chain ID ' + data.evmChainId + ' verified, latest block '
         + data.blockNumber + '. ' + SCOPE_NOTE,
     };
-  } catch (error) {
-    const code = error instanceof QoreChainReadError ? error.code : 'unexpected_error';
-    const message = error instanceof QoreChainReadError ? error.message : 'The check failed unexpectedly.';
-    const last = sent.at(-1);
-    const failedIndex = Math.max(0, plan.steps.findIndex(step => step.rpcMethod === last));
-    const steps = plan.steps.map((step, index): StepResult => {
-      if (index < failedIndex) {
-        return { ...step, status: 'succeeded', detail: step.id === 'verify_chain_id'
-          ? 'Endpoint reported ' + describeReported(reported.get(step.rpcMethod)) + ', matching ' + plan.target.name + '.'
-          : 'Completed.' };
-      }
-      if (index > failedIndex) return { ...step, status: 'skipped', detail: 'Not run because an earlier step failed.' };
-      const detail = code === 'chain_mismatch'
-        ? 'Endpoint reported ' + describeReported(reported.get(step.rpcMethod)) + '; expected ' + plan.target.evmChainId
-          + ' (' + plan.target.evmChainHex + ').'
-        : message;
-      return { ...step, status: 'failed', detail };
-    });
-    const partial = failedIndex > 0;
-    const summary = code === 'chain_mismatch'
-      ? 'The endpoint did not identify as ' + plan.target.name + ', so no block height was read.'
-      : partial
-        ? 'Chain ID ' + plan.target.evmChainId + ' was verified, but reading the latest block failed: ' + message + ' No block height is reported.'
-        : 'The ' + plan.target.name + ' check could not be completed: ' + message;
-    return {
-      status: partial ? 'partial' : 'failed',
-      steps,
-      source: plan.target.endpoint,
-      checkedAt: new Date().toISOString(),
-      error: { code, message },
-      summary,
-    };
   }
+
+  const { code } = outcome.error;
+  const message = code === 'unexpected_error' ? 'The check failed unexpectedly.' : outcome.error.message;
+  const last = sent.at(-1);
+  const failedIndex = Math.max(0, plan.steps.findIndex(step => step.rpcMethod === last));
+  const steps = plan.steps.map((step, index): StepResult => {
+    if (index < failedIndex) {
+      return { ...step, status: 'succeeded', detail: step.id === 'verify_chain_id'
+        ? 'Endpoint reported ' + describeReported(reported.get(step.rpcMethod)) + ', matching ' + plan.target.name + '.'
+        : 'Completed.' };
+    }
+    if (index > failedIndex) return { ...step, status: 'skipped', detail: 'Not run because an earlier step failed.' };
+    const detail = code === 'chain_mismatch'
+      ? 'Endpoint reported ' + describeReported(reported.get(step.rpcMethod)) + '; expected ' + plan.target.evmChainId
+        + ' (' + plan.target.evmChainHex + ').'
+      : message;
+    return { ...step, status: 'failed', detail };
+  });
+  const partial = failedIndex > 0;
+  const summary = code === 'chain_mismatch'
+    ? 'The endpoint did not identify as ' + plan.target.name + ', so no block height was read.'
+    : partial
+      ? 'Chain ID ' + plan.target.evmChainId + ' was verified, but reading the latest block failed: ' + message + ' No block height is reported.'
+      : 'The ' + plan.target.name + ' check could not be completed: ' + message;
+  return {
+    status: partial ? 'partial' : 'failed',
+    steps,
+    source: plan.target.endpoint,
+    checkedAt: new Date().toISOString(),
+    error: { code, message },
+    summary,
+  };
 }
