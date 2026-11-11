@@ -1,3 +1,5 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({ base: './' });
+export default defineConfig(({ command, isPreview }) => ({
+  base: command === 'build' || isPreview ? '/ela/' : '/',
+}));
