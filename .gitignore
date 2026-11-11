@@ -1,0 +1,18 @@
+# Local model experiments and their outputs
+/ela-2*-local/
+events.jsonl
+metrics.jsonl
+*.log
+
+# Model weights and caches
+models/
+cache/
+.cache/
+*.onnx
+*.onnx_data
+*.safetensors
+*.gguf
+
+# Local browser profiles and dependencies
+chrome-profile/
+node_modules/
