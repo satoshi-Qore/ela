@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- No network access: scripts and styles come only from this page's own origin, and fetch,
+         XMLHttpRequest, WebSocket, EventSource, and beacons are blocked (connect-src 'none'). -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'none'; object-src 'none'; media-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta name="theme-color" content="#151819">
+    <link rel="icon" href="data:,">
+    <title>ELA — ML-DSA-87 Offline Verification</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="intro">
+        <span class="badge">Demo · not part of the ELA interface</span>
+        <h1>ML-DSA-87 signature verification</h1>
+        <p class="intro-copy">
+          Checks a post-quantum signature (FIPS 204, ML-DSA-87) entirely in this browser with QoreChain's
+          official <code>@qorechain/pqc</code> package. There is no server-side check, no QoreChain RPC call,
+          and no other network request.
+        </p>
+        <ul class="guarantees">
+          <li>Asks only for a public key, a message, and a signature.</li>
+          <li>Never asks for a secret key, seed, or recovery phrase.</li>
+          <li>Never signs anything and never sends a transaction.</li>
+        </ul>
+      </header>
+
+      <section class="panel" aria-labelledby="inputs-title">
+        <h2 id="inputs-title">Inputs <span class="hint">hexadecimal, no <code>0x</code> prefix</span></h2>
+
+        <label for="public-key">Public key <span class="count" id="public-key-count">0 bytes · needs 2592</span></label>
+        <textarea id="public-key" rows="3" spellcheck="false" autocomplete="off"></textarea>
+
+        <label for="message">Message <span class="count" id="message-count">0 bytes · at most 64 KiB</span></label>
+        <textarea id="message" rows="2" spellcheck="false" autocomplete="off"></textarea>
+        <p class="preview" id="message-text" hidden></p>
+
+        <label for="signature">Signature <span class="count" id="signature-count">0 bytes · needs 4627</span></label>
+        <textarea id="signature" rows="3" spellcheck="false" autocomplete="off"></textarea>
+
+        <div class="actions">
+          <button type="button" id="load-vector">Load official test vector</button>
+          <button type="button" id="verify" class="primary">Verify signature</button>
+          <button type="button" id="flip-byte">Change one message byte</button>
+          <button type="button" id="oversized">Try a too-large message</button>
+          <button type="button" id="clear" class="quiet">Clear</button>
+        </div>
+        <p class="source" id="vector-source"></p>
+      </section>
+
+      <section class="panel result" id="result" data-state="idle" aria-live="polite" aria-labelledby="result-title">
+        <h2 id="result-title">No verification yet</h2>
+        <p id="result-detail">Load the official test vector or paste your own values, then verify.</p>
+        <p class="meta" id="result-meta"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="comparison-title">
+        <h2 id="comparison-title">Comparison</h2>
+        <table id="comparison">
+          <thead><tr><th scope="col">Input</th><th scope="col">Message (last byte)</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            <tr id="cmp-original"><th scope="row">Official test vector</th><td class="byte">—</td><td class="outcome">not run</td></tr>
+            <tr id="cmp-changed"><th scope="row">One message byte changed</th><td class="byte">—</td><td class="outcome">not run</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer class="footer">
+        Works without a connection once this page has loaded. Opening it for the first time still needs
+        the page files from the server; this demo does not install an offline cache.
+      </footer>
+    </main>
+    <script type="module" src="../../src/pqc/demo/main.ts"></script>
+  </body>
+</html>
