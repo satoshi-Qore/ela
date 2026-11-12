@@ -3,16 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.6.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pretest": "node scripts/check-test-environment.mjs",
+    "test": "node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs tests/pqc-browser.test.mjs tests/qorechain-sdk.test.mjs"
   },
   "devDependencies": {
     "typescript": "7.0.2",
     "vite": "8.3.8"
   },
   "dependencies": {
-    "@qorechain/pqc": "0.2.3"
+    "@qorechain/pqc": "0.2.3",
+    "@qorechain/sdk": "0.14.0"
   }
 }

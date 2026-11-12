@@ -3,12 +3,17 @@
 // The static checks run everywhere. The browser checks build the demo with Vite, serve it from a
 // local HTTP server on 127.0.0.1, and drive a real Chrome or Chromium in headless mode over the
 // Chrome DevTools Protocol, using only Node.js built-ins (no Puppeteer or Playwright). Set
-// CHROME_PATH to choose the browser; without one the browser checks are skipped.
+// CHROME_PATH to choose the browser. Without one the browser checks are skipped locally, but they
+// fail when ELA_REQUIRE_CHROME=1 or CI=true, so CI can never pass them silently.
+// The browser checks run in their own suite: if Chrome cannot start, only they fail.
+// ELA_CHROME_START_TIMEOUT_MS sets how long Chrome may take to start (default 60000, allowed
+// 1000-600000 whole milliseconds); a slower start still fails.
+// ELA_CHROME_NO_SANDBOX=1 adds --no-sandbox for environments where Chrome's sandbox cannot start.
 //
 // Run: node --test tests/pqc-browser.test.mjs
 
 import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { after, before, describe, test } from 'node:test';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -83,10 +88,29 @@ function findChrome() {
 }
 
 const CHROME = findChrome();
-const browserTest = (name, fn) => test(name, { skip: CHROME ? false : 'Chrome or Chromium not found (set CHROME_PATH)', timeout: 60_000 }, fn);
+const REQUIRE_CHROME = process.env.ELA_REQUIRE_CHROME === '1' || process.env.CI === 'true';
+
+const DEFAULT_START_TIMEOUT_MS = 60_000;
+const MIN_START_TIMEOUT_MS = 1_000;
+const MAX_START_TIMEOUT_MS = 600_000;
+
+/** ELA_CHROME_START_TIMEOUT_MS as whole milliseconds in [1000, 600000]; anything else is refused. */
+function chromeStartTimeout(value = process.env.ELA_CHROME_START_TIMEOUT_MS) {
+  if (value === undefined) return DEFAULT_START_TIMEOUT_MS;
+  const ms = /^[1-9][0-9]{0,8}$/.test(value) ? Number(value) : Number.NaN;
+  if (!(ms >= MIN_START_TIMEOUT_MS && ms <= MAX_START_TIMEOUT_MS)) {
+    throw new Error(`ELA_CHROME_START_TIMEOUT_MS must be whole milliseconds from ${MIN_START_TIMEOUT_MS} to ${MAX_START_TIMEOUT_MS}, got ${JSON.stringify(value)}.`);
+  }
+  return ms;
+}
+
+// Browser checks are collected here and registered at the end of the file in their own suite, so
+// a browser that cannot start fails only these checks, not the static ones above.
+const browserTests = [];
+const browserTest = (name, fn) => browserTests.push([name, fn]);
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
-const env = { work: undefined, outDir: undefined, server: undefined, origin: undefined, chrome: undefined, page: undefined, assets: [] };
+const env = { work: undefined, outDir: undefined, server: undefined, origin: undefined, chrome: undefined, page: undefined, assets: [], startMs: undefined, startLimitMs: undefined };
 const served = [];
 const requests = [];
 const problems = [];
@@ -146,8 +170,10 @@ const click = id => evaluate(`(() => {
 const setField = (id, value) => evaluate(`document.getElementById(${JSON.stringify(id)}).value = ${JSON.stringify(value)}`);
 const externalRequests = () => requests.filter(item => !item.url.startsWith(env.origin + '/') && !item.url.startsWith('data:'));
 
-before(async () => {
-  if (!CHROME) return;
+/** Builds and serves the demo, starts Chrome, and opens the demo page. Throws on any failure. */
+async function startBrowser() {
+  if (!CHROME) throw new Error('Chrome or Chromium is required (ELA_REQUIRE_CHROME=1 or CI=true) but was not found. Set CHROME_PATH.');
+  const startLimitMs = chromeStartTimeout();
   const { build } = await import('vite');
   env.work = mkdtempSync(join(tmpdir(), 'ela-pqc-browser-'));
   env.outDir = join(env.work, 'site');
@@ -172,18 +198,24 @@ before(async () => {
   env.chrome = spawn(CHROME, [
     '--headless', '--remote-debugging-port=0', '--user-data-dir=' + join(env.work, 'profile'),
     '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-sync',
-    '--disable-background-networking', '--disable-component-update', '--disable-default-apps', 'about:blank',
+    '--disable-background-networking', '--disable-component-update', '--disable-default-apps',
+    ...(process.env.ELA_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []), 'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const started = performance.now();
+  const elapsed = () => Math.round(performance.now() - started);
   const browserUrl = await new Promise((resolvePromise, reject) => {
     let text = '';
-    const timer = setTimeout(() => reject(new Error('Chrome did not start: ' + text)), 20_000);
+    const timer = setTimeout(() => reject(new Error(`Chrome did not start within ${startLimitMs} ms (ELA_CHROME_START_TIMEOUT_MS). Output: ${text}`)), startLimitMs);
     env.chrome.stderr.on('data', chunk => {
       text += chunk;
       const match = text.match(/DevTools listening on (ws:\/\/\S+)/);
       if (match) { clearTimeout(timer); resolvePromise(match[1]); }
     });
-    env.chrome.on('exit', code => reject(new Error('Chrome exited ' + code + ': ' + text)));
+    env.chrome.on('error', error => { clearTimeout(timer); reject(new Error('Chrome could not be started: ' + error.message)); });
+    env.chrome.on('exit', code => { clearTimeout(timer); reject(new Error(`Chrome exited ${code} after ${elapsed()} ms: ${text}`)); });
   });
+  env.startMs = elapsed();
+  env.startLimitMs = startLimitMs;
   const port = new URL(browserUrl).port;
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
   env.page = await connect(targets.find(target => target.type === 'page').webSocketDebuggerUrl);
@@ -199,11 +231,13 @@ before(async () => {
   await env.page.send('Page.navigate', { url: env.origin + '/demo/pqc-verify/index.html' });
   await loaded;
   assert.equal(await evaluate('document.documentElement.dataset.ready'), 'true');
-});
+}
 
-after(async () => {
+/** Stops Chrome and the server and removes the temporary files. Safe to call more than once. */
+async function stopBrowser() {
   try { env.page?.close(); } catch {}
-  if (env.chrome && env.chrome.exitCode === null) {
+  env.page = undefined;
+  if (env.chrome && env.chrome.exitCode === null && env.chrome.signalCode === null) {
     const exited = new Promise(resolvePromise => env.chrome.once('exit', resolvePromise));
     env.chrome.kill();
     await Promise.race([exited, new Promise(resolvePromise => setTimeout(resolvePromise, 5_000))]);
@@ -212,7 +246,8 @@ after(async () => {
   if (env.work && resolve(env.work).startsWith(resolve(tmpdir()))) {
     try { rmSync(env.work, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {}
   }
-});
+  env.work = undefined;
+}
 
 browserTest('Chrome loads the demo from this origin only, as one script, under the CSP, with a clean console', async t => {
   const policy = await evaluate(`document.querySelector('meta[http-equiv="Content-Security-Policy"]').content`);
@@ -224,6 +259,7 @@ browserTest('Chrome loads the demo from this origin only, as one script, under t
   assert.deepEqual(problems, []);
   for (const asset of env.assets) t.diagnostic(`${asset.name}: ${asset.bytes.length} bytes, gzip ${gzipSync(asset.bytes).length} bytes`);
   t.diagnostic('browser: ' + (await env.page.send('Runtime.evaluate', { expression: 'navigator.userAgent', returnByValue: true })).result.value);
+  t.diagnostic(`chrome start: ${env.startMs} ms (limit ${env.startLimitMs} ms)`);
 });
 
 browserTest('the official test vector verifies in Chrome with no network request', async () => {
@@ -299,4 +335,28 @@ browserTest('opening the page cold while offline fails: preloaded is not the sam
   phase = 'cold-offline';
   const { errorText } = await env.page.send('Page.navigate', { url: env.origin + '/demo/pqc-verify/index.html' });
   assert.match(errorText ?? '', /ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_REFUSED/);
+});
+
+const SKIP_BROWSER = CHROME || REQUIRE_CHROME ? false : 'Chrome or Chromium not found (set CHROME_PATH)';
+
+describe('in headless Chrome', () => {
+  // A start failure is kept and reported by every browser check (each fails with the same error),
+  // instead of failing the hook, which node:test would report as cancelled checks.
+  let startError;
+  before(async () => {
+    if (SKIP_BROWSER) return;
+    try {
+      await startBrowser();
+    } catch (error) {
+      startError = error;
+      await stopBrowser();
+    }
+  });
+  after(stopBrowser);
+  for (const [name, fn] of browserTests) {
+    test(name, { skip: SKIP_BROWSER, timeout: 60_000 }, async t => {
+      if (startError) throw startError;
+      return fn(t);
+    });
+  }
 });

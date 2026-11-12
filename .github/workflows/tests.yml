@@ -14,11 +14,17 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '24'
+          # ML-DSA in node:crypto (used by the PQC tests) needs Node.js 24.6.0 or newer.
+          node-version: '>=24.6.0 <25'
           package-manager-cache: false
       - name: Install locked dependencies
         run: npm ci
+      - name: Show test browser
+        run: google-chrome --version
       - name: Run automated tests
-        run: node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs
+        # Browser tests must run, not skip. The live Diana test stays skipped (ELA_LIVE is not set).
+        env:
+          ELA_REQUIRE_CHROME: '1'
+        run: npm test
       - name: Build production site
         run: npm run build
