@@ -13,6 +13,7 @@
     "vite": "8.3.8"
   },
   "dependencies": {
-    "@qorechain/pqc": "0.2.3"
+    "@qorechain/pqc": "0.2.3",
+    "@qorechain/sdk": "0.14.0"
   }
 }
