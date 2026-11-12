@@ -6,6 +6,9 @@ import { routeCommand } from '../src/router.ts';
 import { DIANA_NETWORK, getTool, guardFetch, invokeTool, isAllowedRpcRequest, listTools, validateParams } from '../src/agent/registry.ts';
 import { getEvmBlockNumber } from '../src/qorechain/get-evm-block-number.ts';
 import { createConversation, outcomeOf, queryLatestBlock, resolveFollowUp, runQuery } from '../src/agent/conversation.ts';
+import { actOnDecision, assessRisk, decideIntent, INTENT_LABELS, interpretCommand, mentionsOtherNetwork, PROVISIONAL_THRESHOLDS } from '../src/agent/intent.ts';
+import { intentEvalSet } from './intent-eval-set.mjs';
+import { readFileSync } from 'node:fs';
 
 const ok = (id, result) => Response.json({ jsonrpc: '2.0', id, result });
 // Live block heights change; mocks use a fresh random height instead of a fixed number.
@@ -647,4 +650,248 @@ test('conversation flow: check, follow up twice with fresh data, survive a failu
   const repeat = resolveFollowUp('Tekrar kontrol et.', conversation.current);
   assert.equal(repeat.run, 'block_number');
   assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber', 'eth_chainId', 'eth_blockNumber', 'eth_chainId', 'eth_blockNumber']);
+});
+
+// --- Intent foundation ---------------------------------------------------------------------------
+
+const contextOf = name => (name === 'none' ? undefined : { kind: name, network: DIANA_NETWORK });
+// Fake classifiers. No real model is loaded in tests.
+const fixed = candidates => {
+  const calls = [];
+  return { calls, classify: text => { calls.push(text); return candidates; } };
+};
+const oracle = label => fixed([{ label, score: 0.9 }, { label: label === 'unknown' ? 'unsupported' : 'unknown', score: 0.05 }]);
+const describe = decision => decision.kind === 'run' ? 'run:' + decision.query
+  : decision.kind === 'refuse' ? 'refuse:' + decision.reason
+  : decision.kind === 'unsupported' ? 'unsupported' : 'clarify:' + decision.reason;
+const countingRpc = () => rpc({
+  eth_chainId: id => ok(id, '0x2648'),
+  eth_blockNumber: id => ok(id, '0x' + randomHeight().toString(16)),
+});
+
+test('intent labels are the closed set of six', () => {
+  assert.deepEqual([...INTENT_LABELS], ['network_check', 'block_number', 'follow_up_repeat', 'follow_up_current', 'unsupported', 'unknown']);
+  assert.ok(Object.isFrozen(INTENT_LABELS));
+});
+
+test('evaluation set has at least 150 labelled Turkish sentences across all categories', () => {
+  assert.ok(intentEvalSet.length >= 150, String(intentEvalSet.length));
+  const counts = {};
+  for (const item of intentEvalSet) {
+    counts[item.category] = (counts[item.category] ?? 0) + 1;
+    assert.ok(INTENT_LABELS.includes(item.label), item.text);
+    assert.ok(['none', 'network_check', 'block_number'].includes(item.context), item.text);
+    assert.equal(typeof item.expect, 'string');
+  }
+  for (const category of ['safe_read', 'follow_up', 'ambiguous', 'risky', 'negative']) assert.ok(counts[category] >= 20, category);
+});
+
+for (const item of intentEvalSet) {
+  test('eval [' + item.category + '/' + item.context + '] ' + JSON.stringify(item.text) + ' → ' + item.expect, async () => {
+    const gate = assessRisk(item.text);
+    assert.equal(gate.risk === 'blocked' ? gate.category : null, item.gate);
+    const classifier = oracle(item.label);
+    const decision = await interpretCommand(item.text, contextOf(item.context), { classifier });
+    assert.equal(describe(decision), item.expect);
+    assert.ok(Object.isFrozen(decision));
+    if (item.gate) assert.equal(classifier.calls.length, 0);
+  });
+}
+
+test('safety gate refuses every risky sentence even when the classifier insists it is safe', async () => {
+  const risky = intentEvalSet.filter(item => item.gate);
+  assert.ok(risky.length >= 50);
+  for (const item of risky) {
+    const classifier = fixed([{ label: 'network_check', score: 0.99 }]);
+    const decision = await interpretCommand(item.text, contextOf('network_check'), { classifier });
+    assert.equal(decision.kind, 'refuse', item.text);
+    assert.equal(decision.source, 'safety_gate');
+    assert.equal(classifier.calls.length, 0, item.text);
+  }
+});
+
+test('refused, unsupported, and clarification decisions send zero RPC requests', async () => {
+  let silent = 0;
+  for (const item of intentEvalSet) {
+    const { fetch, methods } = countingRpc();
+    const decision = await interpretCommand(item.text, contextOf(item.context), { classifier: oracle(item.label) });
+    const run = await actOnDecision(decision, { fetch });
+    if (decision.kind === 'run') {
+      assert.ok(run, item.text);
+      assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber'], item.text);
+    } else {
+      silent++;
+      assert.equal(run, undefined, item.text);
+      assert.deepEqual(methods, [], item.text);
+    }
+  }
+  assert.ok(silent >= 100, String(silent));
+});
+
+test('"Ana ağdaki paramı gönder." is refused with no classifier call and no RPC request', async () => {
+  const { fetch, methods } = countingRpc();
+  const classifier = fixed([{ label: 'block_number', score: 1 }]);
+  const decision = await interpretCommand('Ana ağdaki paramı gönder.', undefined, { classifier });
+  assert.deepEqual(decision, { kind: 'refuse', reason: 'transfer', source: 'safety_gate' });
+  assert.equal(await actOnDecision(decision, { fetch }), undefined);
+  assert.deepEqual(methods, []);
+  assert.equal(classifier.calls.length, 0);
+});
+
+test('safety gate is context-sensitive, not a blind word filter', () => {
+  const pairs = [
+    ['10 QOR gönder.', 'Gönderdiğim işlem onaylandı mı?'],
+    ['Paramı gönder.', 'Para gönderme, sadece Diana ağını kontrol et.'],
+    ['Hepsini gönder.', 'Son bloğu bana gönder.'],
+    ['Transfer et.', 'Transfer ücreti ne kadar?'],
+    ['Transfer yap.', 'Transfer yapmadan önce ağı kontrol et.'],
+    ['İşlemi onayla.', 'Zincir kimliğini onayla.'],
+    ['Stake et.', 'Stake oranı kaç?'],
+    ['Swap my tokens.', 'Swap ücreti nedir?'],
+    ['Cüzdanımı bağla.', 'Cüzdan nedir?'],
+    ['Bu işlemi imzala.', 'İmza ne demek?'],
+    ['Paramı çek.', 'Son bloğu çek.'],
+    ['Tokenlerimi sat.', 'Saat kaç?'],
+  ];
+  for (const [blocked, allowed] of pairs) {
+    assert.equal(assessRisk(blocked).risk, 'blocked', blocked);
+    assert.deepEqual(assessRisk(allowed), { risk: 'none' }, allowed);
+  }
+});
+
+test('safety gate handles Turkish casing, ASCII spelling, and request forms', () => {
+  for (const command of ['PARAMI GÖNDER', 'parami gonder', 'Paramı gönderir misiniz?', 'Paramı gönderebilir misin', 'Paramı göndermek istiyorum', 'Paramı göndermeliyim', 'QOR gönderelim', 'CÜZDANIMI BAĞLA', 'cuzdanimi bagla']) {
+    assert.equal(assessRisk(command).risk, 'blocked', command);
+  }
+  for (const value of [undefined, null, 42, {}]) assert.deepEqual(assessRisk(value), { risk: 'none' });
+});
+
+test('raw 64-hex secrets are treated as key material', () => {
+  const key = '4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318';
+  assert.deepEqual(assessRisk(key), { risk: 'blocked', category: 'key_material' });
+  assert.deepEqual(assessRisk('0x' + key.toUpperCase()), { risk: 'blocked', category: 'key_material' });
+  assert.deepEqual(assessRisk('0x742d35Cc6634C0532925a3b844Bc454e4438f44e'), { risk: 'none' });
+});
+
+test('other networks are never selected', () => {
+  for (const command of ['Ana ağın son bloğu kaç?', 'anaağ durumu', "Mainnet'te son blok", 'Ethereum çalışıyor mu?']) assert.equal(mentionsOtherNetwork(command), true, command);
+  for (const command of ['Diana ağını kontrol et.', 'Testnet çalışıyor mu?', 'Son blok kaç?']) assert.equal(mentionsOtherNetwork(command), false, command);
+});
+
+test('classifier output with any extra field is rejected', () => {
+  for (const extra of [
+    { rpcMethod: 'eth_sendRawTransaction' }, { method: 'eth_call' }, { address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' },
+    { amount: '1' }, { network: 'mainnet' }, { tool: 'prepare_transfer' }, { params: {} }, { query: 'network_check' },
+  ]) {
+    assert.deepEqual(decideIntent([{ label: 'block_number', score: 0.95, ...extra }], undefined),
+      { kind: 'clarify', reason: 'invalid_classifier_output', source: 'classifier' }, JSON.stringify(extra));
+  }
+  const withSymbol = { label: 'block_number', score: 0.95, [Symbol('x')]: 1 };
+  assert.equal(decideIntent([withSymbol], undefined).reason, 'invalid_classifier_output');
+});
+
+test('malformed classifier output is rejected', () => {
+  class Candidate { constructor() { this.label = 'block_number'; this.score = 0.9; } }
+  for (const output of [
+    undefined, null, 'block_number', {}, [], [null], [['block_number', 0.9]], [new Candidate()],
+    [{ label: 'get_balance', score: 0.9 }], [{ label: 'prepare_transfer', score: 0.9 }], [{ label: '__proto__', score: 0.9 }],
+    [{ label: 'BLOCK_NUMBER', score: 0.9 }], [{ label: 'block_number', score: '0.9' }], [{ label: 'block_number', score: NaN }],
+    [{ label: 'block_number', score: -0.1 }], [{ label: 'block_number', score: 1.1 }], [{ label: 'block_number', score: Infinity }],
+    [{ label: 'block_number', score: 0.6 }, { label: 'block_number', score: 0.1 }],
+    [{ label: 'block_number', score: 0.8 }, { label: 'network_check', score: 0.5 }],
+    [{ label: 'block_number' }], [{ score: 0.9 }],
+    Array.from({ length: 7 }, () => ({ label: 'unknown', score: 0 })),
+  ]) {
+    assert.equal(decideIntent(output, undefined).reason, 'invalid_classifier_output', JSON.stringify(output));
+  }
+});
+
+test('low confidence and a small margin lead to clarification', () => {
+  assert.equal(decideIntent([{ label: 'block_number', score: 0.7 }], undefined).reason, 'low_confidence');
+  assert.equal(decideIntent([{ label: 'block_number', score: 0.79 }, { label: 'network_check', score: 0.21 }], undefined).kind, 'run');
+  assert.equal(decideIntent([{ label: 'block_number', score: 0.75 }, { label: 'network_check', score: 0.25 }], undefined).kind, 'run');
+  assert.equal(decideIntent([{ label: 'block_number', score: 0.7499 }, { label: 'network_check', score: 0.25 }], undefined).reason, 'low_confidence');
+  assert.equal(decideIntent([{ label: 'block_number', score: 0.6 }, { label: 'network_check', score: 0.4 }], undefined, { minConfidence: 0.5, minMargin: 0.25 }).reason, 'ambiguous_intent');
+  assert.equal(decideIntent([{ label: 'network_check', score: 0.55 }, { label: 'block_number', score: 0.45 }], undefined, { minConfidence: 0.5, minMargin: 0.05 }).kind, 'run');
+  assert.equal(decideIntent([{ label: 'network_check', score: 0.52 }, { label: 'block_number', score: 0.48 }], undefined, { minConfidence: 0.5, minMargin: 0.05 }).reason, 'ambiguous_intent');
+});
+
+test('unknown never runs; unsupported runs nothing and must be confident to be reported', () => {
+  assert.equal(decideIntent([{ label: 'unknown', score: 1 }], contextOf('network_check')).reason, 'unknown_intent');
+  assert.deepEqual(decideIntent([{ label: 'unsupported', score: 0.9 }, { label: 'unknown', score: 0.1 }], undefined),
+    { kind: 'unsupported', source: 'classifier', confidence: 0.9, margin: 0.8 });
+  assert.equal(decideIntent([{ label: 'unsupported', score: 0.6 }], undefined).reason, 'low_confidence');
+  assert.equal(decideIntent([{ label: 'block_number', score: 0.5 }, { label: 'unsupported', score: 0.45 }], undefined, { minConfidence: 0.5, minMargin: 0.1 }).reason, 'ambiguous_intent');
+});
+
+test('classifier follow-ups need a successful Diana context', () => {
+  for (const label of ['follow_up_repeat', 'follow_up_current']) {
+    for (const context of [undefined, { kind: 'block_number', network: 'mainnet' }, { kind: 'network_check' }]) {
+      assert.equal(decideIntent([{ label, score: 0.95 }], context).reason, 'no_context', label);
+    }
+  }
+  assert.deepEqual(decideIntent([{ label: 'follow_up_repeat', score: 0.95 }], contextOf('network_check')),
+    { kind: 'run', intent: 'follow_up_repeat', source: 'classifier', confidence: 0.95, margin: 0.95, query: 'network_check', basedOn: 'network_check' });
+  assert.equal(decideIntent([{ label: 'follow_up_current', score: 0.95 }], contextOf('network_check')).query, 'block_number');
+});
+
+test('a run decision carries only fixed fields chosen by ELA', async () => {
+  const decision = await interpretCommand('Testnet ayakta mı?', undefined, { classifier: oracle('network_check') });
+  assert.deepEqual(Object.keys(decision).sort(), ['confidence', 'intent', 'kind', 'margin', 'query', 'source']);
+  assert.equal(decision.query, 'network_check');
+});
+
+test('provisional thresholds are marked as not calibrated and cannot be set unsafely low', () => {
+  assert.equal(PROVISIONAL_THRESHOLDS.calibrated, false);
+  assert.ok(Object.isFrozen(PROVISIONAL_THRESHOLDS));
+  for (const thresholds of [{ minConfidence: 0.4, minMargin: 0.2 }, { minConfidence: 0.8, minMargin: 0.01 }, { minConfidence: 1.2, minMargin: 0.2 }, { minConfidence: NaN, minMargin: 0.2 }, {}]) {
+    assert.throws(() => decideIntent([{ label: 'block_number', score: 0.9 }], undefined, thresholds), RangeError);
+  }
+});
+
+test('the classifier receives only normalized text and is skipped for deterministic commands', async () => {
+  const classifier = oracle('network_check');
+  await interpretCommand('  Testnet   AYAKTA mı?  ', contextOf('block_number'), { classifier });
+  assert.deepEqual(classifier.calls, ['testnet ayakta mı?']);
+  for (const command of ['Diana ağını kontrol et.', 'QoreChain son blok numarasını öğren.', 'Peki şimdi kaç oldu?']) {
+    const skipped = oracle('unknown');
+    const decision = await interpretCommand(command, contextOf('network_check'), { classifier: skipped });
+    assert.equal(decision.source, 'deterministic', command);
+    assert.equal(skipped.calls.length, 0, command);
+  }
+});
+
+test('without a model, or when it fails, the deterministic commands keep working', async () => {
+  assert.equal(describe(await interpretCommand('Diana ağını kontrol et.', undefined)), 'run:network_check');
+  assert.equal(describe(await interpretCommand('Peki şimdi kaç oldu?', contextOf('network_check'))), 'run:block_number');
+  assert.equal(describe(await interpretCommand('Tekrar kontrol et.', undefined)), 'clarify:no_context');
+  assert.equal(describe(await interpretCommand('Son blok kaç?', undefined)), 'clarify:not_understood');
+  const broken = { classify: async () => { throw new Error('model failed to load'); } };
+  assert.equal(describe(await interpretCommand('Diana ağını kontrol et.', undefined, { classifier: broken })), 'run:network_check');
+  assert.equal(describe(await interpretCommand('Son blok kaç?', undefined, { classifier: broken })), 'clarify:classifier_unavailable');
+  assert.equal(describe(await interpretCommand('Ana ağdaki paramı gönder.', undefined, { classifier: broken })), 'refuse:transfer');
+});
+
+test('input checks run before anything else', async () => {
+  for (const value of [undefined, null, 42, {}, '', '   ']) assert.equal(describe(await interpretCommand(value, undefined)), 'clarify:empty_command');
+  const classifier = oracle('block_number');
+  assert.equal(describe(await interpretCommand('Son blok kaç? '.repeat(50), undefined, { classifier })), 'clarify:command_too_long');
+  assert.equal(classifier.calls.length, 0);
+});
+
+test('actOnDecision ignores anything that is not a fixed run decision', async () => {
+  const { fetch, methods } = countingRpc();
+  for (const decision of [
+    { kind: 'refuse', reason: 'transfer', source: 'safety_gate' },
+    { kind: 'clarify', reason: 'no_context', source: 'deterministic' },
+    { kind: 'unsupported', source: 'classifier', confidence: 0.9, margin: 0.8 },
+    { kind: 'run', query: 'prepare_transfer' },
+    { kind: 'run', query: 'get_balance' },
+  ]) assert.equal(await actOnDecision(decision, { fetch }), undefined);
+  assert.deepEqual(methods, []);
+});
+
+test('the live interface does not use the intent module yet', () => {
+  const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
+  assert.equal(web.includes('intent'), false);
 });
