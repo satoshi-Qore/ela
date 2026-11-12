@@ -3,7 +3,9 @@
 // The static checks run everywhere. The browser checks build the demo with Vite, serve it from a
 // local HTTP server on 127.0.0.1, and drive a real Chrome or Chromium in headless mode over the
 // Chrome DevTools Protocol, using only Node.js built-ins (no Puppeteer or Playwright). Set
-// CHROME_PATH to choose the browser; without one the browser checks are skipped.
+// CHROME_PATH to choose the browser. Without one the browser checks are skipped locally, but they
+// fail when ELA_REQUIRE_CHROME=1 or CI=true, so CI can never pass them silently.
+// ELA_CHROME_NO_SANDBOX=1 adds --no-sandbox for environments where Chrome's sandbox cannot start.
 //
 // Run: node --test tests/pqc-browser.test.mjs
 
@@ -83,7 +85,14 @@ function findChrome() {
 }
 
 const CHROME = findChrome();
-const browserTest = (name, fn) => test(name, { skip: CHROME ? false : 'Chrome or Chromium not found (set CHROME_PATH)', timeout: 60_000 }, fn);
+const REQUIRE_CHROME = process.env.ELA_REQUIRE_CHROME === '1' || process.env.CI === 'true';
+const browserTest = (name, fn) => test(name, {
+  skip: CHROME || REQUIRE_CHROME ? false : 'Chrome or Chromium not found (set CHROME_PATH)',
+  timeout: 60_000,
+}, async t => {
+  if (!CHROME) throw new Error('Chrome or Chromium is required (ELA_REQUIRE_CHROME=1 or CI=true) but was not found. Set CHROME_PATH.');
+  return fn(t);
+});
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 const env = { work: undefined, outDir: undefined, server: undefined, origin: undefined, chrome: undefined, page: undefined, assets: [] };
@@ -172,7 +181,8 @@ before(async () => {
   env.chrome = spawn(CHROME, [
     '--headless', '--remote-debugging-port=0', '--user-data-dir=' + join(env.work, 'profile'),
     '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-sync',
-    '--disable-background-networking', '--disable-component-update', '--disable-default-apps', 'about:blank',
+    '--disable-background-networking', '--disable-component-update', '--disable-default-apps',
+    ...(process.env.ELA_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []), 'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
   const browserUrl = await new Promise((resolvePromise, reject) => {
     let text = '';
