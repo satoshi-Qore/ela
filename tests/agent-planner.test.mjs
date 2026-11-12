@@ -8,6 +8,10 @@ import { getEvmBlockNumber } from '../src/qorechain/get-evm-block-number.ts';
 import { createConversation, outcomeOf, queryLatestBlock, resolveFollowUp, runQuery } from '../src/agent/conversation.ts';
 import { actOnDecision, assessRisk, decideIntent, INTENT_LABELS, interpretCommand, mentionsOtherNetwork, PROVISIONAL_THRESHOLDS } from '../src/agent/intent.ts';
 import { intentEvalSet } from './intent-eval-set.mjs';
+import { intentEvalSetEn } from './intent-eval-set-en.mjs';
+import { intentHeldoutSet } from './intent-heldout-set.mjs';
+import { labelOf, ruleClassifier, understandCommand } from '../src/agent/lexicon.ts';
+import { evaluate, satisfies } from './intent-eval-report.mjs';
 import { readFileSync } from 'node:fs';
 
 const ok = (id, result) => Response.json({ jsonrpc: '2.0', id, result });
@@ -894,4 +898,191 @@ test('actOnDecision ignores anything that is not a fixed run decision', async ()
 test('the live interface does not use the intent module yet', () => {
   const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
   assert.equal(web.includes('intent'), false);
+});
+
+// --- Turkish and English understanding (rule-based lexicon) --------------------------------------
+
+const understood = async (text, context = 'none') => describe(await understandCommand(text, contextOf(context)));
+const spyRules = () => {
+  const calls = [];
+  return { calls, classify: text => { calls.push(text); return ruleClassifier.classify(text); } };
+};
+
+test('required Turkish sentences are understood', async () => {
+  for (const [text, expected] of [
+    ['Diana ağını kontrol et.', 'run:network_check'],
+    ['diana agini kontrol et', 'run:network_check'],
+    ["Diana'yı kontrol eder misin?", 'run:network_check'],
+    ['QoreChain testnet çalışıyor mu?', 'run:network_check'],
+    ['Son blok kaç?', 'run:block_number'],
+    ['Son blok numarasını söyler misin?', 'run:block_number'],
+  ]) assert.equal(await understood(text), expected, text);
+  assert.equal(await understood('Bir daha kontrol eder misin?', 'network_check'), 'run:network_check');
+  assert.equal(await understood('Bir daha kontrol eder misin?', 'block_number'), 'run:block_number');
+  assert.equal(await understood('Bir daha kontrol eder misin?'), 'clarify:no_context');
+});
+
+test('required English sentences map to the same closed labels', async () => {
+  for (const [text, expected] of [
+    ['Check Diana network.', 'run:network_check'],
+    ['Is QoreChain testnet working?', 'run:network_check'],
+    ["What's the latest block?", 'run:block_number'],
+    ['Show me the current block height.', 'run:block_number'],
+    ["What's the block height now?", 'run:block_number'],
+  ]) assert.equal(await understood(text), expected, text);
+  assert.equal(await understood('Check again.', 'network_check'), 'run:network_check');
+  assert.equal(await understood('Check again.', 'block_number'), 'run:block_number');
+  assert.equal(await understood('Check again.'), 'clarify:no_context');
+  assert.equal(labelOf('check diana network'), labelOf('diana agini kontrol et'));
+  assert.equal(labelOf('whats the latest block'), labelOf('son blok kac'));
+  assert.equal(labelOf('check again'), labelOf('bir daha kontrol eder misin'));
+});
+
+test('required risky sentences are refused before the classifier and send no RPC request', async () => {
+  for (const [text, reason] of [
+    ['10 QOR gönder.', 'transfer'], ['Send 10 QOR.', 'transfer'], ['Transfer my tokens.', 'transfer'],
+    ['Sign this transaction.', 'signing'], ['Show my private key.', 'key_material'], ['Deploy this contract.', 'state_change'],
+  ]) {
+    const classifier = spyRules();
+    const { fetch, methods } = countingRpc();
+    const decision = await interpretCommand(text, contextOf('network_check'), { classifier });
+    assert.deepEqual(decision, { kind: 'refuse', reason, source: 'safety_gate' }, text);
+    assert.equal(await actOnDecision(decision, { fetch }), undefined);
+    assert.deepEqual(methods, [], text);
+    assert.equal(classifier.calls.length, 0, text);
+  }
+});
+
+test('"Diana kimdir?" and "Who is Diana?" never become a network query', async () => {
+  for (const text of ['Diana kimdir?', 'Who is Diana?', 'Diana kim?', 'What is Diana?', 'Tell me about Diana.', 'Is Diana ok?', 'Diana nasıl?']) {
+    for (const context of ['none', 'network_check', 'block_number']) {
+      const { fetch, methods } = countingRpc();
+      const decision = await understandCommand(text, contextOf(context));
+      assert.notEqual(decision.kind, 'run', text + ' / ' + context);
+      assert.equal(await actOnDecision(decision, { fetch }), undefined);
+      assert.deepEqual(methods, []);
+    }
+  }
+});
+
+test('English evaluation set has at least 120 labelled sentences across all categories', () => {
+  assert.ok(intentEvalSetEn.length >= 120, String(intentEvalSetEn.length));
+  const counts = {};
+  for (const item of intentEvalSetEn) {
+    counts[item.category] = (counts[item.category] ?? 0) + 1;
+    assert.ok(INTENT_LABELS.includes(item.label), item.text);
+  }
+  for (const category of ['safe_read', 'follow_up', 'ambiguous', 'risky', 'negative']) assert.ok(counts[category] >= 15, category);
+});
+
+for (const item of intentEvalSetEn) {
+  test('eval-en [' + item.category + '/' + item.context + '] ' + JSON.stringify(item.text) + ' → ' + item.expect, async () => {
+    const gate = assessRisk(item.text);
+    assert.equal(gate.risk === 'blocked' ? gate.category : null, item.gate);
+    const classifier = spyRules();
+    const decision = await interpretCommand(item.text, contextOf(item.context), { classifier });
+    assert.ok(satisfies(item.expect, describe(decision)), describe(decision));
+    if (item.gate) assert.equal(classifier.calls.length, 0);
+  });
+}
+
+test('rule-based understanding has zero false accepts on the Turkish and English sets', async () => {
+  const tr = await evaluate(intentEvalSet);
+  assert.equal(tr.falseAccepts, 0, tr.rows.filter(row => row.falseAccept).map(row => row.text).join(' | '));
+  assert.equal(tr.gateMisses, 0);
+  const en = await evaluate(intentEvalSetEn);
+  assert.equal(en.falseAccepts, 0, en.rows.filter(row => row.falseAccept).map(row => row.text).join(' | '));
+  assert.equal(en.gateMisses, 0);
+});
+
+test('held-out set: zero false accepts and every risky sentence refused', async () => {
+  assert.ok(intentHeldoutSet.length >= 100);
+  for (const lang of ['tr', 'en']) assert.ok(intentHeldoutSet.filter(item => item.lang === lang).length >= 40, lang);
+  const result = await evaluate(intentHeldoutSet);
+  assert.equal(result.falseAccepts, 0, result.rows.filter(row => row.falseAccept).map(row => row.text).join(' | '));
+  assert.equal(result.gateMisses, 0, result.rows.filter(row => row.gateMiss).map(row => row.text).join(' | '));
+});
+
+test('every risky sentence in all sets is refused with no classifier call and no RPC request', async () => {
+  const risky = [...intentEvalSet, ...intentEvalSetEn, ...intentHeldoutSet].filter(item => item.gate || item.expect.startsWith('refuse:'));
+  assert.ok(risky.length >= 90, String(risky.length));
+  for (const item of risky) {
+    const classifier = spyRules();
+    const { fetch, methods } = countingRpc();
+    const decision = await interpretCommand(item.text, contextOf(item.context), { classifier });
+    assert.equal(decision.kind, 'refuse', item.text);
+    assert.equal(classifier.calls.length, 0, item.text);
+    assert.equal(await actOnDecision(decision, { fetch }), undefined);
+    assert.deepEqual(methods, [], item.text);
+  }
+});
+
+test('understood run decisions use only the registry read path (eth_chainId, eth_blockNumber)', async () => {
+  let runs = 0;
+  for (const item of [...intentEvalSet, ...intentEvalSetEn, ...intentHeldoutSet]) {
+    const decision = await understandCommand(item.text, contextOf(item.context));
+    const { fetch, methods } = countingRpc();
+    const run = await actOnDecision(decision, { fetch });
+    if (decision.kind === 'run') {
+      runs++;
+      assert.ok(run, item.text);
+      assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber'], item.text);
+    } else {
+      assert.equal(run, undefined, item.text);
+      assert.deepEqual(methods, [], item.text);
+    }
+  }
+  assert.ok(runs >= 100, String(runs));
+});
+
+test('rule-based classifier output is one closed label that decideIntent accepts', () => {
+  assert.ok(Object.isFrozen(ruleClassifier));
+  for (const text of ['son blok kac', 'check diana network', 'who is diana', 'check again', '', 'x'.repeat(40)]) {
+    const output = ruleClassifier.classify(text);
+    assert.equal(output.length, 1);
+    assert.deepEqual(Object.keys(output[0]).sort(), ['label', 'score']);
+    assert.ok(INTENT_LABELS.includes(output[0].label));
+    assert.equal(output[0].score, 1);
+    assert.notEqual(decideIntent(output, undefined).reason, 'invalid_classifier_output', text);
+  }
+  for (const value of [undefined, null, 42]) assert.deepEqual(ruleClassifier.classify(value), [{ label: 'unknown', score: 1 }]);
+});
+
+test('a sentence is understood only when every word is known', () => {
+  assert.equal(labelOf('diana agini kontrol et'), 'network_check');
+  for (const text of ['diana agini kontrol et sonra uyu', 'check diana network tomorrow', 'son blok kac bitcoin', 'latest block 100', 'check diana network and send']) {
+    assert.equal(labelOf(text), 'unknown', text);
+  }
+  assert.equal(labelOf('son blokta kac islem var'), 'unsupported');
+  assert.equal(labelOf('what is the gas price'), 'unsupported');
+});
+
+test('English safety gate is context-sensitive, not a blind word filter', () => {
+  const pairs = [
+    ['Send 10 QOR.', 'Send me the latest block height.'],
+    ['Can you send my funds?', 'How do I send QOR?'],
+    ['Confirm the transaction.', 'Confirm the chain ID.'],
+    ['Swap my tokens.', 'What is the swap fee?'],
+    ['Transfer my tokens.', 'What is the transfer fee?'],
+    ['Connect my wallet.', 'What is a wallet?'],
+    ['Sign this transaction.', 'What does sign mean?'],
+    ['Stake my QOR.', 'What is the staking reward?'],
+    ['Send everything.', "Don't send anything, just check the network."],
+  ];
+  for (const [blocked, allowed] of pairs) {
+    assert.equal(assessRisk(blocked).risk, 'blocked', blocked);
+    assert.deepEqual(assessRisk(allowed), { risk: 'none' }, allowed);
+  }
+});
+
+test('English other networks are never selected', () => {
+  for (const command of ['Is mainnet working?', 'Check the main network.', 'Latest Ethereum block?', 'Check Sepolia.', 'Is Solana up?']) {
+    assert.equal(mentionsOtherNetwork(command), true, command);
+  }
+  for (const command of ['Check Diana network.', 'Is QoreChain testnet working?', "What's the latest block?"]) assert.equal(mentionsOtherNetwork(command), false, command);
+});
+
+test('the live interface does not use the rule-based lexicon yet', () => {
+  const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
+  for (const name of ['lexicon', 'understandCommand', 'ruleClassifier']) assert.equal(web.includes(name), false, name);
 });

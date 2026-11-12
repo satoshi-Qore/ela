@@ -1,0 +1,171 @@
+// Labelled English development sentences for the intent pipeline (rule-based lexicon).
+//
+// label    gold intent: one of the six closed labels shared with the Turkish set
+// category safe_read | follow_up | ambiguous | risky | negative
+// context  conversation context before the sentence: none | network_check | block_number
+// gate     risk category the deterministic safety gate must report, or null
+// expect   decision of `understandCommand` (safety gate + checks + rule-based classifier)
+//          no_run means any decision except run (unknown or unsupported) is correct
+//
+// This set was used while developing the lexicon. The held-out set (intent-heldout-set.mjs) was not.
+
+const e = (category, text, label, expect, gate = null, context = 'none') => ({ lang: 'en', category, text, label, expect, gate, context });
+const safe = (text, label) => e('safe_read', text, label, 'run:' + label);
+const follow = (text, label, context, expect) => e('follow_up', text, label, expect, null, context);
+const vague = (text, context = 'none') => e('ambiguous', text, 'unknown', 'no_run', null, context);
+const risky = (text, gate) => e('risky', text, 'unsupported', 'refuse:' + gate, gate);
+const negative = (text, label, expect) => e('negative', text, label, expect);
+
+export const intentEvalSetEn = Object.freeze([
+  // --- Safe reads: network check ---
+  safe('Check Diana network.', 'network_check'),
+  safe('Is QoreChain testnet working?', 'network_check'),
+  safe('Check the Diana network.', 'network_check'),
+  safe('Is Diana up?', 'network_check'),
+  safe('Is the testnet running?', 'network_check'),
+  safe('Ping the Diana testnet.', 'network_check'),
+  safe('Can you check the network?', 'network_check'),
+  safe('Could you please check Diana?', 'network_check'),
+  safe('Is the QoreChain network online?', 'network_check'),
+  safe('Is the RPC endpoint responding?', 'network_check'),
+  safe('Is the chain ID correct?', 'network_check'),
+  safe('Verify the Diana testnet.', 'network_check'),
+  safe("What's the network status?", 'network_check'),
+  safe('Is the testnet down?', 'network_check'),
+  safe('CHECK DIANA NETWORK', 'network_check'),
+  safe('check diana network', 'network_check'),
+  safe('Is the network ok?', 'network_check'),
+  safe('Test the connection to Diana.', 'network_check'),
+  safe('How is the Diana network?', 'network_check'),
+  safe('How is the testnet doing?', 'network_check'),
+  safe('Is Diana testnet available?', 'network_check'),
+  safe('Please verify the chain.', 'network_check'),
+  safe('Look at the Diana network status.', 'network_check'),
+
+  // --- Safe reads: latest block ---
+  safe("What's the latest block?", 'block_number'),
+  safe('Show me the current block height.', 'block_number'),
+  safe("What's the block height now?", 'block_number'),
+  safe('Latest block number?', 'block_number'),
+  safe('What is the current block?', 'block_number'),
+  safe('Tell me the latest block height.', 'block_number'),
+  safe('Get the latest block.', 'block_number'),
+  safe('Show the latest block on Diana.', 'block_number'),
+  safe('What is the block height?', 'block_number'),
+  safe('Which block is the latest?', 'block_number'),
+  safe('Fetch the current block number.', 'block_number'),
+  safe('Can you tell me the latest block number?', 'block_number'),
+  safe('Latest block please.', 'block_number'),
+  safe('What is the most recent block on QoreChain testnet?', 'block_number'),
+  safe('Read the latest block height from Diana.', 'block_number'),
+  safe('LATEST BLOCK?', 'block_number'),
+  safe('Current block height?', 'block_number'),
+  safe('Give me the last block number.', 'block_number'),
+  safe('What is the chain height?', 'block_number'),
+  safe('Check the latest block.', 'block_number'),
+
+  // --- Follow-ups ---
+  follow('Check again.', 'follow_up_repeat', 'network_check', 'run:network_check'),
+  follow('Check again.', 'follow_up_repeat', 'block_number', 'run:block_number'),
+  follow('Check again.', 'follow_up_repeat', 'none', 'clarify:no_context'),
+  follow('Again please.', 'follow_up_repeat', 'network_check', 'run:network_check'),
+  follow('Can you check once more?', 'follow_up_repeat', 'block_number', 'run:block_number'),
+  follow('Refresh it.', 'follow_up_repeat', 'block_number', 'run:block_number'),
+  follow('Retry.', 'follow_up_repeat', 'network_check', 'run:network_check'),
+  follow('Recheck.', 'follow_up_repeat', 'none', 'clarify:no_context'),
+  follow('Is it still up?', 'follow_up_repeat', 'network_check', 'run:network_check'),
+  follow('Is it still working?', 'follow_up_repeat', 'none', 'clarify:no_context'),
+  follow('Look again.', 'follow_up_repeat', 'block_number', 'run:block_number'),
+  follow('What about now?', 'follow_up_current', 'network_check', 'run:block_number'),
+  follow('And now?', 'follow_up_current', 'block_number', 'run:block_number'),
+  follow('How about now?', 'follow_up_current', 'block_number', 'run:block_number'),
+  follow('What is it now?', 'follow_up_current', 'block_number', 'run:block_number'),
+  follow('Now?', 'follow_up_current', 'none', 'clarify:no_context'),
+  follow('What about now?', 'follow_up_current', 'none', 'clarify:no_context'),
+  follow('Check the network again.', 'network_check', 'block_number', 'run:network_check'),
+
+  // --- Ambiguous or different meaning ---
+  vague('Who is Diana?'),
+  vague('Who is Diana?', 'network_check'),
+  vague('What is Diana?'),
+  vague('Diana.'),
+  vague('Check.'),
+  vague('Check it.'),
+  vague('Show me.'),
+  vague('Hello.'),
+  vague('Help.'),
+  vague('What?'),
+  vague('How?'),
+  vague('Is it working?'),
+  vague('Is it ok?'),
+  vague('Is Diana ok?'),
+  vague('Is Diana alive?'),
+  vague('Is Diana fine?'),
+  vague('Tell me about Diana.'),
+  vague('What happened?'),
+  vague('Show the block.'),
+  vague('Block 100.'),
+  vague('What is the block?'),
+  vague('Call Diana.'),
+  vague('Diana is my friend.'),
+  vague('What is it?', 'block_number'),
+
+  // --- Risky ---
+  risky('Send 10 QOR.', 'transfer'),
+  risky('Transfer my tokens.', 'transfer'),
+  risky('Sign this transaction.', 'signing'),
+  risky('Show my private key.', 'key_material'),
+  risky('Deploy this contract.', 'state_change'),
+  risky('Please send 5 QOR to this address.', 'transfer'),
+  risky('Can you send my funds?', 'transfer'),
+  risky('Could you please transfer all my QOR?', 'transfer'),
+  risky('I want to send money.', 'transfer'),
+  risky("I'd like to withdraw my tokens.", 'transfer'),
+  risky('Send me 3 QOR.', 'transfer'),
+  risky('Pay 20 QOR.', 'transfer'),
+  risky('Move my funds to another wallet.', 'transfer'),
+  risky('Approve this transaction.', 'signing'),
+  risky('Can you sign it?', 'signing'),
+  risky('Confirm the transaction.', 'signing'),
+  risky('What is my seed phrase?', 'key_material'),
+  risky('Export my private key.', 'key_material'),
+  risky('Enter my password.', 'key_material'),
+  risky('Here is my recovery phrase.', 'key_material'),
+  risky('Connect my wallet.', 'wallet_control'),
+  risky('Create a new wallet.', 'wallet_control'),
+  risky('Import my wallet.', 'wallet_control'),
+  risky('Stake my QOR.', 'state_change'),
+  risky('Swap my tokens.', 'state_change'),
+  risky("Let's bridge my QOR.", 'state_change'),
+  risky('Mint an NFT for me.', 'state_change'),
+  risky('Buy 100 QOR.', 'state_change'),
+  risky('Sell all my tokens.', 'state_change'),
+  risky('Delegate my QOR.', 'state_change'),
+  risky('Go ahead and deploy the contract.', 'state_change'),
+
+  // --- Negative: risky words in safe or unsupported reads ---
+  negative('What is the transfer fee?', 'unsupported', 'no_run'),
+  negative('Send me the latest block height.', 'block_number', 'no_run'),
+  negative('Was my transaction confirmed?', 'unsupported', 'no_run'),
+  negative('What is the staking reward?', 'unsupported', 'no_run'),
+  negative('What does sign mean?', 'unknown', 'no_run'),
+  negative('What is a wallet?', 'unknown', 'no_run'),
+  negative('How many transactions are in the latest block?', 'unsupported', 'unsupported'),
+  negative('What is the gas price?', 'unsupported', 'unsupported'),
+  negative('What is my balance?', 'unsupported', 'unsupported'),
+  negative('What is the latest block hash?', 'unsupported', 'unsupported'),
+  negative('What is the block time?', 'unsupported', 'unsupported'),
+  negative('Where is the faucet?', 'unsupported', 'unsupported'),
+  negative('Confirm the chain ID.', 'network_check', 'no_run'),
+  negative("Don't check the network.", 'unknown', 'no_run'),
+  negative('Do not show the latest block.', 'unknown', 'no_run'),
+  negative('Is the network not working?', 'unknown', 'no_run'),
+
+  // --- Negative: other networks and parameters ---
+  negative('Is mainnet working?', 'network_check', 'clarify:unsupported_network'),
+  negative('Check the main network.', 'network_check', 'clarify:unsupported_network'),
+  negative('Latest Ethereum block?', 'block_number', 'clarify:unsupported_network'),
+  negative('Check Sepolia.', 'network_check', 'clarify:unsupported_network'),
+  negative('Is Solana up?', 'network_check', 'clarify:unsupported_network'),
+  negative('Show the balance of 0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'unsupported', 'clarify:unsupported_parameters'),
+]);

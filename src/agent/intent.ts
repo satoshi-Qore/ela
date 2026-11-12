@@ -112,6 +112,11 @@ function fold(text: string): string {
     .trim();
 }
 
+/** Folded form of a command, shared with the rule-based lexicon (`lexicon.ts`). */
+export function foldCommand(command: string): string {
+  return fold(normalize(command));
+}
+
 const word = (body: string): RegExp => new RegExp('(?<![a-z0-9])(?:' + body + ')(?![a-z0-9])', 'u');
 
 /**
@@ -139,11 +144,13 @@ function requestOf(stem: string): string {
 const assetContext = word(
   'para[a-z]*|qor(?:u|a|un|lar[a-z]*)?|token[a-z]*|coin[a-z]*|jeton[a-z]*|bakiye[a-z]*|varlik[a-z]*|nft[a-z]*'
     + '|fon(?:u|um|umu|unu|lar|lari|larimi|larini)?|usdt|usdc|eth|btc|adres[a-z]*|hesab[a-z]*|hesap[a-z]*'
-    + '|[0-9]+(?: [0-9]+)? ?(?:qor|token|coin|eth|usdt|tl|lira|dolar)',
+    + '|[0-9]+(?: [0-9]+)? ?(?:qor|token|coin|eth|usdt|tl|lira|dolar)'
+    + '|money|funds?|assets?|balance[a-z]*|crypto',
 );
 // Words that make "gönder", "aktar", or "onayla" plausibly about reading data rather than funds.
-const readContext = word('blo[kg][a-z]*|durum[a-z]*|sonuc[a-z]*|rapor[a-z]*|bilgi[a-z]*|veri[a-z]*|numara[a-z]*|yukseklig[a-z]*|yukseklik[a-z]*|ozet[a-z]*|chain id[a-z]*|zincir kimli[a-z]*');
-const transactionContext = word('islem[a-z]*|transfer[a-z]*|tx|izin[a-z]*|harcama[a-z]*|sozlesme[a-z]*|odeme[a-z]*|approve[a-z]*|allowance');
+const readContext = word('blo[kg][a-z]*|durum[a-z]*|sonuc[a-z]*|rapor[a-z]*|bilgi[a-z]*|veri[a-z]*|numara[a-z]*|yukseklig[a-z]*|yukseklik[a-z]*|ozet[a-z]*|chain id[a-z]*|zincir kimli[a-z]*'
+  + '|block[a-z]*|status|result[a-z]*|report[a-z]*|info[a-z]*|data|height|number');
+const transactionContext = word('islem[a-z]*|transfer[a-z]*|tx|izin[a-z]*|harcama[a-z]*|sozlesme[a-z]*|odeme[a-z]*|approve[a-z]*|allowance|transactions?|contracts?|spending');
 
 interface RiskRule {
   readonly category: RiskCategory;
@@ -152,8 +159,19 @@ interface RiskRule {
   readonly when?: (text: string) => boolean;
 }
 
-function englishRequest(verbs: string): RegExp {
-  return new RegExp('^(?:please )?(?:' + verbs + ') (?:my|all|the|this|these|that|it|to|[0-9]|tokens?|qor|coins?|funds?|nfts?|contracts?|transactions?)(?![a-z])', 'u');
+// English request openers on folded text: "please", "can you", "could you please", "i want to",
+// "i'd like to", "let's", "go ahead and". A question such as "how do i send qor" is not a request.
+const englishLead = '(?:(?:hey|ok|okay|ela|now|so|then|and) )*(?:(?:please|kindly|pls|just) )*'
+  + '(?:(?:(?:can|could|would|will) you|i (?:want|need|would like|wanna)(?: you)? to|id like(?: you)? to|lets|let us|go ahead and|help me) (?:(?:please|kindly|just) )*)?';
+const englishObject = 'my|all|the|this|these|that|those|it|to|[0-9]|tokens?|qor|coins?|funds?|nfts?|contracts?|transactions?|txs?|money|some|any|everything|a|an|our|your|out';
+
+/**
+ * English imperatives with an object ("send 5 qor", "please sign this", "can you transfer my
+ * tokens"). With `indirect`, a pronoun may come first ("send me 5 qor").
+ */
+function englishRequest(verbs: string, indirect = false): RegExp {
+  const pronoun = indirect ? '(?:(?:me|us|him|her|them) )?' : '';
+  return new RegExp('^' + englishLead + '(?:' + verbs + ') ' + pronoun + '(?:' + englishObject + ')(?![a-z])', 'u');
 }
 
 const fundsOrNoRead =(text: string): boolean => assetContext.test(text) || !readContext.test(text);
@@ -161,15 +179,20 @@ const assetOnly = (text: string): boolean => assetContext.test(text);
 
 const riskRules: readonly RiskRule[] = [
   // Secrets are never handled, whatever the phrasing.
-  { category: 'key_material', pattern: word('ozel anahtar[a-z]*|gizli anahtar[a-z]*|private key[a-z]*|seed[a-z]*|mnemonic[a-z]*|kurtarma (?:ifade|cumle|kelime|anahtar)[a-z]*|gizli (?:ifade|cumle|kelime)[a-z]*|(?:12|24) kelime[a-z]*|sifre[a-z]*|parola[a-z]*') },
+  { category: 'key_material', pattern: word('ozel anahtar[a-z]*|gizli anahtar[a-z]*|private key[a-z]*|seed[a-z]*|mnemonic[a-z]*|kurtarma (?:ifade|cumle|kelime|anahtar)[a-z]*|gizli (?:ifade|cumle|kelime)[a-z]*|(?:12|24) kelime[a-z]*|sifre[a-z]*|parola[a-z]*'
+    + '|privatekey[a-z]*|secret (?:key|phrase|recovery phrase)[a-z]*|recovery (?:phrase|words?)|password[a-z]*|passphrase[a-z]*|keystore|(?:12|24) words?') },
   { category: 'transfer', pattern: word(requestOf('transfer (?:et|ed|yap)|havale (?:et|ed|yap)|odeme (?:yap)|ode')) },
   { category: 'transfer', pattern: word('(?:transfer|gonderim|odeme|islem|tx)[a-z]* (?:taslagi |taslak )?(?:' + requestOf('hazirla') + ')') },
   { category: 'transfer', pattern: word(requestOf('gonder|yolla')), when: fundsOrNoRead },
   { category: 'transfer', pattern: word(requestOf('aktar|cek')), when: assetOnly },
-  // English imperatives with an object ("send 5 qor", "please sign this"); "swap ücreti nedir" is a question, not a request.
-  { category: 'transfer', pattern: englishRequest('send|withdraw|transfer') },
-  { category: 'signing', pattern: englishRequest('sign|approve') },
-  { category: 'state_change', pattern: englishRequest('swap|bridge|mint|deploy|stake|unstake|delegate') },
+  // English requests; "swap ücreti nedir" or "what is the transfer fee" are questions, not requests.
+  // "Send me the latest block" reads data, so "send" and "move" need funds or no read context.
+  { category: 'transfer', pattern: englishRequest('send|move', true), when: fundsOrNoRead },
+  { category: 'transfer', pattern: englishRequest('withdraw|transfer|pay|wire', true) },
+  { category: 'signing', pattern: englishRequest('sign|approve|authori[sz]e') },
+  { category: 'signing', pattern: englishRequest('confirm'), when: text => transactionContext.test(text) || assetContext.test(text) || !readContext.test(text) },
+  { category: 'wallet_control', pattern: new RegExp('^' + englishLead + '(?:connect|link|import|create|open|reset|unlock|drain|empty|delete|restore|recover|export) (?:(?:my|a|an|the|new|your|this|our) )*(?:wallet|account)s?(?![a-z])', 'u') },
+  { category: 'state_change', pattern: englishRequest('swap|bridge|mint|deploy|stake|unstake|delegate|undelegate|redelegate|buy|sell|burn|trade|exchange|lend|borrow|claim|vote', true) },
   { category: 'signing', pattern: word(requestOf('imzala|imza at')) },
   { category: 'signing', pattern: word(requestOf('onayla')), when: text => transactionContext.test(text) || assetContext.test(text) || !readContext.test(text) },
   { category: 'wallet_control', pattern: word('(?:cuzdan|wallet)[a-z]* (?:' + requestOf('bagla|ac|olustur|kur|ice aktar|sil|bosalt|sifirla|import et|import ed') + ')') },
@@ -201,7 +224,8 @@ export function assessRisk(command: string): RiskAssessment {
 }
 
 // Networks other than Diana testnet. ELA never lets a classifier or a phrase select a network.
-const otherNetwork = word('ana ?ag[a-z]*|mainnet[a-z]*|ethereum[a-z]*|bitcoin[a-z]*|solana[a-z]*|bsc|binance[a-z]*|polygon[a-z]*|avalanche[a-z]*|arbitrum[a-z]*|optimism[a-z]*|devnet[a-z]*');
+const otherNetwork = word('ana ?ag[a-z]*|mainnet[a-z]*|ethereum[a-z]*|bitcoin[a-z]*|solana[a-z]*|bsc|binance[a-z]*|polygon[a-z]*|avalanche[a-z]*|arbitrum[a-z]*|optimism[a-z]*|devnet[a-z]*'
+  + '|main ?net(?:work)?[a-z]*|sepolia|goerli|holesky|tron|cardano|polkadot|litecoin|dogecoin|avax|bnb chain');
 // Addresses and hashes are parameters; no supported intent accepts one.
 const parameterPattern = /(?<![0-9a-z])(?:0x[0-9a-f]{40}|qor1[0-9a-z]{20,})(?![0-9a-z])/u;
 
