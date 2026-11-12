@@ -11,5 +11,8 @@
   "devDependencies": {
     "typescript": "7.0.2",
     "vite": "8.3.8"
+  },
+  "dependencies": {
+    "@qorechain/pqc": "0.2.3"
   }
 }

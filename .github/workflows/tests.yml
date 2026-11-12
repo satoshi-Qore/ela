@@ -19,6 +19,6 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Run automated tests
-        run: node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs
+        run: node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs
       - name: Build production site
         run: npm run build
