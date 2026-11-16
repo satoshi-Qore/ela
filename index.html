@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#151819">
+    <meta name="theme-color" content="#080f20">
+    <meta name="description" content="ELA is a read-only agent for the QoreChain Diana testnet. Ask in English or Turkish to check the network or read the latest block.">
+    <!-- No icon file: an empty data URI keeps browsers from requesting /favicon.ico. -->
+    <link rel="icon" href="data:,">
     <title>ELA — Execution &amp; Logic Agent</title>
   </head>
   <body>
@@ -12,18 +15,21 @@
         <span class="network">Diana Testnet</span>
         <h1>ELA</h1>
         <p class="subtitle">Execution &amp; Logic Agent</p>
-        <p class="intro-copy">A web agent for querying QoreChain in Turkish.</p>
+        <p class="intro-copy">A read-only agent for the QoreChain Diana testnet. Ask in English or Turkish to check the network or read the latest block.</p>
       </header>
 
       <section class="command-panel" aria-label="Command">
         <form id="command-form">
-          <label for="command">Turkish command</label>
-          <textarea id="command" name="command" lang="tr" rows="2" required
-            placeholder="QoreChain son blok numarasını öğren."></textarea>
+          <label for="command">Command (English or Turkish)</label>
+          <textarea id="command" name="command" rows="2" required aria-describedby="command-help"
+            placeholder="What's the latest block?"></textarea>
+          <p id="command-help" class="command-help">ELA only reads Diana testnet: it checks the network and reads the latest block. It never sends funds, signs transactions, or handles keys.</p>
           <div class="form-actions">
-            <div class="examples">
-              <button type="button" id="example" class="example">Use example command</button>
-              <button type="button" id="example-network" class="example">Check Diana network</button>
+            <div class="examples" role="group" aria-label="Example commands">
+              <button type="button" class="example" data-example="What's the latest block?">What's the latest block?</button>
+              <button type="button" class="example" data-example="Check Diana network.">Check Diana network.</button>
+              <button type="button" class="example" lang="tr" data-example="Son blok kaç?">Son blok kaç?</button>
+              <button type="button" class="example" lang="tr" data-example="Diana ağını kontrol et.">Diana ağını kontrol et.</button>
             </div>
             <button type="submit" id="run" class="run">Run query <span aria-hidden="true">→</span></button>
           </div>
@@ -71,6 +77,42 @@
           <p id="plan-source" class="plan-source"></p>
         </section>
         <p id="query-message" class="message" role="status">Waiting for a command.</p>
+      </section>
+
+      <section id="pqc-panel" class="pqc-panel" aria-labelledby="pqc-heading">
+        <div class="pqc-header">
+          <h2 id="pqc-heading">Post-Quantum Signature Verification</h2>
+          <button type="button" id="pqc-toggle" class="pqc-toggle" aria-expanded="false" aria-controls="pqc-body">Open verifier</button>
+        </div>
+        <p class="pqc-intro">Check an ML-DSA-87 (FIPS 204) signature in this browser with QoreChain's official test vector. Verification only: no signing, no private keys, no network request.</p>
+        <div id="pqc-body" class="pqc-body" hidden>
+          <p id="pqc-loading" class="pqc-loading" role="status">Loading the verifier…</p>
+          <div id="pqc-form" class="pqc-form" hidden>
+            <label for="pqc-public-key">Public key <span class="pqc-count" id="pqc-public-key-count">hex · 2592 bytes</span></label>
+            <textarea id="pqc-public-key" class="pqc-field" rows="3" spellcheck="false" autocomplete="off" aria-describedby="pqc-hint"></textarea>
+            <label for="pqc-message">Message <span class="pqc-count" id="pqc-message-count">hex · at most 64 KiB</span></label>
+            <textarea id="pqc-message" class="pqc-field" rows="2" spellcheck="false" autocomplete="off" aria-describedby="pqc-hint"></textarea>
+            <label for="pqc-signature">Signature <span class="pqc-count" id="pqc-signature-count">hex · 4627 bytes</span></label>
+            <textarea id="pqc-signature" class="pqc-field" rows="3" spellcheck="false" autocomplete="off" aria-describedby="pqc-hint"></textarea>
+            <p id="pqc-hint" class="pqc-hint">Hexadecimal text only (0–9, a–f), without a 0x prefix or spaces.</p>
+            <div class="pqc-actions">
+              <button type="button" id="pqc-load" class="pqc-button">Load official test vector</button>
+              <button type="button" id="pqc-verify" class="pqc-button pqc-primary">Verify signature</button>
+              <button type="button" id="pqc-flip" class="pqc-button">Change one message byte</button>
+              <button type="button" id="pqc-oversized" class="pqc-button">Try a too-large message</button>
+              <button type="button" id="pqc-clear" class="pqc-button pqc-quiet">Clear</button>
+            </div>
+            <div id="pqc-result" class="pqc-result" data-state="idle" aria-live="polite">
+              <p id="pqc-result-title" class="pqc-result-title">No verification yet</p>
+              <p id="pqc-result-detail" class="pqc-result-detail">Load the official test vector or paste your own public values, then verify.</p>
+              <p id="pqc-result-meta" class="pqc-result-meta"></p>
+            </div>
+            <dl class="pqc-compare" aria-label="Comparison">
+              <div><dt>Official test vector</dt><dd id="pqc-cmp-original">not run</dd></div>
+              <div><dt>One message byte changed</dt><dd id="pqc-cmp-changed">not run</dd></div>
+            </dl>
+          </div>
+        </div>
       </section>
 
       <footer class="footer">Read-only <span aria-hidden="true">·</span> No signing</footer>

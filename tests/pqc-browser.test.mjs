@@ -66,8 +66,13 @@ test('demo page has a strict Content-Security-Policy and only public-value field
   assert.deepEqual([...html.matchAll(/<textarea id="([^"]+)"/g)].map(match => match[1]), ['public-key', 'message', 'signature']);
 });
 
+// Changed in 7F: index.html and web.ts were required not to mention PQC at all. The interface now
+// has its own verification panel (src/pqc/panel.ts, loaded on demand), but it still never links to
+// or loads this separate offline page, and the build config is unchanged.
 test('the demo is separate from the ELA interface and its production build', () => {
-  for (const file of ['index.html', 'src/web.ts', 'vite.config.ts']) assert.equal(/demo|pqc/i.test(read(file)), false, file);
+  for (const file of ['index.html', 'src/web.ts', 'vite.config.ts']) assert.equal(/demo/i.test(read(file)), false, file);
+  assert.equal(/pqc/i.test(read('vite.config.ts')), false, 'vite.config.ts');
+  assert.equal(/demo\/pqc-verify|src\/pqc\/demo\/main/.test(read('src/pqc/panel.ts')), false, 'the panel does not load the offline page');
 });
 
 // --- Real browser checks -----------------------------------------------------------------------
