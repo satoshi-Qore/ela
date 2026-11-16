@@ -1,0 +1,18 @@
+{
+  "name": "ela-diana-payment-account-prototype",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Prototype only: Diana bounded payment account with ML-DSA-87 invoice authorization. Not part of the ELA web interface.",
+  "engines": {
+    "node": ">=24.6.0"
+  },
+  "scripts": {
+    "test": "node --test diana-account-generation.test.mjs test/diana-invoice-pqc.test.mjs test/public-ml-dsa-vector.test.mjs"
+  },
+  "dependencies": {
+    "@qorechain/evm": "0.14.0",
+    "@qorechain/pqc": "0.2.3",
+    "@qorechain/sdk": "0.14.0",
+    "viem": "2.57.19"
+  }
+}
