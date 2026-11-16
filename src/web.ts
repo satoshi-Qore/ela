@@ -1,16 +1,18 @@
 import './web.css';
-import { routeCommand } from './router.ts';
-import { planCommand } from './agent/planner.ts';
-import type { NetworkCheckPlan } from './agent/planner.ts';
+import { createSession } from './agent/session.ts';
+import type { CommandResult } from './agent/session.ts';
+import type { QueryKind } from './agent/conversation.ts';
 import type { StepResult } from './agent/executor.ts';
+import type { ClarifyReason, RiskCategory } from './agent/intent.ts';
 import type { ToolError } from './agent/registry.ts';
-import { createConversation, outcomeOf, resolveFollowUp, runQuery } from './agent/conversation.ts';
-import type { FollowUp, QueryKind } from './agent/conversation.ts';
 
-type QueryState = 'Ready' | 'Querying' | 'Success' | 'Partial' | 'Needs clarification' | 'Error';
+// Every command goes through one agent session: input checks and the safety gate first, then the
+// deterministic routes and the rule-based classifier, then only the registry's read-only tool
+// (eth_chainId, eth_blockNumber on Diana testnet). This file only renders the session's results.
 
-const example = 'QoreChain son blok numarasını öğren.';
-const networkExample = 'Diana ağını kontrol et.';
+type QueryState = 'Ready' | 'Querying' | 'Success' | 'Partial' | 'Needs clarification' | 'Refused' | 'Unsupported' | 'Error';
+
+const TARGET = 'Target: Diana testnet · EVM chain 9800';
 const form = document.querySelector<HTMLFormElement>('#command-form')!;
 const command = document.querySelector<HTMLTextAreaElement>('#command')!;
 const run = document.querySelector<HTMLButtonElement>('#run')!;
@@ -26,9 +28,25 @@ const planSource = document.querySelector<HTMLElement>('#plan-source')!;
 const contextStatus = document.querySelector<HTMLElement>('#context-status')!;
 const clearContext = document.querySelector<HTMLButtonElement>('#clear-context')!;
 
-// In-memory only: a page reload starts a new conversation with no context.
-const conversation = createConversation();
+// In-memory only: a page reload starts a new session with no context.
+const session = createSession();
 const kindLabels: Record<QueryKind, string> = { block_number: 'latest block query', network_check: 'Diana network check' };
+
+const GENERIC_CLARIFICATION = 'Ask for the latest block number on Diana testnet, ask ELA to check the Diana network, or use an example command.';
+const REFUSALS: Record<RiskCategory, string> = {
+  transfer: 'ELA is read-only and cannot send, transfer, or withdraw funds.',
+  signing: 'ELA does not sign or approve messages or transactions.',
+  key_material: 'ELA never asks for or handles private keys, seed phrases, recovery phrases, or passwords. Do not share them. The command field was cleared.',
+  wallet_control: 'ELA does not connect to, create, or control wallets.',
+  state_change: 'ELA cannot deploy, stake, swap, mint, or otherwise change chain state; it only reads Diana testnet.',
+};
+const CLARIFICATIONS: Partial<Record<ClarifyReason, string>> = {
+  empty_command: 'Type a command, for example "Check Diana network." or "Diana ağını kontrol et."',
+  command_too_long: 'That command is too long. Keep it under 500 characters.',
+  unsupported_network: 'This interface only reads Diana testnet. Other networks, such as mainnet, are not supported.',
+  unsupported_parameters: 'ELA does not take addresses, hashes, or amounts yet. Ask for the latest block or a Diana network check.',
+  no_context: 'There is no earlier successful query in this page session to follow up on. Ask for the latest block number on Diana testnet or ask ELA to check the Diana network first.',
+};
 
 function showStatus(next: QueryState, detail: string): void {
   state.dataset.state = next.toLowerCase();
@@ -37,7 +55,7 @@ function showStatus(next: QueryState, detail: string): void {
 }
 
 function showContext(): void {
-  const current = conversation.current;
+  const current = session.context;
   contextStatus.textContent = current
     ? 'Context: last successful ' + kindLabels[current.kind] + ' · Diana testnet'
     : 'Context: none';
@@ -51,25 +69,21 @@ function describeFailure(error: ToolError): string {
   return error.code === 'unexpected_error' ? 'The query failed unexpectedly.' : error.message;
 }
 
-document.querySelector<HTMLButtonElement>('#example')!.addEventListener('click', () => {
-  command.value = example;
-  command.focus();
-});
-
-document.querySelector<HTMLButtonElement>('#example-network')!.addEventListener('click', () => {
-  command.value = networkExample;
-  command.focus();
-});
+// Example buttons (English first, then Turkish) only fill the command field; they never submit.
+for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-example]')) {
+  button.addEventListener('click', () => {
+    command.value = button.dataset.example ?? '';
+    command.focus();
+  });
+}
 
 clearContext.addEventListener('click', () => {
-  conversation.clear();
+  session.clear();
   showContext();
   command.focus();
 });
 
-type StepView = Pick<StepResult, 'title' | 'rpcMethod' | 'detail'> & { status: StepResult['status'] | 'pending' };
-
-function renderSteps(steps: readonly StepView[]): void {
+function renderSteps(steps: readonly StepResult[]): void {
   planSteps.replaceChildren(...steps.map(step => {
     const item = document.createElement('li');
     item.dataset.status = step.status;
@@ -89,94 +103,75 @@ function renderSteps(steps: readonly StepView[]): void {
   }));
 }
 
-function showPendingPlan(selected: NetworkCheckPlan): void {
-  planTarget.textContent = 'Target: ' + selected.target.name + ' · EVM chain ' + selected.target.evmChainId;
-  planSource.textContent = 'Source: ' + selected.target.endpoint;
-  renderSteps(selected.steps.map(step => ({ ...step, status: 'pending', detail: 'Waiting to run.' })));
-  plan.hidden = false;
-  showStatus('Querying', 'Running ' + selected.steps.length + ' read-only steps against ' + selected.target.name + '…');
+function showData(data: { readonly chainId: string; readonly evmChainId: string; readonly blockNumber: string }): void {
+  blockNumber.textContent = data.blockNumber;
+  chainId.textContent = data.chainId;
+  evmChainId.textContent = data.evmChainId;
 }
 
-/** Runs a query with fresh RPC data, renders it, and records the outcome in the conversation. */
-async function execute(kind: QueryKind, note = ''): Promise<void> {
-  if (kind === 'network_check') {
-    const selected = planCommand(networkExample);
-    if (selected.kind === 'plan') showPendingPlan(selected);
-  } else {
-    showStatus('Querying', note + 'Reading the latest block from Diana testnet…');
-  }
+/** Renders a query the session ran. The session already recorded the outcome in its context. */
+function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void {
+  const basedOn = result.decision.basedOn;
+  const note = basedOn ? 'Follow-up to your last successful ' + kindLabels[basedOn] + '; fresh data requested. ' : '';
 
-  const outcome = await runQuery(kind);
-  conversation.record(kind, outcomeOf(outcome));
-
-  if (outcome.kind === 'network_check') {
-    const result = outcome.result;
-    renderSteps(result.steps);
-    planSource.textContent = 'Source: ' + result.source + ' · checked ' + new Date(result.checkedAt).toLocaleString();
-    if (result.data) {
-      blockNumber.textContent = result.data.blockNumber;
-      chainId.textContent = result.data.chainId;
-      evmChainId.textContent = result.data.evmChainId;
-    }
-    showStatus(result.status === 'success' ? 'Success' : result.status === 'partial' ? 'Partial' : 'Error', note + result.summary);
+  if (result.run.kind === 'network_check') {
+    const checked = result.run.result;
+    planTarget.textContent = TARGET;
+    renderSteps(checked.steps);
+    planSource.textContent = 'Source: ' + checked.source + ' · checked ' + new Date(checked.checkedAt).toLocaleString();
+    plan.hidden = false;
+    if (checked.data) showData(checked.data);
+    showStatus(checked.status === 'success' ? 'Success' : checked.status === 'partial' ? 'Partial' : 'Error', note + checked.summary);
     return;
   }
 
-  const result = outcome.result;
-  if (result.ok) {
-    const data = result.data as { chainId: string; evmChainId: string; blockNumber: string };
-    blockNumber.textContent = data.blockNumber;
-    chainId.textContent = data.chainId;
-    evmChainId.textContent = data.evmChainId;
+  const read = result.run.result;
+  if (read.ok) {
+    showData(read.data as { chainId: string; evmChainId: string; blockNumber: string });
     showStatus('Success', note + 'Latest block received from Diana testnet via EVM JSON-RPC.');
   } else {
-    showStatus('Error', note + describeFailure(result.error));
+    showStatus('Error', note + describeFailure(read.error));
   }
 }
 
-function followUpNote(followUp: Extract<FollowUp, { kind: 'follow_up' }>): string {
-  return 'Follow-up to your last successful ' + kindLabels[followUp.basedOn] + '; fresh data requested. ';
+function showResult(result: CommandResult): void {
+  switch (result.kind) {
+    case 'answered':
+      showAnswer(result);
+      return;
+    case 'refused':
+      // Do not keep secrets on screen.
+      if (result.reason === 'key_material') command.value = '';
+      showStatus('Refused', REFUSALS[result.reason] + ' Nothing was sent. Ask for the latest block or a Diana network check instead.');
+      return;
+    case 'unsupported':
+      showStatus('Unsupported', 'ELA can only check the Diana network and read its latest block. Balances, fees, transactions, and other data are not supported yet.');
+      return;
+    case 'clarify':
+      showStatus('Needs clarification', CLARIFICATIONS[result.reason] ?? GENERIC_CLARIFICATION);
+      return;
+    default:
+      showStatus('Error', 'The command failed unexpectedly. Nothing was changed.');
+  }
 }
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
+  // One command at a time: a submit while a query runs is ignored.
   if (run.disabled) return;
+  run.disabled = true;
 
   blockNumber.textContent = '—';
   chainId.textContent = '—';
   evmChainId.textContent = '—';
   plan.hidden = true;
   planSteps.replaceChildren();
+  showStatus('Querying', 'Working on your command…');
 
-  let kind: QueryKind;
-  let note = '';
-  const followUp = resolveFollowUp(command.value, conversation.current);
-  if (planCommand(command.value).kind === 'plan') {
-    kind = 'network_check';
-  } else if (followUp.kind === 'follow_up') {
-    kind = followUp.run;
-    note = followUpNote(followUp);
-  } else if (followUp.kind === 'needs_clarification') {
-    showStatus('Needs clarification', 'There is no earlier successful query in this page session to follow up on. Ask for the latest block number on Diana testnet or ask ELA to check the Diana network first.');
-    return;
-  } else {
-    const route = routeCommand(command.value);
-    if (route.kind !== 'route' || route.tool !== 'get_block_number') {
-      showStatus('Needs clarification', 'Ask for the latest block number on Diana testnet, ask ELA to check the Diana network, or use an example command.');
-      return;
-    }
-    if (route.network === 'mainnet') {
-      showStatus('Needs clarification', 'This interface queries Diana testnet. Please ask for the testnet block number.');
-      return;
-    }
-    kind = 'block_number';
-  }
-
-  run.disabled = true;
   try {
-    await execute(kind, note);
+    showResult(await session.handleCommand(command.value));
   } catch {
-    showStatus('Error', kind === 'network_check' ? 'The network check failed unexpectedly.' : 'The query failed unexpectedly.');
+    showStatus('Error', 'The command failed unexpectedly. Nothing was changed.');
   } finally {
     run.disabled = false;
     showContext();
@@ -184,3 +179,24 @@ form.addEventListener('submit', async event => {
 });
 
 showContext();
+
+// Post-quantum verification panel. It is closed at first; opening it loads its module and the
+// ML-DSA-87 verifier as a separate chunk. It has its own controls and does not use the session.
+const pqcToggle = document.querySelector<HTMLButtonElement>('#pqc-toggle')!;
+const pqcBody = document.querySelector<HTMLElement>('#pqc-body')!;
+let pqcLoad: Promise<void> | undefined;
+
+pqcToggle.addEventListener('click', () => {
+  const open = pqcBody.hidden;
+  pqcBody.hidden = !open;
+  pqcToggle.setAttribute('aria-expanded', String(open));
+  pqcToggle.textContent = open ? 'Close verifier' : 'Open verifier';
+  if (open && !pqcLoad) {
+    pqcLoad = import('./pqc/panel.ts')
+      .then(panel => panel.mountPanel(pqcBody))
+      .catch(() => {
+        pqcLoad = undefined;
+        document.querySelector<HTMLElement>('#pqc-loading')!.textContent = 'The verifier could not be loaded. Close and open the panel to try again.';
+      });
+  }
+});

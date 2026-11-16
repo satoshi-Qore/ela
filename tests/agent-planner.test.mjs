@@ -895,9 +895,14 @@ test('actOnDecision ignores anything that is not a fixed run decision', async ()
   assert.deepEqual(methods, []);
 });
 
-test('the live interface does not use the intent module yet', () => {
+// Changed in 7C: this test checked that web.ts did not mention the intent module at all. Since 7C
+// the interface reaches it only through the agent session; web.ts may import intent types, never code.
+test('the live interface uses the intent module only through the agent session', () => {
   const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
-  assert.equal(web.includes('intent'), false);
+  const intentImports = web.split('\n').filter(line => /from '\.\/agent\/intent\.ts'/.test(line));
+  assert.ok(intentImports.every(line => /^import type /.test(line)), intentImports.join(' | '));
+  for (const name of ['interpretCommand', 'actOnDecision', 'decideIntent', 'assessRisk']) assert.equal(web.includes(name), false, name);
+  assert.match(web, /import \{ createSession \} from '\.\/agent\/session\.ts';/);
 });
 
 // --- Turkish and English understanding (rule-based lexicon) --------------------------------------
@@ -1082,7 +1087,10 @@ test('English other networks are never selected', () => {
   for (const command of ['Check Diana network.', 'Is QoreChain testnet working?', "What's the latest block?"]) assert.equal(mentionsOtherNetwork(command), false, command);
 });
 
-test('the live interface does not use the rule-based lexicon yet', () => {
+// Changed in 7C (name only): the interface now uses the lexicon, but only inside the agent session.
+test('the live interface reaches the rule-based lexicon only through the agent session', () => {
   const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
   for (const name of ['lexicon', 'understandCommand', 'ruleClassifier']) assert.equal(web.includes(name), false, name);
+  const session = readFileSync(new URL('../src/agent/session.ts', import.meta.url), 'utf8');
+  assert.match(session, /import \{ ruleClassifier \} from '\.\/lexicon\.ts';/);
 });

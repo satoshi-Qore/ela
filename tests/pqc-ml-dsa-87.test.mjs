@@ -263,8 +263,14 @@ test('the module is verification-only and isolated from the agent and the interf
   for (const forbidden of ['fetch', 'XMLHttpRequest', 'WebSocket', 'import(', 'keygen', 'secretKey', 'privateKey', '.sign(', 'localStorage', 'indexedDB']) {
     assert.equal(code.includes(forbidden), false, forbidden);
   }
-  for (const file of ['web.ts', 'router.ts', 'agent/registry.ts', 'agent/planner.ts', 'agent/conversation.ts', 'agent/executor.ts', 'agent/intent.ts', 'agent/lexicon.ts']) {
+  for (const file of ['router.ts', 'agent/registry.ts', 'agent/planner.ts', 'agent/conversation.ts', 'agent/executor.ts', 'agent/intent.ts', 'agent/lexicon.ts', 'agent/session.ts']) {
     const text = readFileSync(new URL('../src/' + file, import.meta.url), 'utf8');
     assert.equal(/pqc|ml-?dsa|verifyMlDsa87/i.test(text), false, file);
   }
+  // Changed in 7F: web.ts was required not to mention PQC at all. It now opens the verification
+  // panel, but only through one dynamic import of the panel module; it never imports the verifier.
+  const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.equal(/verifyMlDsa87|verify-ml-dsa-87|@qorechain\/pqc/.test(web), false);
+  assert.equal(/^import\s+(?!type\b)[^;]*pqc/m.test(web), false, 'no static PQC import');
+  assert.deepEqual([...web.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts']);
 });
