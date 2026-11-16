@@ -19,13 +19,33 @@ Kullanıcı, EFS şifrelemesini ve parola korumalı PFX yedeğini doğruladı. B
 Üretim için kendi Windows oturumunuzda çevrimdışı olarak aşağıdaki tek komutu çalıştırın. İstemde `GENERATE DIANA TEST ACCOUNTS` yazmak dört hesabın oluşturulmasına açık onay verir. Bu alana parola veya mnemonic girmeyin.
 
 ```powershell
-node "E:\ELA\worktrees\ela-agent-v1\prototypes\diana-payment-account\diana-create-accounts.mjs"
+node .\diana-create-accounts.mjs
 ```
 
-Başarı çıktısı yalnız dört rolün genel EVM ve Native adreslerini içerir.
+Komut `prototypes\diana-payment-account` klasöründe, bu dalın güncel kopyasıyla çalıştırılır. Başarı çıktısı yalnız dört rolün genel EVM ve Native adreslerini ve PQC genel anahtarının SHA-256 parmak izini içerir.
 
 ## Doğrulama
 
 - Yayımlanmış Ethereum vektöründen beklenen adres, AES şifreli veri, KDF alanları ve MAC birebir elde edildi. Yönlendirilmiş onay girdisi hesap verisi üretmeden reddedildi. [Üretim aracı testleri](diana-account-generation.test.mjs)
 - **2/2 yeni test ve 2/2 mevcut kriptografi testi geçti.** PowerShell kasa denetimi Codex hesabını kasa kontrolüne geçmeden reddetti. Kullanıcının oturumundaki başarılı kasa yolu ve gerçek hesap kurtarma bu çalışmada yürütülmedi.
 - Git index SHA-256 değeri `668E955F212D74B3CD800087279472E8F5BE7E3424D27CBB8C5EAAB8D94951E7` olarak kaldı. Mevcut ELA kaynakları değiştirilmedi. Gerçek hesap, özel anahtar, zincir işlemi, kayıt veya fon aktarımı oluşturulmadı.
+
+## Kanonik PQC anahtarı — 7C-5
+
+Invoice Owner dahil her rolün ML-DSA-87 anahtarı, SDK 0.14.0’ın kanonik ve adrese bağlı türetimidir: `deriveUnifiedAccount(mnemonic, 0).pqc`, `derivePqcCanonical(qor1, mnemonic)` ile aynıdır. Anahtar mnemonic’ten yeniden üretilebildiği için ayrı PQC anahtar dosyası yazılmaz; ikinci bir yedek gerekmez.
+
+- [diana-canonical-pqc.mjs](diana-canonical-pqc.mjs) kasaya yazmadan önce anahtarın kanonik olduğunu, 2.592 bayt olduğunu ve `validateRegisteredPqcKey('hybrid', …)` denetiminden geçtiğini doğrular. Yalnız algoritma kimliğini ve genel anahtarın SHA-256 parmak izini döndürür. Kendi hesapladığı gizli kopyayı sıfırlar.
+- Üretici, kurtarma kaydına `pqc: { derivation: 'canonical', algorithmId: 1, pqcPublicKeySha256 }` genel alanını ekler ve hesabın PQC gizli tamponunu kullanım sonrasında sıfırlar.
+- Ayrı anahtar üreticisi [diana-create-invoice-pqc.mjs](diana-create-invoice-pqc.mjs) silinmedi ve değiştirilmedi. Kanonik yol seçildiğinde Invoice Owner için çalıştırılmamalıdır.
+- **Mevcut hesaplar (7C-5B).** Önceki biçimdeki kurtarma kaydı (`mnemonic`, `password`, `index`, `sdkVersion`; `pqc` alanı yok) yeniden üretim gerektirmez. `verifyRecoveryRecord(record, { native, evm })` kanonik anahtarı `deriveUnifiedAccount(mnemonic, index)` ile yeniden türetir, bilinen genel adreslerle karşılaştırır ve yalnız genel parmak izini döndürür. Kaydı okumak kullanıcının kendi oturumundadır; fonksiyon dosya okumaz, yazmaz.
+- Testler yalnız herkese açık BIP-39 test mnemonic’ini kullanır: [kanonik PQC testleri](test/diana-canonical-pqc.test.mjs). Gerçek hesap üretilmedi, kasaya erişilmedi.
+
+## Mevcut Invoice Owner kaydının doğrulanması — 7C-6
+
+[diana-verify-recovery.mjs](diana-verify-recovery.mjs) yalnız kullanıcının kendi etkileşimli Windows terminalinde çalışır. Yönlendirilmiş girdiyi kasaya dokunmadan reddeder. `VERIFY DIANA INVOICE OWNER` onayından sonra yalnız `invoice-owner.recovery.json` dosyasını okur: dosya sıradan, en fazla 4 KiB ve EFS şifreli olmalıdır, salt okuma kipinde açılır. Hesap bellekte türetilir ve bilinen genel adreslerle karşılaştırılır. Terminale yalnız rol, `MATCH`, adresler, türetim indeksi, algoritma kimliği ve PQC genel anahtarının SHA-256 parmak izi yazılır. Araç dosya yazmaz, ağ isteği göndermez, mnemonic, parola veya anahtar göstermez. Okunan baytlar ve türetilen ML-DSA-87 gizli tamponları sonuç ne olursa olsun sıfırlanır. JavaScript dizeleri (mnemonic ve SDK’nın döndürdüğü hex özel anahtar) silinemez; süreç işlem sonunda kapanır.
+
+```powershell
+node .diana-verify-recovery.mjs
+```
+
+Testler yalnız herkese açık test mnemonic’iyle çalışır: [doğrulayıcı testleri](test/diana-verify-recovery.test.mjs). Gerçek kasa okunmadı.

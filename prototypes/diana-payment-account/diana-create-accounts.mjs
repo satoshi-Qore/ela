@@ -4,6 +4,7 @@ import { openSync, closeSync, fstatSync, writeFileSync } from 'node:fs';
 import { win32 as path } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveUnifiedAccount, generateMnemonic, qoreAddresses } from '@qorechain/sdk';
+import { canonicalPqcSummary } from './diana-canonical-pqc.mjs';
 import { makeKeystore } from './diana-keystore.mjs';
 
 const roles = ['deployer', 'invoice-owner', 'executor', 'recipient'];
@@ -41,15 +42,19 @@ async function main() {
     const privateKey = Buffer.from(account.privateKey.slice(2), 'hex');
     const password = randomBytes(32).toString('base64url');
     try {
+      // The ML-DSA-87 key is the SDK's canonical, address-bound key: re-derivable from the mnemonic,
+      // so no separate PQC key file is written. Only its public fingerprint is recorded and shown.
+      const pqc = canonicalPqcSummary(account, mnemonic);
       const keystore = makeKeystore(privateKey, password, {
         salt: randomBytes(32), iv: randomBytes(16), id: randomUUID(), iterations: 600000,
       });
       if ('0x' + keystore.address !== address) throw new Error('Keystore address mismatch');
-      writeReservedFile(role, 'recovery', { mnemonic, password, index: 0, sdkVersion: '0.14.0' });
+      writeReservedFile(role, 'recovery', { mnemonic, password, index: 0, sdkVersion: '0.14.0', pqc: { derivation: 'canonical', ...pqc } });
       writeReservedFile(role, 'v3', keystore);
-      addresses.push({ role, evm: account.evm, native: account.cosmos });
+      addresses.push({ role, evm: account.evm, native: account.cosmos, pqcPublicKeySha256: pqc.pqcPublicKeySha256 });
     } finally {
       privateKey.fill(0);
+      account.pqc.secretKey.fill(0);
     }
   }
   process.stdout.write(JSON.stringify(addresses, null, 2) + '\n');

@@ -4,6 +4,8 @@
 
 ## Anahtar seçimi ve saklama
 
+> **7C-5 güncellemesi:** Invoice Owner için önerilen yol artık [kanonik PQC anahtarıdır](DIANA-ACCOUNT-GENERATION.md#kanonik-pqc-anahtarı--7c-5). Aşağıdaki ayrı anahtar akışı başvuru için korunur; kanonik yol seçildiğinde çalıştırılmamalıdır.
+
 Önceki araç `deriveUnifiedAccount` ile kanonik PQC anahtarını da bellekte türetir. Kasadaki hesap kurtarma kaydı mnemonic ve türetim bilgisini tutar. O PQC anahtarının ayrı dosyaya yazıldığına veya Diana'ya kaydedildiğine ilişkin kanıt yok. 7C-1, mevcut mnemonic'i açmadan QoreChain SDK 0.14.0 `generatePqcKeypair` ile bağımsız ML-DSA-87 anahtarı üretme yolunu seçer. Yeni anahtarın Native hesaba bağı, kayıt anında hesabın klasik imzası ve yeni anahtarın PoP imzasıyla kurulur. Kayıt sonrasındaki hibrit imzalayıcı bu ayrı PQC anahtarını kullanmalıdır. Eski mnemonic'in kanonik PQC türetimi bu yeni anahtarı kurtaramaz. Kasa dosyasının EFS yedeği bu nedenle önemlidir. Bağımsız EFS kurtarma provası hâlâ doğrulanmadı. [Önceki hesap üreticisi](diana-create-accounts.mjs) · [Resmî anahtar kaydı](https://docs.qorechain.io/developer-guide/post-quantum-signing/)
 
 [diana-create-invoice-pqc.mjs](diana-create-invoice-pqc.mjs) iki **genel** Invoice Owner adresini sorar. SDK ile Native `qor1…` ve EVM `0x…` adreslerinin aynı 20 bayta karşılık geldiğini doğrular. Adres çiftinin gerçekten Invoice Owner rolünden alındığı kullanıcı tarafından kontrol edilir. Ortak [Windows kasa denetimi](prepare-diana-vault.ps1) yerel etkileşimli oturumu, sahiplik ve erişim listesini, sabit NTFS konumunu ve EFS özniteliğini denetler. Kullanıcı onayından sonra EFS özniteliği doğrulanan boş hedef hazırlanır. Dosya mevcutsa üzerine yazılmaz.
