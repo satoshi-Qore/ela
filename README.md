@@ -1,5 +1,7 @@
 # ELA — Execution & Logic Agent
 
+[![Built on QoreChain](https://build.qorechain.io/badge/ela-execution-logic-agent.svg)](https://build.qorechain.io/p/ela-execution-logic-agent)
+
 ELA is an early-stage TypeScript project: a read-only agent that understands English and Turkish commands and reads public data from the QoreChain Diana testnet.
 
 ## Current capabilities
