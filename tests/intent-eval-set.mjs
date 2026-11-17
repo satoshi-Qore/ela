@@ -218,5 +218,7 @@ export const intentEvalSet = Object.freeze([
   negative('Ethereum son blok kaç?', 'block_number', 'clarify:unsupported_network'),
   negative('QoreChain ana ağını kontrol et.', 'network_check', 'clarify:unsupported_network'),
   negative('Bu adresin bakiyesini göster: 0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'unsupported', 'clarify:unsupported_parameters'),
-  negative('qor1qypqxpq9qcrsszg2pvxq6rs0zqg3yyc5lzv7xu adresinin bakiyesi ne?', 'unsupported', 'clarify:unsupported_parameters'),
+  // Changed in 7C-28: balance queries take one qor1 address now. This one fails its Bech32 checksum,
+  // so ELA asks for a valid address instead of declining every address; nothing is sent either way.
+  negative('qor1qypqxpq9qcrsszg2pvxq6rs0zqg3yyc5lzv7xu adresinin bakiyesi ne?', 'unsupported', 'clarify:invalid_address'),
 ]);

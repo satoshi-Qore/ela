@@ -1,9 +1,9 @@
 import type { ReadOptions } from '../qorechain/read-client.ts';
 import { routeCommand } from '../router.ts';
 import { resolveFollowUp, runQuery } from './conversation.ts';
-import type { ConversationContext, QueryKind, QueryRun } from './conversation.ts';
+import type { ContextKind, ConversationContext, QueryRun } from './conversation.ts';
 import { planCommand } from './planner.ts';
-import { DIANA_NETWORK } from './registry.ts';
+import { DIANA_NETWORK, loadBalance } from './registry.ts';
 
 /**
  * Intent understanding foundation. A future local classifier may only pick one label from this
@@ -73,19 +73,32 @@ export type ClarifyReason =
   | 'invalid_classifier_output'
   | 'unknown_intent'
   | 'low_confidence'
-  | 'ambiguous_intent';
+  | 'ambiguous_intent'
+  | 'invalid_address';
 
 export type DecisionSource = 'safety_gate' | 'input_check' | 'deterministic' | 'classifier';
 
 export type IntentDecision =
   | {
       readonly kind: 'run';
-      readonly query: QueryKind;
+      readonly query: ContextKind;
       readonly intent: ActionIntent;
       readonly source: 'deterministic' | 'classifier';
-      readonly basedOn?: QueryKind;
+      readonly basedOn?: ContextKind;
       readonly confidence?: number;
       readonly margin?: number;
+    }
+  /**
+   * A native QOR balance read. Only the deterministic balance rules produce it, with an address
+   * that passed the Bech32 checksum; a classifier has no label for it and can never supply one.
+   */
+  | {
+      readonly kind: 'run';
+      readonly query: 'balance';
+      readonly intent: 'balance';
+      readonly source: 'deterministic';
+      readonly address: string;
+      readonly basedOn?: undefined;
     }
   | { readonly kind: 'refuse'; readonly reason: RiskCategory; readonly source: 'safety_gate' }
   | { readonly kind: 'unsupported'; readonly source: 'classifier'; readonly confidence: number; readonly margin: number }
@@ -331,7 +344,7 @@ function readCandidates(output: unknown): IntentCandidate[] | undefined {
 }
 
 /** Maps an accepted action label to a fixed query kind. Nothing from the classifier is passed on. */
-function mapIntent(intent: ActionIntent, context: ConversationContext | undefined): { query: QueryKind; basedOn?: QueryKind } | undefined {
+function mapIntent(intent: ActionIntent, context: ConversationContext | undefined): { query: ContextKind; basedOn?: ContextKind } | undefined {
   if (intent === 'network_check' || intent === 'block_number') return { query: intent };
   if (!context || context.network !== DIANA_NETWORK) return undefined;
   // Both earlier query kinds report a block height, so "how much now" reads the latest block.
@@ -390,6 +403,14 @@ export async function interpretCommand(
   const risk = assessRisk(command);
   if (risk.risk === 'blocked') return Object.freeze({ kind: 'refuse', reason: risk.category, source: 'safety_gate' });
   if (mentionsOtherNetwork(command)) return clarify('unsupported_network', 'input_check');
+  // A balance query is the only intent that takes a parameter: exactly one checksum-valid qor1
+  // address. Its rules load only for a command that mentions qor1 (a separate chunk on the web).
+  const balance = /qor1/iu.test(command) ? (await loadBalance()).recognizeBalanceRequest(command) : { kind: 'none' as const };
+  if (balance.kind === 'invalid_address') return clarify('invalid_address', 'input_check');
+  if (balance.kind === 'multiple_addresses' || balance.kind === 'unsupported_address') return clarify('unsupported_parameters', 'input_check');
+  if (balance.kind === 'balance') {
+    return Object.freeze({ kind: 'run', query: 'balance', intent: 'balance', source: 'deterministic', address: balance.address });
+  }
   if (parameterPattern.test(normalize(command))) return clarify('unsupported_parameters', 'input_check');
 
   if (planCommand(command).kind === 'plan') {
@@ -428,6 +449,7 @@ export async function interpretCommand(
  */
 export async function actOnDecision(decision: IntentDecision, options: ReadOptions = {}): Promise<QueryRun | undefined> {
   if (decision.kind !== 'run') return undefined;
+  if (decision.query === 'balance') return (await loadBalance()).runBalanceQuery(decision.address, options);
   if (decision.query !== 'network_check' && decision.query !== 'block_number') return undefined;
   return runQuery(decision.query, options);
 }

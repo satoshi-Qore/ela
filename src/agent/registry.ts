@@ -1,6 +1,7 @@
 import { getEvmBlockNumber } from '../qorechain/get-evm-block-number.ts';
 import { isRecord, QORECHAIN_TESTNET, QoreChainReadError } from '../qorechain/read-client.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
+import type { BalanceReading } from './balance.ts';
 import type { RpcMethod } from './planner.ts';
 
 /** The only network any registered tool may target. */
@@ -75,11 +76,31 @@ const getEvmBlockNumberTool = defineTool({
   run: (_params, runtime) => getEvmBlockNumber(runtime),
 });
 
+export type { BalanceReading };
+
+/** A 20-byte native QoreChain account address in lower case. */
+export const QOR_ADDRESS_PATTERN = /^qor1[02-9ac-hj-np-z]{38}$/u;
+
+/** The balance rules and reader, loaded on demand (a separate chunk in the web build). */
+export const loadBalance = () => import('./balance.ts');
+
+const getBalanceTool = defineTool<BalanceReading>({
+  id: 'get_balance',
+  description: 'Verify the Diana EVM chain ID (9800), then read the native QOR balance of one qor1 account with eth_getBalance.',
+  network: DIANA_NETWORK,
+  readOnly: true,
+  rpcMethods: ['eth_chainId', 'eth_getBalance'],
+  params: { address: { type: 'string', required: true, pattern: QOR_ADDRESS_PATTERN } },
+  // The endpoint is fixed; the runtime supplies only fetch and timeoutMs, never a URL.
+  run: async (params, runtime) => (await loadBalance()).readBalance(params.address as string, runtime),
+});
+
 const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.freeze(Object.assign(Object.create(null), {
   [getEvmBlockNumberTool.id]: getEvmBlockNumberTool,
+  [getBalanceTool.id]: getBalanceTool,
 }));
 
-export type ToolId = 'get_evm_block_number';
+export type ToolId = 'get_evm_block_number' | 'get_balance';
 
 /** Returns the registered tool, or `undefined` for any id that is not an own registry entry. */
 export function getTool(id: unknown): ToolDefinition | undefined {

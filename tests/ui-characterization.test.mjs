@@ -116,7 +116,7 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
-  const rpc = { mode: 'ok', height: '0x97e6b0', calls: [] };
+  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', calls: [] };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
@@ -125,6 +125,8 @@ const RPC_STUB = `(() => {
     rpc.calls.push({ url: String(input), httpMethod: init.method, credentials: init.credentials, redirect: init.redirect, method: body && body.method });
     const id = body && body.id;
     const isChain = body && body.method === 'eth_chainId';
+    // New in 7C-28: eth_getBalance answers with the scripted balance (18-decimal base units, hex).
+    if (body && body.method === 'eth_getBalance' && (rpc.mode === 'ok' || rpc.mode === 'slow')) return Promise.resolve(reply(id, rpc.balance));
     switch (rpc.mode) {
       case 'network_error': return Promise.reject(new TypeError('Failed to fetch'));
       case 'http_500': return Promise.resolve(new Response('upstream detail', { status: 500 }));
@@ -282,7 +284,9 @@ const MSG = {
   // New in 7C.
   clarifyNetwork: 'This interface only reads Diana testnet. Other networks, such as mainnet, are not supported.',
   clarifyEmpty: 'Type a command, for example "Check Diana network." or "Diana ağını kontrol et."',
-  unsupported: 'ELA can only check the Diana network and read its latest block. Balances, fees, transactions, and other data are not supported yet.',
+  // Changed in 7C-28: was "ELA can only check the Diana network and read its latest block. Balances,
+  // fees, transactions, and other data are not supported yet." A qor1 address's balance is readable now.
+  unsupported: 'ELA can check the Diana network, read its latest block, and read the QOR balance of a qor1 address you give it. Your own balance, fees, transactions, and other data are not supported yet.',
 };
 const REFUSAL_TAIL = ' Nothing was sent. Ask for the latest block or a Diana network check instead.';
 const REFUSED = {
@@ -954,7 +958,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['Refused', REFUSED.key_material, 'Reddedildi', 'ELA asla özel anahtar, tohum ifadesi, kurtarma ifadesi veya parola istemez ve işlemez. Bunları paylaşmayın. Komut alanı temizlendi.' + tail, 0],
       ['Refused', REFUSED.wallet_control, 'Reddedildi', 'ELA cüzdan bağlamaz, oluşturmaz veya yönetmez.' + tail, 0],
       ['Refused', REFUSED.state_change, 'Reddedildi', 'ELA sözleşme dağıtamaz, stake edemez, takas yapamaz, basım yapamaz veya zincir durumunu başka şekilde değiştiremez; yalnızca Diana test ağını okur.' + tail, 0],
-      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA yalnızca Diana ağını kontrol edebilir ve son bloğunu okuyabilir. Bakiye, ücret, işlem ve diğer veriler henüz desteklenmiyor.', 0],
+      // Changed in 7C-28 (see MSG.unsupported).
+      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu okuyabilir ve verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir. Kendi bakiyeniz, ücretler, işlemler ve diğer veriler henüz desteklenmiyor.', 0],
       ['Needs clarification', MSG.clarifyGeneric, 'Açıklama gerekli', "Diana test ağındaki son blok numarasını sorun, ELA'dan Diana ağını kontrol etmesini isteyin veya bir örnek komut kullanın.", 0],
       ['Needs clarification', MSG.clarifyEmpty, 'Açıklama gerekli', 'Bir komut yazın, örneğin "Diana ağını kontrol et." veya "Check Diana network."', 0],
       ['Needs clarification', MSG.clarifyNetwork, 'Açıklama gerekli', 'Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.', 0],
@@ -1659,14 +1664,21 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     if (PROBE) return;
     // Changed in 7C-27: two chunks before (main, panel); now also the ELA Core chunk, its shared
     // drawing helpers, and one chunk per Core view. The main budget below is unchanged.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel'], scripts.join(', '));
+    // Changed in 7C-28: also the balance chunk, loaded only for a command that mentions qor1.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
       const code = readFileSync(join(env.outDir, 'assets', name), 'utf8');
       for (const marker of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'handleCommand', 'verifyMlDsa87', 'f96bc953da4e941be8354a22']) assert.equal(code.includes(marker), false, name + ': ' + marker);
     }
-    assert.ok(sizes[main].gzip <= 13 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13 KiB budget`);
+    // Changed in 7C-28: the gzip budget was 13 KiB (main was 13,293 bytes, 19 under it). The balance
+    // rules, address conversion, and reader are a lazy chunk behind one dynamic import; main gains
+    // only the registry entry, the balance decision, and the two readout rows (about 460 bytes
+    // gzip, measured). The raw budget is unchanged.
+    const balanceChunk = scripts.find(name => name.startsWith('balance-'));
+    assert.ok(sizes[balanceChunk].gzip <= 2 * 1024, `${balanceChunk} gzip ${sizes[balanceChunk].gzip} bytes exceeds the 2 KiB budget`);
+    assert.ok(sizes[main].gzip <= 13.5 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13.5 KiB budget`);
     assert.ok(sizes[main].bytes <= 36 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 36 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
@@ -1720,6 +1732,82 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.ok(calls.every(call => call.url === 'https://evm-testnet.qore.host/'));
   });
 
+  // New in 7C-28: native QOR balance of one qor1 account, read-only, Diana testnet only, through the
+  // official Diana EVM JSON-RPC (eth_chainId, then eth_getBalance).
+  const FAUCET = 'qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw08';
+  const FAUCET_HEX = '0xf1e70c24817e00aee286f7275e14e61cabd20741';
+  const BALANCE_VIEW = `(() => ({
+    message: document.getElementById('query-message').textContent,
+    qor: document.getElementById('balance-qor').textContent,
+    uqor: document.getElementById('balance-uqor').textContent,
+    codes: [...document.querySelectorAll('#flow .flow-code')].map(code => code.textContent),
+    flow: [...document.querySelectorAll('#flow > li')].map(item => item.dataset.state),
+    calls: window.__rpc.calls.map(call => [call.url, call.httpMethod, call.credentials, call.redirect, call.method]),
+  }))()`;
+  const BALANCE_CALLS = [
+    ['https://evm-testnet.qore.host/', 'POST', 'omit', 'error', 'eth_chainId'],
+    ['https://evm-testnet.qore.host/', 'POST', 'omit', 'error', 'eth_getBalance'],
+  ];
+  const balanceHex = (base) => `window.__rpc.balance = '0x${BigInt(base).toString(16)}'`;
+
+  uiTest('balance query (Turkish and English) shows the real uqor and QOR values from eth_getBalance and leaves the context unchanged', async t => {
+    await openPage();
+    await evaluate(balanceHex('9007199254740993123456000000000000'));
+    const tr = await submit(FAUCET + ' adresinin bakiyesini göster.');
+    expectView(t, tr, { state: 'Success', block: '—', chain: 'qorechain-diana', evmChain: '9800', planVisible: false, context: CONTEXT_NONE, clearEnabled: false });
+    const trView = await evaluate(BALANCE_VIEW);
+    expectView(t, trView, {
+      qor: '9007199254740993.123456', uqor: '9007199254740993123456', codes: ['eth_chainId', 'eth_getBalance'],
+      flow: ['done', 'pass', 'recognized', 'ok', 'ok', 'success'], calls: BALANCE_CALLS,
+      message: 'Balance of ' + FAUCET + ' read from Diana testnet via EVM JSON-RPC (chain 9800 verified): 9007199254740993.123456 QOR, 9007199254740993123456 uqor.',
+    }, 'tr');
+    const params = await evaluate(`window.__rpc.calls.map(call => call.url)`);
+    if (!PROBE) assert.ok(params.every(url => url === 'https://evm-testnet.qore.host/'));
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.equal(turkish, FAUCET + ' adresinin bakiyesi Diana test ağından EVM JSON-RPC ile okundu (zincir 9800 doğrulandı): 9007199254740993.123456 QOR, 9007199254740993123456 uqor.');
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+
+    // A block query first, then a balance with a part below 1 uqor: the context stays on the block query.
+    await submit('Son blok kaç?');
+    await evaluate(balanceHex('43399778337500000000'));
+    const en = await submit('How much QOR does ' + FAUCET.toUpperCase() + ' have?');
+    expectView(t, en, { state: 'Success', block: '—', context: CONTEXT_BLOCK, clearEnabled: true }, 'en');
+    expectView(t, await evaluate(BALANCE_VIEW), {
+      qor: '43.3997783375', uqor: '43399778', calls: BALANCE_CALLS,
+      message: 'Balance of ' + FAUCET + ' read from Diana testnet via EVM JSON-RPC (chain 9800 verified): 43.3997783375 QOR, 43399778 uqor. The QOR value includes a part below 1 uqor, which the uqor value leaves out.',
+    }, 'en view');
+    // The next block query restores the method name in the flow and clears the balance.
+    await submit('Son blok kaç?');
+    expectView(t, await evaluate(BALANCE_VIEW), { qor: '—', uqor: '—', codes: ['eth_chainId', 'eth_blockNumber'] }, 'after');
+  });
+
+  uiTest('balance query: invalid address, EVM address, or a transfer sends nothing; read failures are explained', async t => {
+    await openPage();
+    for (const [command, state] of [
+      ['qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw09 adresinin bakiyesini göster', 'Needs clarification'],
+      ['Show the balance of ' + FAUCET_HEX, 'Needs clarification'],
+      ['Balance of qor1qqrsu9guyv4rzwplgex4gkmzd9c8wl593jfe4gdg47mtm3xt6tvsy3zpd2', 'Needs clarification'],
+      ['Send all QOR from ' + FAUCET + ' to Alice.', 'Refused'],
+      [FAUCET + ' adresinin bakiyesini mainnet üzerinde göster', 'Needs clarification'],
+    ]) {
+      const observed = await submit(command);
+      expectView(t, observed, { state, rpc: [] }, command);
+    }
+    const invalid = await submit('What is the balance of qor1abc?');
+    if (!PROBE) assert.equal(invalid.message, 'That is not a valid QoreChain address. Give one native qor1… address with a valid checksum, for example "What is the balance of qor1…?" Nothing was sent.');
+
+    await setMode('network_error');
+    const offline = await submit('Balance of ' + FAUCET);
+    expectView(t, offline, { state: 'Error', context: CONTEXT_NONE, message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    await setMode('stall');
+    const stalled = await submit('Balance of ' + FAUCET, { timeoutMs: 20_000 });
+    expectView(t, stalled, { state: 'Error', message: 'QoreChain request timed out.', rpc: ['eth_chainId'] }, 'timeout');
+    await setMode('wrong_chain');
+    const wrong = await submit('Balance of ' + FAUCET);
+    // Only the chain check was sent: the balance is never read from another chain.
+    expectView(t, wrong, { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+    expectView(t, await evaluate(BALANCE_VIEW), { qor: '—', uqor: '—' }, 'wrong chain readout');
+  });
   uiTest('recognized Turkish variants', async t => {
     for (const [command, expected] of [
       ['Son blok numarası kaç?', 'block'], ['son blok numarasını göster', 'block'], ['Testnette son blok numarasını öğren.', 'block'],
