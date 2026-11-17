@@ -195,8 +195,8 @@ export function selfSendMessage(plan = PLAN) {
  * The unsigned parts, exactly as `signHybridEth` builds them: B0 (body without the extension), A
  * (auth info) and the bytes the ML-DSA-87 key would sign. No key is involved.
  */
-export function unsignedHybridParts({ publicKeyHex, plan = PLAN, registry = sdk.qorechainRegistry() }) {
-  const messages = [registry.encodeAsAny(selfSendMessage(plan))];
+export function unsignedHybridParts({ publicKeyHex, plan = PLAN, registry = sdk.qorechainRegistry(), message = selfSendMessage(plan) }) {
+  const messages = [registry.encodeAsAny(message)];
   const b0 = TxBody.encode(TxBody.fromPartial({ messages, memo: plan.memo, timeoutHeight: BigInt(plan.timeoutHeight ?? 0) })).finish();
   const authInfoBytes = AuthInfo.encode(AuthInfo.fromPartial({
     signerInfos: [SignerInfo.fromPartial({
