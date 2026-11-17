@@ -46,7 +46,7 @@ export function failureMessage(error) {
 }
 
 // Read-only file access: a regular, EFS-encrypted, small file, opened for reading only.
-function readRecordBytes(file) {
+export function readRecordBytes(file) {
   const before = lstatSync(file);
   if (!before.isFile() || before.isSymbolicLink() || before.size === 0 || before.size > MAX_RECORD_BYTES) throw new Error('Unreadable recovery record');
   const powerShell = path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');

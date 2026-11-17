@@ -43,6 +43,17 @@ export function canonicalPqcSummary(account, mnemonic, deps = {}) {
  * `deps.derive` / `deps.canonical` replace the SDK derivations in tests only.
  */
 export async function verifyRecoveryRecord(record, expected, deps = {}) {
+  return withVerifiedAccount(record, expected, (account, summary, index) => ({ native: account.cosmos, evm: account.evm, index, ...summary }), deps);
+}
+
+/**
+ * Runs `use(account, summary, index)` with the account a recovery record derives, after the same
+ * checks as {@link verifyRecoveryRecord}: the record derives the expected public addresses, its
+ * ML-DSA-87 key is the canonical address-bound key, and any recorded fingerprint matches. The
+ * account (with its secret keys) exists only for the duration of `use`; its ML-DSA-87 secret key
+ * is zeroed afterwards, whether `use` returns or throws. `use` must not keep the account.
+ */
+export async function withVerifiedAccount(record, expected, use, deps = {}) {
   if (record === null || typeof record !== 'object' || typeof record.mnemonic !== 'string') throw new Error('Unreadable recovery record');
   const index = record.index ?? 0;
   if (!Number.isInteger(index) || index < 0) throw new Error('Invalid derivation index');
@@ -58,7 +69,7 @@ export async function verifyRecoveryRecord(record, expected, deps = {}) {
     if (record.pqc !== undefined && record.pqc.pqcPublicKeySha256 !== summary.pqcPublicKeySha256) {
       throw new Error('Recorded PQC fingerprint does not match the derived key');
     }
-    return { native: account.cosmos, evm: account.evm, index, ...summary };
+    return await use(account, summary, index);
   } finally {
     account.pqc.secretKey.fill(0);
     account = undefined;
