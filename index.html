@@ -8,6 +8,8 @@
     <!-- No icon file: an empty data URI keeps browsers from requesting /favicon.ico. -->
     <link rel="icon" href="data:,">
     <title>ELA — Execution &amp; Logic Agent</title>
+    <!-- Applies the stored theme (White, Black; Blue is the default) before the first paint. -->
+    <script>try { var t = localStorage.getItem('ela-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
     <!-- Interface text catalog. "en" holds most messages src/web.ts and src/pqc/panel.ts write at run
          time (static English text stays in the markup below); "tr" translates both. Keys missing in
          "tr" fall back to "en". {name} marks a value inserted unchanged. In English, the agent's own
@@ -101,7 +103,41 @@
     "pqc.count": "hex · {size} · needs {need}",
     "pqc.countMsg": "hex · {size} · at most 64 KiB",
     "pqc.bytes": "{n} bytes",
-    "pqc.notHex": "not hexadecimal"
+    "pqc.notHex": "not hexadecimal",
+
+    "theme.label": "Theme",
+    "theme.light": "White",
+    "theme.dark": "Black",
+    "theme.blue": "Blue",
+    "core.title": "ELA Core",
+    "core.view": "Core view",
+    "core.legend": "State language",
+    "view.karot": "Core sample",
+    "view.optik": "Optical bench",
+    "view.gravur": "Engraving",
+    "core.s.waiting": "Waiting",
+    "core.s.running": "Running",
+    "core.s.ok": "Succeeded",
+    "core.s.blocked": "Blocked",
+    "core.s.failed": "Failed",
+    "core.s.skipped": "Skipped",
+    "core.s.unknown": "Unknown",
+    "core.k.title": "SPECIMEN SECTION",
+    "core.k.depth": "Depth reached · {n} / 06",
+    "core.k.idle": "Probe raised · waiting for a command",
+    "core.k.sealed": "Not opened · {n} layers sealed",
+    "core.k.all": "All six layers opened",
+    "core.o.title": "SIGNAL PATH",
+    "core.o.cmd": "COMMAND",
+    "core.o.det": "DETECTOR",
+    "core.o.none": "no signal",
+    "core.o.arrived": "signal arrived",
+    "core.o.stopped": "{stage} · signal stopped here",
+    "core.o.scattered": "{stage} · signal scattered here",
+    "core.g.title": "EXECUTION SEAL",
+    "core.g.cols": "RING · STAGE · STATE",
+    "core.g.stopped": "stopped at {n}",
+    "core.g.count": "{n} / 6 stages"
   },
   "tr": {
     "title": "ELA — Yürütme ve Mantık Ajanı",
@@ -195,6 +231,39 @@
     "pqc.countMsg": "hex · {size} · en fazla 64 KiB",
     "pqc.bytes": "{n} bayt",
     "pqc.notHex": "onaltılık değil",
+
+    "theme.label": "Tema",
+    "theme.light": "Beyaz",
+    "theme.dark": "Siyah",
+    "theme.blue": "Mavi",
+    "core.view": "Core görünümü",
+    "core.legend": "Durum dili",
+    "view.karot": "Karot",
+    "view.optik": "Optik",
+    "view.gravur": "Gravür",
+    "core.s.waiting": "Bekliyor",
+    "core.s.running": "Çalışıyor",
+    "core.s.ok": "Başarılı",
+    "core.s.blocked": "Engellendi",
+    "core.s.failed": "Başarısız",
+    "core.s.skipped": "Atlandı",
+    "core.s.unknown": "Bilinmiyor",
+    "core.k.title": "NUMUNE KESİTİ",
+    "core.k.depth": "Erişilen derinlik · {n} / 06",
+    "core.k.idle": "Sonda yukarıda · komut bekleniyor",
+    "core.k.sealed": "Açılmadı · {n} katman mühürlü",
+    "core.k.all": "Altı katman açıldı",
+    "core.o.title": "SİNYAL YOLU",
+    "core.o.cmd": "KOMUT",
+    "core.o.det": "DEDEKTÖR",
+    "core.o.none": "sinyal yok",
+    "core.o.arrived": "sinyal ulaştı",
+    "core.o.stopped": "{stage} · sinyal burada durdu",
+    "core.o.scattered": "{stage} · sinyal burada dağıldı",
+    "core.g.title": "YÜRÜTME MÜHRÜ",
+    "core.g.cols": "HALKA · AŞAMA · DURUM",
+    "core.g.stopped": "{n}'de durdu",
+    "core.g.count": "{n} / 6 aşama",
 
     "fs.idle": "çalışmadı",
     "fs.wait": "bekliyor",
@@ -326,6 +395,11 @@
             <button type="button" data-lang="en" lang="en" aria-label="English" aria-pressed="true">EN</button>
             <button type="button" data-lang="tr" lang="tr" aria-label="Türkçe" aria-pressed="false">TR</button>
           </div>
+          <div class="switch theme-switch" id="theme-switch" role="radiogroup" aria-label="Theme" data-i18n-label="theme.label">
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" aria-label="White" data-i18n-label="theme.light" data-theme="light"><span class="swatch" aria-hidden="true"></span><span class="switch-text" data-i18n="theme.light">White</span></button>
+            <button type="button" role="radio" aria-checked="false" tabindex="-1" aria-label="Black" data-i18n-label="theme.dark" data-theme="dark"><span class="swatch" aria-hidden="true"></span><span class="switch-text" data-i18n="theme.dark">Black</span></button>
+            <button type="button" role="radio" aria-checked="true" tabindex="0" aria-label="Blue" data-i18n-label="theme.blue" data-theme="blue"><span class="swatch" aria-hidden="true"></span><span class="switch-text" data-i18n="theme.blue">Blue</span></button>
+          </div>
         </div>
       </div>
     </header>
@@ -410,6 +484,29 @@
             <span class="tag" data-tone="live" data-i18n="tag.logic">Active · rule-based</span>
           </div>
           <p class="module-copy" data-i18n="logic.copy">Each stage shows what actually ran for the last command. Stages that did not run stay marked "not run".</p>
+
+          <div class="core">
+            <div class="core-bar">
+              <p class="core-title" data-i18n="core.title">ELA Core</p>
+              <div class="switch" id="view-switch" role="radiogroup" aria-label="Core view" data-i18n-label="core.view">
+                <button type="button" role="radio" aria-checked="true" tabindex="0" data-view="karot"><span class="switch-key" aria-hidden="true">C</span><span data-i18n="view.karot">Core sample</span></button>
+                <button type="button" role="radio" aria-checked="false" tabindex="-1" data-view="optik"><span class="switch-key" aria-hidden="true">A</span><span data-i18n="view.optik">Optical bench</span></button>
+                <button type="button" role="radio" aria-checked="false" tabindex="-1" data-view="gravur"><span class="switch-key" aria-hidden="true">B</span><span data-i18n="view.gravur">Engraving</span></button>
+              </div>
+            </div>
+            <div class="core-body">
+              <div id="core-viz" class="core-viz"></div>
+              <ul class="core-legend" aria-label="State language" data-i18n-label="core.legend">
+                <li data-status="waiting"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-waiting);stroke-width:1.3;stroke-dasharray:1.2 2.4"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.waiting">Waiting</span></li>
+                <li data-status="running"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-running);stroke-width:1.3"/><path d="M0-6V6L-6 0Z" style="fill:var(--s-running)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.running">Running</span></li>
+                <li data-status="ok"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--s-ok);stroke:var(--s-ok);stroke-width:1.3"/><path d="M-2.7 0L-.5 2.2 2.7-1.9" style="fill:none;stroke:var(--core-well);stroke-width:1.6;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.ok">Succeeded</span></li>
+                <li data-status="blocked"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-blocked);stroke-width:2"/><path d="M-3.7 0H3.7" style="stroke:var(--s-blocked);stroke-width:2.4;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.blocked">Blocked</span></li>
+                <li data-status="failed"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-failed);stroke-width:1.3"/><path d="M-2.7-2.7L2.7 2.7M2.7-2.7L-2.7 2.7" style="stroke:var(--s-failed);stroke-width:1.4;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.failed">Failed</span></li>
+                <li data-status="skipped"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-skipped);stroke-width:1.3;stroke-dasharray:2.2 2"/><path d="M-2.2 0H2.2" style="stroke:var(--s-skipped);stroke-width:1.2"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.skipped">Skipped</span></li>
+                <li data-status="unknown"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-unknown);stroke-width:1.3;stroke-dasharray:1.2 2.2"/><path d="M-1.5-1.5Q0-3.4 1.5-1.5Q1.6 0 0 .5" style="fill:none;stroke:var(--s-unknown);stroke-width:1.2"/><circle cx="0" cy="2.3" r=".8" style="fill:var(--s-unknown)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.unknown">Unknown</span></li>
+              </ul>
+            </div>
+          </div>
 
           <ol id="flow" class="flow" aria-label="Execution flow" data-i18n-label="flow.label">
             <li data-state="idle"><span class="flow-n">01</span><span class="flow-name" data-i18n="flow.cmd">Command</span><span class="flow-state">not run</span></li>

@@ -422,9 +422,11 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const tab = async () => { for (const type of ['keyDown', 'keyUp']) await env.page.send('Input.dispatchKeyEvent', { type, key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 }); };
     let stops = 0;
     while (stops < 12 && await evaluate(`document.activeElement.id`) !== 'command') { await tab(); stops++; }
+    // Changed in 7C-27: the theme selector (top bar) and the Core view selector (before the command
+    // panel) are radio groups with one Tab stop each, so two stops were added: 7 before, 9 now.
     if (!PROBE) {
       assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
-      assert.equal(stops, 7, 'two language buttons and four module links come first');
+      assert.equal(stops, 9, 'two language buttons, the theme group, four module links, and the Core view group come first');
     }
     await tab();
     desktop.focus = await evaluate(`(() => {
@@ -1031,6 +1033,291 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.deepEqual(traffic, { rpc: 0, requests: [], langMarks: 0 });
   });
 
+  // --- New in 7C-27: three themes and three ELA Core views --------------------------------------
+  // The Core (src/core) draws only what web.ts rendered from the real session result: the execution
+  // flow, the query state, and the readout. Theme and view switches restyle or redraw that same record;
+  // they never run a command, send an RPC, or verify anything. Every test restores the default theme
+  // and view (Blue, Karot) so the tests after it see the page as a first-time visitor does.
+
+  const resetCore = () => evaluate(`(() => { try { localStorage.removeItem('ela-theme'); localStorage.removeItem('ela-view'); } catch {} delete document.documentElement.dataset.theme; })()`);
+  const clickAt = async selector => {
+    const [x, y] = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    for (const type of ['mousePressed', 'mouseReleased']) await env.page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+  };
+  const pressKey = async (key, code) => { for (const type of ['keyDown', 'keyUp']) await env.page.send('Input.dispatchKeyEvent', { type, key, code: key, windowsVirtualKeyCode: code }); };
+  // Waits until the Core shows `view` and has drawn the current record: no redraw is pending (data-pending).
+  const core = (view) => evaluate(`(async () => {
+    const started = Date.now();
+    for (;;) {
+      const host = document.getElementById('core-viz');
+      if ((!${JSON.stringify(view ?? null)} || host.dataset.view === ${JSON.stringify(view ?? null)}) && host.querySelector('svg') && !host.dataset.pending) break;
+      if (Date.now() - started > 10000) throw new Error('the Core did not render');
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    const host = document.getElementById('core-viz');
+    return {
+      view: host.dataset.view, statuses: host.dataset.statuses, outcome: host.dataset.outcome, renders: Number(host.dataset.renders),
+      theme: document.documentElement.dataset.theme ?? 'blue',
+      checked: [...document.querySelectorAll('#theme-switch [aria-checked="true"], #view-switch [aria-checked="true"]')].map(b => b.dataset.theme ?? b.dataset.view),
+      text: host.querySelector('svg.core-d').textContent,
+      label: host.querySelector('svg.core-d').getAttribute('aria-label'),
+    };
+  })()`);
+  const SESSION_VIEW = `(() => ({
+    rpc: window.__rpc.calls.length,
+    state: document.getElementById('query-state').dataset.state,
+    message: document.getElementById('query-message').textContent,
+    context: document.getElementById('context-status').textContent,
+    flow: [...document.querySelectorAll('#flow > li')].map(li => li.dataset.state + ':' + li.querySelector('.flow-state').textContent).join(' | '),
+    steps: document.getElementById('plan-steps').textContent,
+    block: document.getElementById('block-number').textContent,
+    command: document.getElementById('command').value,
+  }))()`;
+
+  uiTest('ELA Core shows the real session result the same way in all three views', async t => {
+    const seen = {};
+    try {
+      for (const [label, command, mode] of [
+        ['ready'], ['refused', 'Send 10 QOR.'], ['success', 'Diana ağını kontrol et.'], ['partial', 'Diana ağını kontrol et.', 'block_fails'],
+        ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'], ['blockError', "What's the latest block?", 'http_500'],
+        ['spaces', '   '], ['unsupported', 'What is the gas price?'],
+      ]) {
+        await openPage(mode ?? 'ok');
+        if (command) await submit(command);
+        const rpc = await evaluate(`window.__rpc.calls.length`);
+        const views = {};
+        for (const view of ['karot', 'optik', 'gravur']) {
+          await clickAt(`#view-switch [data-view="${view}"]`);
+          views[view] = await core(view);
+        }
+        seen[label] = { views, rpcAfter: await evaluate(`window.__rpc.calls.length`), rpc };
+      }
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, v.views.karot.statuses])))); return; }
+    const expected = {
+      ready: 'waiting waiting waiting waiting waiting waiting',
+      refused: 'ok blocked skipped skipped skipped blocked',
+      success: 'ok ok ok ok ok ok',
+      partial: 'ok ok ok ok failed failed',
+      wrongChain: 'ok ok ok failed skipped failed',
+      blockError: 'ok ok ok unknown unknown failed',
+      spaces: 'blocked skipped skipped skipped skipped blocked',
+      unsupported: 'ok ok blocked skipped skipped blocked',
+    };
+    for (const [label, statuses] of Object.entries(expected)) {
+      for (const view of ['karot', 'optik', 'gravur']) assert.equal(seen[label].views[view].statuses, statuses, `${label} · ${view}`);
+      assert.equal(seen[label].rpcAfter, seen[label].rpc, `${label}: switching views sends nothing`);
+    }
+    // Values come only from the real query: the success read shows its block height, a refusal shows none.
+    assert.match(seen.success.views.karot.text, /eth_blockNumber → 9954992/);
+    assert.match(seen.success.views.karot.text, /eth_chainId → 9800/);
+    assert.doesNotMatch(seen.refused.views.karot.text, /9954992|→/);
+    assert.match(seen.refused.views.optik.text, /Safety gate · signal stopped here/);
+    assert.match(seen.refused.views.optik.text, /no signal/);
+    assert.match(seen.success.views.optik.text, /signal arrived/);
+    assert.match(seen.refused.views.gravur.text, /stopped at 02/);
+    assert.match(seen.refused.views.karot.text, /Not opened · 3 layers sealed/);
+  }, { timeout: 180_000 });
+
+  uiTest('nine theme and view combinations by click: the same record, nothing runs again, nothing is sent', async t => {
+    const seen = [];
+    let before, after, start;
+    try {
+      await openPage();
+      await submit('Diana ağını kontrol et.');
+      before = await evaluate(SESSION_VIEW);
+      const first = await core('karot');
+      start = networkLog.length;
+      for (const theme of ['light', 'dark', 'blue']) {
+        await clickAt(`#theme-switch [data-theme="${theme}"]`);
+        const afterTheme = await core();
+        seen.push(['theme ' + theme, afterTheme.renders]);
+        for (const view of ['karot', 'optik', 'gravur']) {
+          await clickAt(`#view-switch [data-view="${view}"]`);
+          const shown = await core(view);
+          const bg = await evaluate(`getComputedStyle(document.documentElement).backgroundColor`);
+          seen.push([theme, view, shown.theme, shown.checked.join(','), shown.statuses, shown.label, bg]);
+        }
+      }
+      after = await evaluate(SESSION_VIEW);
+      seen.push(['first renders', first.renders]);
+    } finally {
+      await resetCore();
+    }
+    const requests = networkLog.slice(start).map(url => new URL(url)).filter(url => !url.pathname.startsWith('/ela/assets/') || !/^\/ela\/assets\/(karot|optik|gravur)-[\w-]+\.js$/.test(url.pathname));
+    if (PROBE) { t.diagnostic(JSON.stringify({ seen, before, after, requests: requests.map(String) })); return; }
+    assert.deepEqual(after, before, 'the session result, context, flow, and RPC count are untouched');
+    assert.deepEqual(requests.map(String), [], 'only Core view chunks were fetched');
+    const backgrounds = {};
+    for (const row of seen.filter(r => r.length === 7)) {
+      const [theme, view, shownTheme, checked, statuses, label, bg] = row;
+      assert.deepEqual([shownTheme, checked, statuses], [theme, `${theme},${view}`, 'ok ok ok ok ok ok'], `${theme} × ${view}`);
+      assert.match(label, { karot: /^Core sample · /, optik: /^Optical bench · /, gravur: /^Engraving · / }[view], `${theme} × ${view}`);
+      backgrounds[theme] = bg;
+    }
+    assert.deepEqual(backgrounds, { light: 'rgb(238, 241, 245)', dark: 'rgb(11, 12, 14)', blue: 'rgb(8, 15, 32)' });
+    // A theme switch is CSS only: it never redraws the Core.
+    const themeRows = seen.filter(r => r[0].startsWith('theme '));
+    assert.equal(themeRows[0][1], seen.find(r => r[0] === 'first renders')[1], 'switching to White did not redraw');
+  }, { timeout: 120_000 });
+
+  uiTest('theme and view selectors work with the keyboard: one Tab stop each, arrow keys move the choice', async t => {
+    const seen = {};
+    try {
+      await openPage();
+      await core('karot');
+      await evaluate(`document.querySelector('#theme-switch [aria-checked="true"]').focus()`);
+      await pressKey('ArrowRight', 39);
+      seen.theme = await evaluate(`[document.documentElement.dataset.theme, document.activeElement.dataset.theme, document.activeElement.getAttribute('aria-checked'), document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#theme-switch button')].map(b => b.tabIndex).join(',')]`);
+      await evaluate(`document.querySelector('#view-switch [aria-checked="true"]').focus()`);
+      await pressKey('ArrowLeft', 37);
+      seen.view = await core('gravur');
+      seen.viewFocus = await evaluate(`[document.activeElement.dataset.view, document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#view-switch button')].map(b => b.tabIndex).join(',')]`);
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual(seen.theme, ['light', 'light', 'true', true, '0,-1,-1'], 'Blue → (wraps) White');
+    assert.equal(seen.view.view, 'gravur', 'Karot → (wraps) Engraving');
+    assert.deepEqual(seen.viewFocus, ['gravur', true, '-1,-1,0']);
+  });
+
+  uiTest('theme and view are remembered on reload; the stored theme applies before the Core loads', async t => {
+    const seen = {};
+    try {
+      await openPage();
+      await clickAt('#theme-switch [data-theme="dark"]');
+      await clickAt('#view-switch [data-view="optik"]');
+      await core('optik');
+      await env.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `document.addEventListener('DOMContentLoaded', () => { window.__themeAtParse = document.documentElement.dataset.theme ?? 'blue'; });` }).then(r => { seen.id = r.identifier; });
+      await openPage();
+      seen.after = await core('optik');
+      seen.atParse = await evaluate(`window.__themeAtParse`);
+    } finally {
+      if (seen.id) await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: seen.id });
+      await resetCore();
+    }
+    await openPage();
+    seen.fresh = await core('karot');
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual([seen.after.theme, seen.after.view, seen.after.checked.join(','), seen.atParse], ['dark', 'optik', 'dark,optik', 'dark']);
+    assert.deepEqual([seen.fresh.theme, seen.fresh.view, seen.fresh.checked.join(',')], ['blue', 'karot', 'blue,karot'], 'defaults: Blue and Karot');
+  });
+
+  uiTest('the Core follows the language switch without running anything', async t => {
+    const seen = {};
+    try {
+      await openPage();
+      await submit('Send 10 QOR.');
+      seen.en = await core('karot');
+      const rpc = await evaluate(`window.__rpc.calls.length`);
+      await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+      await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`);
+      seen.tr = await core('karot');
+      await clickAt('#view-switch [data-view="gravur"]');
+      seen.trGravur = await core('gravur');
+      seen.legend = await evaluate(`[...document.querySelectorAll('.core-legend li')].map(li => li.textContent.trim())`);
+      seen.rpc = [rpc, await evaluate(`window.__rpc.calls.length`)];
+    } finally {
+      await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.match(seen.en.text, /SPECIMEN SECTION/);
+    assert.match(seen.tr.text, /NUMUNE KESİTİ/);
+    assert.match(seen.tr.text, /Güvenlik kapısı/);
+    assert.match(seen.tr.text, /Açılmadı · 3 katman mühürlü/);
+    assert.match(seen.trGravur.text, /02'de durdu/);
+    assert.equal(seen.tr.statuses, seen.en.statuses);
+    assert.deepEqual(seen.legend, ['Bekliyor', 'Çalışıyor', 'Başarılı', 'Engellendi', 'Başarısız', 'Atlandı', 'Bilinmiyor']);
+    assert.equal(seen.rpc[1], seen.rpc[0], 'the language switch sends nothing');
+  });
+
+  uiTest('a running query animates the optical beam only when reduced motion is not requested', async t => {
+    const seen = {};
+    await openPage();
+    try {
+      for (const reduce of [false, true]) {
+        await env.page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }] });
+        await evaluate(`localStorage.setItem('ela-view', 'optik')`);
+        await openPage('slow');
+        await core('optik');
+        seen[reduce ? 'reduce' : 'motion'] = await evaluate(`(async () => {
+          document.getElementById('command').value = 'Diana ağını kontrol et.';
+          document.getElementById('command-form').requestSubmit();
+          const started = Date.now();
+          while (!document.querySelector('#core-viz .core-moving')) { if (Date.now() - started > 3000) return 'no running beam'; await new Promise(r => setTimeout(r, 10)); }
+          const statuses = document.getElementById('core-viz').dataset.statuses;
+          return [statuses, getComputedStyle(document.querySelector('#core-viz .core-moving')).animationName];
+        })()`);
+        await evaluate(`(async () => { while (document.getElementById('run').disabled) await new Promise(r => setTimeout(r, 20)); })()`);
+      }
+    } finally {
+      await env.page.send('Emulation.setEmulatedMedia', { features: [] });
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual(seen.motion, ['ok running running running running running', 'core-flow']);
+    assert.deepEqual(seen.reduce, ['ok running running running running running', 'none']);
+  });
+
+  uiTest('every theme × view at 1440, 390 and 320 px, and at 320 px with 200% text: no overflow, clipping, overlap, or low contrast', async t => {
+    const AUDIT = `(() => {
+      const width = document.documentElement.clientWidth;
+      const shown = element => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden'; };
+      const all = [...document.querySelectorAll('body *')].filter(shown);
+      const name = element => element.tagName + '#' + element.id + '.' + (typeof element.className === 'string' ? element.className : '') + ' ' + (element.textContent || '').trim().slice(0, 24);
+      const leaves = all.filter(element => [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()));
+      const overlaps = [];
+      for (let i = 0; i < leaves.length; i++) for (let k = i + 1; k < leaves.length; k++) {
+        const [a, b] = [leaves[i], leaves[k]];
+        if (a.contains(b) || b.contains(a)) continue;
+        const hit = [...a.getClientRects()].some(x => [...b.getClientRects()].some(y => Math.min(x.right, y.right) - Math.max(x.left, y.left) > 1 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 1));
+        if (hit) overlaps.push(name(a) + ' × ' + name(b));
+      }
+      const rgb = value => (value.match(/[0-9.]+/g) || []).map(Number);
+      const lum = ([r, g, b]) => [r, g, b].map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+      const page = rgb(getComputedStyle(document.documentElement).backgroundColor);
+      const background = element => { for (let node = element; node; node = node.parentElement) { const c = rgb(getComputedStyle(node).backgroundColor); if (c.length >= 3 && (c[3] === undefined || c[3] >= 0.7)) return c; } return page; };
+      const color = element => element instanceof SVGElement ? getComputedStyle(element).fill : getComputedStyle(element).color;
+      const lowContrast = leaves.filter(element => !/rgba\\(0, 0, 0, 0\\)|^none$|url/.test(color(element))).map(element => {
+        const [x, y] = [lum(rgb(color(element))), lum(element instanceof SVGElement ? rgb(getComputedStyle(document.querySelector('#core-viz')).backgroundColor) : background(element))].sort((p, q) => q - p);
+        return [name(element), Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100];
+      }).filter(([, ratio]) => ratio < 4.5);
+      return {
+        scrollWidth: document.documentElement.scrollWidth - width,
+        outside: all.filter(element => { const box = element.getBoundingClientRect(); return box.right > width + 0.5 || box.left < -0.5; }).map(name),
+        clipped: all.filter(element => element.tagName !== 'TEXTAREA' && getComputedStyle(element).overflowX !== 'visible' && !(element instanceof SVGElement) && element.scrollWidth > element.clientWidth + 1).map(name),
+        overlaps, lowContrast,
+      };
+    })()`;
+    const results = {};
+    await openPage();
+    try {
+      for (const [width, scale] of [[1440, 1], [390, 1], [320, 1], [320, 2]]) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
+        for (const theme of ['light', 'dark', 'blue']) for (const view of ['karot', 'optik', 'gravur']) {
+          await evaluate(`(() => { localStorage.setItem('ela-theme', ${JSON.stringify(theme)}); localStorage.setItem('ela-view', ${JSON.stringify(view)}); })()`);
+          await openPage();
+          await submit('Send 10 QOR.');
+          await core(view);
+          results[`${width}px ${scale * 100}% ${theme} ${view}`] = await evaluate(AUDIT);
+        }
+      }
+    } finally {
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(results)); return; }
+    for (const [label, result] of Object.entries(results)) {
+      assert.deepEqual(result, { scrollWidth: 0, outside: [], clipped: [], overlaps: [], lowContrast: [] }, label);
+    }
+  }, { timeout: 600_000 });
+
   // --- New in 7F: post-quantum verification panel -------------------------------------------------
 
   const assetsSince = start => networkLog.slice(start).map(url => new URL(url)).filter(url => url.pathname.startsWith('/ela/assets/')).map(url => url.pathname.slice('/ela/assets/'.length));
@@ -1074,8 +1361,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const onReopen = assetsSince(beforeReopen);
     if (PROBE) { t.diagnostic(JSON.stringify({ closed, atLoad, opened, onOpen, reclosed, onReopen })); return; }
     assert.deepEqual(closed, { hidden: true, expanded: 'false', label: 'Open verifier', controls: 'pqc-body', heading: 'Post-Quantum Signature Verification' });
-    assert.equal(atLoad.length, 2, atLoad.join(', '));
-    assert.ok(atLoad.every(name => /^index-[\w-]+\.(js|css)$/.test(name)), 'no panel chunk before opening: ' + atLoad.join(', '));
+    // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
+    // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'draw.js', 'index.css', 'index.js', 'karot.js'], atLoad.join(', '));
+    assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
     assert.match(onOpen[0], /^panel-[\w-]+\.js$/);
@@ -1175,8 +1464,15 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const panelCode = panel ? readFileSync(join(env.outDir, 'assets', panel), 'utf8') : '';
     for (const [name, size] of Object.entries(sizes)) t.diagnostic(`${name}: ${size.bytes} bytes, gzip ${size.gzip} bytes`);
     if (PROBE) return;
-    assert.equal(scripts.length, 2, scripts.join(', '));
+    // Changed in 7C-27: two chunks before (main, panel); now also the ELA Core chunk, its shared
+    // drawing helpers, and one chunk per Core view. The main budget below is unchanged.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
+    for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
+      assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
+      const code = readFileSync(join(env.outDir, 'assets', name), 'utf8');
+      for (const marker of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'handleCommand', 'verifyMlDsa87', 'f96bc953da4e941be8354a22']) assert.equal(code.includes(marker), false, name + ': ' + marker);
+    }
     assert.ok(sizes[main].gzip <= 13 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13 KiB budget`);
     assert.ok(sizes[main].bytes <= 36 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 36 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');

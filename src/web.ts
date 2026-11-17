@@ -316,3 +316,6 @@ pqcToggle.addEventListener('click', () => {
       });
   }
 });
+
+// ELA Core (themes, Core views) is its own chunk. It only reads what this file renders.
+import('./core/core.ts');
