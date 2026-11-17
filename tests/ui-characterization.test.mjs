@@ -422,9 +422,11 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const tab = async () => { for (const type of ['keyDown', 'keyUp']) await env.page.send('Input.dispatchKeyEvent', { type, key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 }); };
     let stops = 0;
     while (stops < 12 && await evaluate(`document.activeElement.id`) !== 'command') { await tab(); stops++; }
+    // Changed in 7C-27: the theme selector (top bar) and the Core view selector (before the command
+    // panel) are radio groups with one Tab stop each, so two stops were added: 7 before, 9 now.
     if (!PROBE) {
       assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
-      assert.equal(stops, 7, 'two language buttons and four module links come first');
+      assert.equal(stops, 9, 'two language buttons, the theme group, four module links, and the Core view group come first');
     }
     await tab();
     desktop.focus = await evaluate(`(() => {
@@ -451,6 +453,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       for (const [name, value] of [['run button text', desktop.run[1]], ['text on card', desktop.textOnCard], ['muted text on card', desktop.mutedOnCard], ['example link', desktop.linkOnCard]]) {
         assert.ok(value >= 4.5, `${name}: ${value}`);
       }
+      // 7C-27 decision: a refusal and an error stay red, as before 7C-27 (a purple variant was tried and
+      // reverted). They also differ by badge mark: a barrier bar for a refusal, a cross for an error.
       const red = ['rgb(255, 195, 205)', 'rgb(74, 29, 42)'];
       const amber = ['rgb(255, 224, 162)', 'rgb(70, 54, 26)'];
       const green = ['rgb(142, 240, 212)', 'rgb(14, 59, 52)'];
@@ -606,6 +610,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     seen.longSignature = await read();
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     const green = 'rgb(142, 240, 212)';
+    // The not-valid verdict is red with its cross mark (unchanged by 7C-27).
     const red = 'rgb(255, 195, 205)';
     assert.deepEqual(seen.idle, { result: 'idle', gauges: ['under', 'under'], seal: 'rgb(58, 106, 168)' });
     assert.deepEqual(seen.valid, { result: 'valid', gauges: ['exact', 'exact'], seal: green });
@@ -1031,6 +1036,481 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.deepEqual(traffic, { rpc: 0, requests: [], langMarks: 0 });
   });
 
+  // --- New in 7C-27: three themes and three ELA Core views --------------------------------------
+  // The Core (src/core) draws only what web.ts rendered from the real session result: the execution
+  // flow, the query state, and the readout. Theme and view switches restyle or redraw that same record;
+  // they never run a command, send an RPC, or verify anything. Every test restores the default theme
+  // and view (Blue, Karot) so the tests after it see the page as a first-time visitor does.
+
+  const resetCore = () => evaluate(`(() => { try { localStorage.removeItem('ela-theme'); localStorage.removeItem('ela-view'); } catch {} delete document.documentElement.dataset.theme; })()`);
+  const clickAt = async selector => {
+    const [x, y] = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    for (const type of ['mousePressed', 'mouseReleased']) await env.page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+  };
+  const pressKey = async (key, code) => { for (const type of ['keyDown', 'keyUp']) await env.page.send('Input.dispatchKeyEvent', { type, key, code: key, windowsVirtualKeyCode: code }); };
+  // Waits until the Core shows `view` and has drawn the current record: no redraw is pending (data-pending).
+  const core = (view) => evaluate(`(async () => {
+    const started = Date.now();
+    for (;;) {
+      const host = document.getElementById('core-viz');
+      if ((!${JSON.stringify(view ?? null)} || host.dataset.view === ${JSON.stringify(view ?? null)}) && host.querySelector('svg') && !host.dataset.pending) break;
+      if (Date.now() - started > 10000) throw new Error('the Core did not render');
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    const host = document.getElementById('core-viz');
+    return {
+      view: host.dataset.view, statuses: host.dataset.statuses, outcome: host.dataset.outcome, renders: Number(host.dataset.renders),
+      theme: document.documentElement.dataset.theme ?? 'blue',
+      checked: [...document.querySelectorAll('#theme-switch [aria-checked="true"], #view-switch [aria-checked="true"]')].map(b => b.dataset.theme ?? b.dataset.view),
+      text: host.querySelector('svg.core-d').textContent,
+      label: host.querySelector('svg.core-d').getAttribute('aria-label'),
+      caption: document.getElementById('core-caption').textContent,
+    };
+  })()`);
+  const SESSION_VIEW = `(() => ({
+    rpc: window.__rpc.calls.length,
+    state: document.getElementById('query-state').dataset.state,
+    message: document.getElementById('query-message').textContent,
+    context: document.getElementById('context-status').textContent,
+    flow: [...document.querySelectorAll('#flow > li')].map(li => li.dataset.state + ':' + li.querySelector('.flow-state').textContent).join(' | '),
+    steps: document.getElementById('plan-steps').textContent,
+    block: document.getElementById('block-number').textContent,
+    command: document.getElementById('command').value,
+  }))()`;
+
+  uiTest('ELA Core shows the real session result the same way in all three views', async t => {
+    const seen = {};
+    try {
+      for (const [label, command, mode] of [
+        ['ready'], ['refused', 'Send 10 QOR.'], ['success', 'Diana ağını kontrol et.'], ['partial', 'Diana ağını kontrol et.', 'block_fails'],
+        ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'], ['blockError', "What's the latest block?", 'http_500'],
+        ['spaces', '   '], ['unsupported', 'What is the gas price?'],
+      ]) {
+        await openPage(mode ?? 'ok');
+        if (command) await submit(command);
+        const rpc = await evaluate(`window.__rpc.calls.length`);
+        const views = {};
+        for (const view of ['karot', 'optik', 'gravur']) {
+          await clickAt(`#view-switch [data-view="${view}"]`);
+          views[view] = await core(view);
+        }
+        seen[label] = { views, rpcAfter: await evaluate(`window.__rpc.calls.length`), rpc };
+      }
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, v.views.karot.statuses])))); return; }
+    const expected = {
+      ready: 'waiting waiting waiting waiting waiting waiting',
+      refused: 'ok blocked skipped skipped skipped blocked',
+      success: 'ok ok ok ok ok ok',
+      partial: 'ok ok ok ok failed failed',
+      wrongChain: 'ok ok ok failed skipped failed',
+      blockError: 'ok ok ok unknown unknown failed',
+      spaces: 'blocked skipped skipped skipped skipped blocked',
+      unsupported: 'ok ok blocked skipped skipped blocked',
+    };
+    for (const [label, statuses] of Object.entries(expected)) {
+      for (const view of ['karot', 'optik', 'gravur']) assert.equal(seen[label].views[view].statuses, statuses, `${label} · ${view}`);
+      assert.equal(seen[label].rpcAfter, seen[label].rpc, `${label}: switching views sends nothing`);
+    }
+    // Values come only from the real query: the success read shows its block height, a refusal shows none.
+    assert.match(seen.success.views.karot.text, /eth_blockNumber → 9954992/);
+    assert.match(seen.success.views.karot.text, /eth_chainId → 9800/);
+    assert.doesNotMatch(seen.refused.views.karot.text, /9954992|→/);
+    assert.match(seen.refused.views.optik.text, /Safety gate · signal stopped here/);
+    assert.match(seen.refused.views.optik.text, /no signal/);
+    assert.match(seen.success.views.optik.text, /signal arrived/);
+    assert.match(seen.refused.views.gravur.text, /stopped at 02/);
+    assert.match(seen.refused.views.karot.text, /Not opened · 3 layers sealed/);
+    // The same meaning in HTML, for every view.
+    for (const view of ['karot', 'optik', 'gravur']) {
+      assert.equal(seen.ready.views[view].caption, 'No command has run yet. All six stages are waiting.');
+      assert.equal(seen.refused.views[view].caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.');
+      assert.equal(seen.success.views[view].caption, 'All six stages ran and succeeded.');
+      assert.equal(seen.partial.views[view].caption, 'Stopped at 05 Data read (Failed). Result: Failed.');
+    }
+  }, { timeout: 180_000 });
+
+  uiTest('nine theme and view combinations by click: the same record, nothing runs again, nothing is sent', async t => {
+    const seen = [];
+    let before, after, start;
+    try {
+      await openPage();
+      await submit('Diana ağını kontrol et.');
+      before = await evaluate(SESSION_VIEW);
+      const first = await core('karot');
+      start = networkLog.length;
+      for (const theme of ['light', 'dark', 'blue']) {
+        await clickAt(`#theme-switch [data-theme="${theme}"]`);
+        const afterTheme = await core();
+        seen.push(['theme ' + theme, afterTheme.renders]);
+        for (const view of ['karot', 'optik', 'gravur']) {
+          await clickAt(`#view-switch [data-view="${view}"]`);
+          const shown = await core(view);
+          const bg = await evaluate(`getComputedStyle(document.documentElement).backgroundColor`);
+          seen.push([theme, view, shown.theme, shown.checked.join(','), shown.statuses, shown.label, bg]);
+        }
+      }
+      after = await evaluate(SESSION_VIEW);
+      seen.push(['first renders', first.renders]);
+    } finally {
+      await resetCore();
+    }
+    const requests = networkLog.slice(start).map(url => new URL(url)).filter(url => !url.pathname.startsWith('/ela/assets/') || !/^\/ela\/assets\/(karot|optik|gravur)-[\w-]+\.js$/.test(url.pathname));
+    if (PROBE) { t.diagnostic(JSON.stringify({ seen, before, after, requests: requests.map(String) })); return; }
+    assert.deepEqual(after, before, 'the session result, context, flow, and RPC count are untouched');
+    assert.deepEqual(requests.map(String), [], 'only Core view chunks were fetched');
+    const backgrounds = {};
+    for (const row of seen.filter(r => r.length === 7)) {
+      const [theme, view, shownTheme, checked, statuses, label, bg] = row;
+      assert.deepEqual([shownTheme, checked, statuses], [theme, `${theme},${view}`, 'ok ok ok ok ok ok'], `${theme} × ${view}`);
+      assert.match(label, { karot: /^Core sample · /, optik: /^Optical bench · /, gravur: /^Engraving · / }[view], `${theme} × ${view}`);
+      backgrounds[theme] = bg;
+    }
+    assert.deepEqual(backgrounds, { light: 'rgb(238, 241, 245)', dark: 'rgb(11, 12, 14)', blue: 'rgb(8, 15, 32)' });
+    // A theme switch is CSS only: it never redraws the Core.
+    const themeRows = seen.filter(r => r[0].startsWith('theme '));
+    assert.equal(themeRows[0][1], seen.find(r => r[0] === 'first renders')[1], 'switching to White did not redraw');
+  }, { timeout: 120_000 });
+
+  uiTest('theme and view selectors work with the keyboard: one Tab stop each, arrow keys move the choice', async t => {
+    const seen = {};
+    try {
+      await openPage();
+      await core('karot');
+      await evaluate(`document.querySelector('#theme-switch [aria-checked="true"]').focus()`);
+      await pressKey('ArrowRight', 39);
+      seen.theme = await evaluate(`[document.documentElement.dataset.theme, document.activeElement.dataset.theme, document.activeElement.getAttribute('aria-checked'), document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#theme-switch button')].map(b => b.tabIndex).join(',')]`);
+      await evaluate(`document.querySelector('#view-switch [aria-checked="true"]').focus()`);
+      await pressKey('ArrowLeft', 37);
+      seen.view = await core('gravur');
+      seen.viewFocus = await evaluate(`[document.activeElement.dataset.view, document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#view-switch button')].map(b => b.tabIndex).join(',')]`);
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual(seen.theme, ['light', 'light', 'true', true, '0,-1,-1'], 'Blue → (wraps) White');
+    assert.equal(seen.view.view, 'gravur', 'Karot → (wraps) Engraving');
+    assert.deepEqual(seen.viewFocus, ['gravur', true, '-1,-1,0']);
+  });
+
+  uiTest('theme and view are remembered on reload; the stored theme applies before the Core loads', async t => {
+    const seen = {};
+    try {
+      await openPage();
+      await clickAt('#theme-switch [data-theme="dark"]');
+      await clickAt('#view-switch [data-view="optik"]');
+      await core('optik');
+      await env.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `document.addEventListener('DOMContentLoaded', () => { window.__themeAtParse = document.documentElement.dataset.theme ?? 'blue'; });` }).then(r => { seen.id = r.identifier; });
+      await openPage();
+      seen.after = await core('optik');
+      seen.atParse = await evaluate(`window.__themeAtParse`);
+    } finally {
+      if (seen.id) await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: seen.id });
+      await resetCore();
+    }
+    await openPage();
+    seen.fresh = await core('karot');
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual([seen.after.theme, seen.after.view, seen.after.checked.join(','), seen.atParse], ['dark', 'optik', 'dark,optik', 'dark']);
+    assert.deepEqual([seen.fresh.theme, seen.fresh.view, seen.fresh.checked.join(',')], ['blue', 'karot', 'blue,karot'], 'defaults: Blue and Karot');
+  });
+
+  uiTest('the Core follows the language switch without running anything', async t => {
+    const seen = {};
+    try {
+      await openPage();
+      await submit('Send 10 QOR.');
+      seen.en = await core('karot');
+      const rpc = await evaluate(`window.__rpc.calls.length`);
+      await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+      await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`);
+      seen.tr = await core('karot');
+      await clickAt('#view-switch [data-view="gravur"]');
+      seen.trGravur = await core('gravur');
+      seen.legend = await evaluate(`[...document.querySelectorAll('.core-legend li')].map(li => li.textContent.trim())`);
+      seen.rpc = [rpc, await evaluate(`window.__rpc.calls.length`)];
+    } finally {
+      await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.match(seen.en.text, /SPECIMEN SECTION/);
+    assert.match(seen.tr.text, /NUMUNE KESİTİ/);
+    assert.match(seen.tr.text, /Güvenlik kapısı/);
+    assert.match(seen.tr.text, /Açılmadı · 3 katman mühürlü/);
+    assert.match(seen.trGravur.text, /02'de durdu/);
+    assert.equal(seen.tr.statuses, seen.en.statuses);
+    assert.deepEqual(seen.legend, ['Bekliyor', 'Çalışıyor', 'Başarılı', 'Engellendi', 'Başarısız', 'Atlandı', 'Bilinmiyor']);
+    assert.equal(seen.rpc[1], seen.rpc[0], 'the language switch sends nothing');
+  });
+
+  uiTest('a running query animates the optical beam only when reduced motion is not requested', async t => {
+    const seen = {};
+    await openPage();
+    try {
+      for (const reduce of [false, true]) {
+        await env.page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }] });
+        await evaluate(`localStorage.setItem('ela-view', 'optik')`);
+        await openPage('slow');
+        await core('optik');
+        seen[reduce ? 'reduce' : 'motion'] = await evaluate(`(async () => {
+          document.getElementById('command').value = 'Diana ağını kontrol et.';
+          document.getElementById('command-form').requestSubmit();
+          const started = Date.now();
+          while (!document.querySelector('#core-viz .core-moving')) { if (Date.now() - started > 3000) return 'no running beam'; await new Promise(r => setTimeout(r, 10)); }
+          const statuses = document.getElementById('core-viz').dataset.statuses;
+          return [statuses, getComputedStyle(document.querySelector('#core-viz .core-moving')).animationName];
+        })()`);
+        await evaluate(`(async () => { while (document.getElementById('run').disabled) await new Promise(r => setTimeout(r, 20)); })()`);
+      }
+    } finally {
+      await env.page.send('Emulation.setEmulatedMedia', { features: [] });
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual(seen.motion, ['ok running running running running running', 'core-flow']);
+    assert.deepEqual(seen.reduce, ['ok running running running running running', 'none']);
+  });
+
+  uiTest('every theme × view at 1440, 390 and 320 px, and at 320 px with 200% text: no overflow, clipping, overlap, or low contrast', async t => {
+    const AUDIT = `(() => {
+      const width = document.documentElement.clientWidth;
+      const shown = element => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden'; };
+      const all = [...document.querySelectorAll('body *')].filter(shown);
+      const name = element => element.tagName + '#' + element.id + '.' + (typeof element.className === 'string' ? element.className : '') + ' ' + (element.textContent || '').trim().slice(0, 24);
+      const leaves = all.filter(element => [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()));
+      const overlaps = [];
+      for (let i = 0; i < leaves.length; i++) for (let k = i + 1; k < leaves.length; k++) {
+        const [a, b] = [leaves[i], leaves[k]];
+        if (a.contains(b) || b.contains(a)) continue;
+        const hit = [...a.getClientRects()].some(x => [...b.getClientRects()].some(y => Math.min(x.right, y.right) - Math.max(x.left, y.left) > 1 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 1));
+        if (hit) overlaps.push(name(a) + ' × ' + name(b));
+      }
+      const rgb = value => (value.match(/[0-9.]+/g) || []).map(Number);
+      const lum = ([r, g, b]) => [r, g, b].map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+      const page = rgb(getComputedStyle(document.documentElement).backgroundColor);
+      const background = element => { for (let node = element; node; node = node.parentElement) { const c = rgb(getComputedStyle(node).backgroundColor); if (c.length >= 3 && (c[3] === undefined || c[3] >= 0.7)) return c; } return page; };
+      const color = element => element instanceof SVGElement ? getComputedStyle(element).fill : getComputedStyle(element).color;
+      const lowContrast = leaves.filter(element => !/rgba\\(0, 0, 0, 0\\)|^none$|url/.test(color(element))).map(element => {
+        const [x, y] = [lum(rgb(color(element))), lum(element instanceof SVGElement ? rgb(getComputedStyle(document.querySelector('#core-viz')).backgroundColor) : background(element))].sort((p, q) => q - p);
+        return [name(element), Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100];
+      }).filter(([, ratio]) => ratio < 4.5);
+      return {
+        scrollWidth: document.documentElement.scrollWidth - width,
+        outside: all.filter(element => { const box = element.getBoundingClientRect(); return box.right > width + 0.5 || box.left < -0.5; }).map(name),
+        clipped: all.filter(element => element.tagName !== 'TEXTAREA' && getComputedStyle(element).overflowX !== 'visible' && !(element instanceof SVGElement) && element.scrollWidth > element.clientWidth + 1).map(name),
+        overlaps, lowContrast,
+      };
+    })()`;
+    const results = {};
+    await openPage();
+    try {
+      for (const [width, scale] of [[1440, 1], [390, 1], [320, 1], [320, 2]]) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
+        for (const theme of ['light', 'dark', 'blue']) for (const view of ['karot', 'optik', 'gravur']) {
+          await evaluate(`(() => { localStorage.setItem('ela-theme', ${JSON.stringify(theme)}); localStorage.setItem('ela-view', ${JSON.stringify(view)}); })()`);
+          await openPage();
+          await submit('Send 10 QOR.');
+          await core(view);
+          results[`${width}px ${scale * 100}% ${theme} ${view}`] = await evaluate(AUDIT);
+        }
+      }
+    } finally {
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(results)); return; }
+    for (const [label, result] of Object.entries(results)) {
+      assert.deepEqual(result, { scrollWidth: 0, outside: [], clipped: [], overlaps: [], lowContrast: [] }, label);
+    }
+  }, { timeout: 600_000 });
+
+  // Added in the 7C-27 visual pass: ELA Core decoration stays blue and purple (red marks only a real stop),
+  // readable narrow screens, compact flow.
+  const NO_WARM_RED = `(() => {
+    const hits = new Set();
+    const warm = value => {
+      for (const m of String(value).matchAll(/rgba?\\(([^)]+)\\)/g)) {
+        const [r, g, b, a = 1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+        if (a < 0.05) continue;
+        const max = Math.max(r, g, b) / 255, min = Math.min(r, g, b) / 255, l = (max + min) / 2, d = max - min;
+        if (d < 0.08) continue;
+        const sat = d / (1 - Math.abs(2 * l - 1));
+        let h = max === r / 255 ? ((g - b) / 255 / d) % 6 : max === g / 255 ? (b - r) / 255 / d + 2 : (r - g) / 255 / d + 4;
+        h = (h * 60 + 360) % 360;
+        if ((h < 25 || h > 335) && sat > 0.35 && l > 0.12 && l < 0.94) return m[0];
+      }
+      return null;
+    };
+    // The legend is a color key that always lists every state, so it is checked separately (by value).
+    for (const e of [...document.querySelectorAll('.core, .core *')].filter(node => !node.closest('.core-legend'))) {
+      const s = getComputedStyle(e);
+      if (s.display === 'none') continue;
+      for (const prop of ['color', 'backgroundColor', 'borderTopColor', 'borderLeftColor', 'outlineColor', 'fill', 'stroke', 'boxShadow', 'backgroundImage', 'textDecorationColor']) {
+        const hit = warm(s[prop]);
+        if (hit) hits.add((e.id || e.className.baseVal || e.className || e.tagName) + ' ' + prop + ' ' + hit);
+      }
+    }
+    return [...hits].slice(0, 12);
+  })()`;
+
+  uiTest('the ELA Core shows red only where execution really stopped; its decoration stays blue and purple', async t => {
+    const seen = {};
+    await openPage();
+    try {
+      for (const theme of ['light', 'dark', 'blue']) {
+        for (const [label, command, mode] of [['ready'], ['refused', 'Send 10 QOR.'], ['error', "What's the latest block?", 'http_500'], ['partial', 'Diana ağını kontrol et.', 'block_fails'], ['success', 'Diana ağını kontrol et.']]) {
+          await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
+          await openPage(mode ?? 'ok');
+          if (command) await submit(command);
+          await core();
+          seen[`${theme} ${label}`] = await evaluate(NO_WARM_RED);
+          if (label === 'ready') {
+            // Decorative tokens are never red, whatever the state.
+            seen[`${theme} decoration`] = await evaluate(`(() => {
+              const root = getComputedStyle(document.documentElement);
+              const names = ['--layer-0', '--layer-1', '--layer-2', '--layer-3', '--layer-4', '--layer-5', '--layer-line', '--layer-top', '--beam-1', '--beam-2', '--glass-1', '--glass-2', '--glass-edge', '--metal-1', '--metal-2', '--metal-rail-hi', '--metal-rail-lo', '--probe-tip', '--e-ok-2', '--e-res-2', '--s-ok', '--s-result', '--s-running'];
+              const probe = document.createElement('i');
+              document.body.append(probe);
+              const hits = names.filter(name => { probe.style.color = root.getPropertyValue(name).trim(); const [r, g, b] = getComputedStyle(probe).color.match(/[0-9.]+/g).map(Number); return r > 150 && r > g * 1.35 && r > b * 1.2; });
+              probe.remove();
+              return hits;
+            })()`);
+          }
+        }
+        await openPanel();
+        await pqc('pqc-load');
+        await pqc('pqc-flip');
+        seen[`${theme} pqc-invalid`] = await evaluate(NO_WARM_RED);
+      }
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    for (const [label, hits] of Object.entries(seen)) {
+      // Changed by the 7C-27 color decision: a real stop (refusal, error, partial failure) is red in the
+      // Core too. No stop, no red: ready, success, and the success page behind the verifier stay free of it.
+      if (/ready|success|pqc-invalid|decoration/.test(label)) assert.deepEqual(hits, [], label);
+      else assert.ok(hits.length > 0, label + ': the stop is shown in red in the Core');
+    }
+  }, { timeout: 180_000 });
+
+  uiTest('refusal and failure indicators are red and consistent in every theme; success stays green', async t => {
+    const read = `(() => {
+      const color = selector => { const e = document.querySelector(selector); return e ? getComputedStyle(e).color : null; };
+      return {
+        badge: color('#query-state'), badgeMark: getComputedStyle(document.getElementById('query-state'), '::before').content,
+        gate: color('#flow > li:nth-child(2) .flow-state'), result: color('#flow > li:nth-child(6) .flow-state'),
+        gateMarker: getComputedStyle(document.querySelector('#flow > li:nth-child(2)'), '::before').backgroundColor,
+        failedMarker: getComputedStyle(document.querySelector('#flow > li:nth-child(6)'), '::before').borderTopStyle,
+        state: document.getElementById('query-state').dataset.state,
+        core: [
+          getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] svg path')).stroke,
+          getComputedStyle(document.querySelector('.core-legend [data-status="failed"] svg path')).stroke,
+          (document.querySelector('#core-viz .core-d g[data-status="blocked"] path') ? getComputedStyle(document.querySelector('#core-viz .core-d g[data-status="blocked"] path')).stroke : null),
+          getComputedStyle(document.querySelector('.core-legend [data-status="blocked"]')).getPropertyValue('--c').trim() ? getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] .ln')).backgroundColor : null,
+        ],
+        coreFailed: (document.querySelector('#core-viz .core-d g[data-status="failed"] path') ? getComputedStyle(document.querySelector('#core-viz .core-d g[data-status="failed"] path')).stroke : null),
+      };
+    })()`;
+    const seen = {};
+    await openPage();
+    try {
+      for (const theme of ['light', 'dark', 'blue']) {
+        await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
+        await openPage();
+        await submit('Send 10 QOR.');
+        await core();
+        seen[theme + ' refused'] = await evaluate(read);
+        await setMode('wrong_chain');
+        await submit('Diana ağını kontrol et.');
+        await core();
+        seen[theme + ' error'] = await evaluate(read);
+        await setMode('ok');
+        await submit('Diana ağını kontrol et.');
+        seen[theme + ' success'] = await evaluate(read);
+        await openPanel();
+        await pqc('pqc-load');
+        await pqc('pqc-flip');
+        seen[theme + ' invalid'] = await evaluate(`[getComputedStyle(document.getElementById('pqc-result-title')).color, getComputedStyle(document.getElementById('pqc-cmp-changed')).color]`);
+      }
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    const RED = { light: 'rgb(160, 29, 56)', dark: 'rgb(255, 195, 205)', blue: 'rgb(255, 195, 205)' };
+    const GREEN = { light: 'rgb(11, 102, 80)', dark: 'rgb(142, 240, 212)', blue: 'rgb(142, 240, 212)' };
+    for (const theme of ['light', 'dark', 'blue']) {
+      const refused = seen[theme + ' refused'], error = seen[theme + ' error'], success = seen[theme + ' success'];
+      assert.deepEqual([refused.state, refused.badge, refused.gate, refused.result, refused.gateMarker], ['refused', RED[theme], RED[theme], RED[theme], RED[theme]], theme + ' refusal');
+      assert.deepEqual([error.state, error.badge, error.result], ['error', RED[theme], RED[theme]], theme + ' error');
+      // Same red, different marks: a barrier bar for a refusal, a cross for an error; a dashed marker for a failed stage.
+      assert.deepEqual([refused.badgeMark, error.badgeMark, error.failedMarker], ['""', '"×"', 'dashed'], theme + ' marks');
+      assert.deepEqual([success.badge, success.result], [GREEN[theme], GREEN[theme]], theme + ' success');
+      assert.deepEqual(seen[theme + ' invalid'], [RED[theme], RED[theme]], theme + ' not-valid signature');
+      // Inside the Core: the same red for the legend and the drawn marks of a refusal and a failure.
+      assert.deepEqual(refused.core, [RED[theme], RED[theme], RED[theme], RED[theme]], theme + ' Core refusal marks');
+      assert.equal(error.coreFailed, RED[theme], theme + ' Core failure mark');
+    }
+  }, { timeout: 180_000 });
+
+  uiTest('narrow screens: compact six-stage flow with real states, no squeezed text columns at 320 px and 200% text', async t => {
+    // A squeezed column: a text broken over three or more lines with under six characters per line.
+    const NARROW = `(() => {
+      const out = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent.trim();
+        if (text.length < 6 || node.parentElement instanceof SVGElement || node.parentElement.closest('script, style')) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const lines = new Set([...range.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top))).size;
+        if (lines >= 3 && text.length / lines < 6) out.push(node.parentElement.tagName + '.' + node.parentElement.className + ' "' + text.slice(0, 20) + '" ' + lines + ' lines');
+      }
+      return out;
+    })()`;
+    const FLOW = `[...document.querySelectorAll('#flow > li')].map(li => {
+      const top = el => Math.round(li.querySelector(el).getBoundingClientRect().top);
+      return [li.querySelector('.flow-n').textContent, li.dataset.state, li.querySelector('.flow-state').textContent, Math.abs(top('.flow-name') - top('.flow-state')) <= 6, Math.round(li.getBoundingClientRect().height)];
+    })`;
+    const seen = {};
+    await openPage();
+    try {
+      for (const [width, scale] of [[390, 1], [320, 1], [320, 2]]) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: true });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
+        for (const theme of ['light', 'dark', 'blue']) {
+          await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
+          await openPage();
+          await submit('Send 10 QOR.');
+          await core();
+          seen[`${width}px ${scale * 100}% ${theme}`] = { narrow: await evaluate(NARROW), flow: await evaluate(FLOW), caption: await evaluate(`document.getElementById('core-caption').textContent`) };
+        }
+      }
+    } finally {
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    for (const [label, { narrow, flow, caption }] of Object.entries(seen)) {
+      assert.deepEqual(narrow, [], label + ': no text squeezed into a column of a few characters per line');
+      assert.deepEqual(flow.map(([n, state, text]) => [n, state, text]), [
+        ['01', 'done', 'received'], ['02', 'blocked', 'blocked'], ['03', 'idle', 'not run'], ['04', 'idle', 'not run'], ['05', 'idle', 'not run'], ['06', 'refused', 'refused'],
+      ], label + ': all six stages with their real states');
+      assert.equal(caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.', label);
+      // Compact at normal text size: name and state share a line, and a stage takes at most two lines.
+      if (!label.includes('200%')) {
+        assert.ok(flow.every(([, , , sameLine]) => sameLine), label + ': name and state on one line');
+        assert.ok(flow.every(([, , , , height]) => height <= 64), label + ': ' + flow.map(f => f[4]).join(','));
+      }
+    }
+  }, { timeout: 180_000 });
+
   // --- New in 7F: post-quantum verification panel -------------------------------------------------
 
   const assetsSince = start => networkLog.slice(start).map(url => new URL(url)).filter(url => url.pathname.startsWith('/ela/assets/')).map(url => url.pathname.slice('/ela/assets/'.length));
@@ -1074,8 +1554,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const onReopen = assetsSince(beforeReopen);
     if (PROBE) { t.diagnostic(JSON.stringify({ closed, atLoad, opened, onOpen, reclosed, onReopen })); return; }
     assert.deepEqual(closed, { hidden: true, expanded: 'false', label: 'Open verifier', controls: 'pqc-body', heading: 'Post-Quantum Signature Verification' });
-    assert.equal(atLoad.length, 2, atLoad.join(', '));
-    assert.ok(atLoad.every(name => /^index-[\w-]+\.(js|css)$/.test(name)), 'no panel chunk before opening: ' + atLoad.join(', '));
+    // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
+    // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'draw.js', 'index.css', 'index.js', 'karot.js'], atLoad.join(', '));
+    assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
     assert.match(onOpen[0], /^panel-[\w-]+\.js$/);
@@ -1175,8 +1657,15 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const panelCode = panel ? readFileSync(join(env.outDir, 'assets', panel), 'utf8') : '';
     for (const [name, size] of Object.entries(sizes)) t.diagnostic(`${name}: ${size.bytes} bytes, gzip ${size.gzip} bytes`);
     if (PROBE) return;
-    assert.equal(scripts.length, 2, scripts.join(', '));
+    // Changed in 7C-27: two chunks before (main, panel); now also the ELA Core chunk, its shared
+    // drawing helpers, and one chunk per Core view. The main budget below is unchanged.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
+    for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
+      assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
+      const code = readFileSync(join(env.outDir, 'assets', name), 'utf8');
+      for (const marker of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'handleCommand', 'verifyMlDsa87', 'f96bc953da4e941be8354a22']) assert.equal(code.includes(marker), false, name + ': ' + marker);
+    }
     assert.ok(sizes[main].gzip <= 13 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13 KiB budget`);
     assert.ok(sizes[main].bytes <= 36 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 36 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');

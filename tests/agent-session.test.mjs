@@ -426,9 +426,18 @@ test('the web interface runs every command through the session and has no path a
   assert.equal(/session|handleCommand/.test(read('index.html')), false, 'index.html is unchanged');
   // Added in 7F: the only other code web.ts may load is the post-quantum panel, on demand. The panel
   // verifies signatures locally and has no command path into the session.
-  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts']);
-  const panel = read('src/pqc/panel.ts').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-  for (const name of ['session', 'handleCommand', 'interpretCommand', 'runQuery', 'invokeTool', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'sign(', 'keygen', 'secretKey', 'privateKey']) {
-    assert.equal(panel.includes(name), false, 'panel: ' + name);
+  // Changed in 7C-27: web.ts also loads ELA Core (themes and the three Core views) as its own chunk.
+  // Like the panel, the Core has no command path: it only reads what web.ts rendered (checked below).
+  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts']);
+  for (const file of ['src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts']) {
+    const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    for (const name of ['session', 'handleCommand', 'interpretCommand', 'runQuery', 'invokeTool', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'sign(', 'keygen', 'secretKey', 'privateKey']) {
+      assert.equal(source.includes(name), false, file + ': ' + name);
+    }
+  }
+  // The Core imports nothing from the agent, the readers, or the verifier.
+  for (const file of ['src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts']) {
+    const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    for (const match of source.matchAll(/(?:from\s+|import\()'([^']+)'/g)) assert.match(match[1], /^\.\/(draw|karot|optik|gravur)\.ts$/, file + ' imports ' + match[1]);
   }
 });

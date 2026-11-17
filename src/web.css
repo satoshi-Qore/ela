@@ -30,11 +30,15 @@
   --accent: var(--electric);
   --focus: var(--ice);
 
-  /* Status colors keep their meaning: green success, red error or refusal, amber warning, blue progress */
+  /* Status colors keep their meaning: green success, red refusal and failure, amber warning, blue progress.
+     Refusal and failure share the red, and differ by mark (bar or cross, filled or dashed) and text.
+     ELA Core visuals do not use these tokens; they keep the blue and purple family (--s-*). */
   --ok-bg: #0e3b34;
   --ok-fg: #8ef0d4;
   --bad-bg: #4a1d2a;
   --bad-fg: #ffc3cd;
+  --refuse-bg: var(--bad-bg);
+  --refuse-fg: var(--bad-fg);
   --warn-bg: #46361a;
   --warn-fg: #ffe0a2;
   --info-bg: var(--sapphire);
@@ -394,8 +398,11 @@ dd { margin-top: 0.15rem; color: var(--platinum); overflow-wrap: anywhere; font-
 .flow > [data-state="wait"] { --c: var(--ice); }
 .flow > :is([data-state="done"], [data-state="pass"], [data-state="ok"], [data-state="recognized"], [data-state="success"]) { --c: var(--ok-fg); border-top-style: solid; }
 .flow > :is([data-state="done"], [data-state="pass"], [data-state="ok"], [data-state="recognized"], [data-state="success"])::before { background: var(--ok-fg); box-shadow: 0 0 0.6rem rgba(142, 240, 212, 0.55); }
-.flow > :is([data-state="blocked"], [data-state="failed"], [data-state="error"], [data-state="refused"]) { --c: var(--bad-fg); border-top-style: solid; }
-.flow > :is([data-state="blocked"], [data-state="failed"], [data-state="error"], [data-state="refused"])::before { background: var(--bad-fg); }
+.flow > :is([data-state="blocked"], [data-state="refused"]) { --c: var(--refuse-fg); border-top-style: solid; }
+.flow > :is([data-state="blocked"], [data-state="refused"])::before { background: var(--refuse-fg); }
+/* A failure is a hollow, dashed marker; a refusal a filled one. */
+.flow > :is([data-state="failed"], [data-state="error"]) { --c: var(--bad-fg); border-top-style: solid; }
+.flow > :is([data-state="failed"], [data-state="error"])::before { border-style: dashed; }
 .flow > :is([data-state="clarify"], [data-state="unsupported"], [data-state="partial"], [data-state="stopped"], [data-state="unknown"]) { --c: var(--warn-fg); border-top-style: solid; }
 .flow > [data-state="skipped"] { --c: var(--skipped-fg); border-top-style: dotted; }
 
@@ -516,7 +523,10 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .state[data-state="querying"] { background: var(--info-bg); color: var(--info-fg); }
 .state[data-state="success"] { background: var(--ok-bg); color: var(--ok-fg); }
 .state[data-state="error"] { background: var(--bad-bg); color: var(--bad-fg); }
-.state[data-state="refused"] { background: var(--bad-bg); color: var(--bad-fg); }
+.state[data-state="refused"] { background: var(--refuse-bg); color: var(--refuse-fg); }
+/* The badge mark differs too: a barrier bar for a refusal, a cross for an error. */
+.state[data-state="refused"]::before { width: 0.6rem; height: 0.16rem; border-radius: 0.05rem; }
+.state[data-state="error"]::before { width: auto; height: auto; border-radius: 0; background: none; content: "×"; font-weight: 700; line-height: 1; }
 .state[data-state="needs clarification"] { background: var(--warn-bg); color: var(--warn-fg); }
 .state[data-state="unsupported"] { background: var(--warn-bg); color: var(--warn-fg); }
 .state[data-state="partial"] { background: var(--warn-bg); color: var(--warn-fg); }
@@ -792,4 +802,189 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   :root { --gutter: 0.625rem; }
   .module, .command-panel, .result { padding: 0.65rem; }
   .run { width: 100%; }
+}
+
+/* === 7C-27: three themes and the three ELA Core views =============================================
+   Blue (Quantum Blue) is the default and keeps every token above. White (Precision Light) and Black
+   (Titanium Dark) redefine the same tokens on :root only (theme buttons also carry data-theme).
+   Core decoration uses only the purple, white, and blue families: lavender, lilac, amethyst, violet,
+   deep purple; pearl, ice white, platinum, silver white; ice blue, electric blue, sapphire, night blue.
+   Core status marks of a real stop (--s-blocked, --s-failed, --e-blk-2, --blocked-fill) use the same
+   red as the status badges outside the Core (--bad-fg), so one meaning has one color on the page. */
+
+:root {
+  --core-panel: linear-gradient(165deg, rgba(166, 220, 255, 0.07), rgba(166, 220, 255, 0) 38%), linear-gradient(200deg, rgba(160, 140, 255, 0.06), transparent 50%), rgba(7, 15, 33, 0.92);
+  --core-ink: #eaf3ff; --core-ink-2: #b7cbea; --core-ink-3: #8fa6cc; --core-ink-4: #7189b6;
+  --core-line: #16305e; --core-line-2: #22427a; --core-surface: #142a5a; --core-well: #061027; --core-grid: #0b1a3b;
+  --s-ok: #7cc4ff; --e-ok-2: #3d9bff; --s-running: #a8dcff; --s-blocked: var(--bad-fg); --e-blk-2: #d9536b;
+  --s-failed: var(--bad-fg); --s-skipped: #7189b2; --s-waiting: #5f78a3; --s-unknown: #a3b6d6; --s-result: #eef6ff; --e-res-2: #d9d2ff;
+  --beam-1: #eef6ff; --beam-2: #3d9bff; --glass-1: #a8dcff; --glass-2: #9b6ce0; --glass-edge: #eef6ff; --blocked-fill: rgba(255, 195, 205, 0.12);
+  --layer-0: #16295a; --layer-1: #1e2256; --layer-2: #12244e; --layer-3: #102045; --layer-4: #0e1c3e; --layer-5: #0c1836;
+  --layer-line: #2a4c8a; --layer-top: #1d3870; --seal-overlay: rgba(2, 6, 18, 0.55); --bore: #020611;
+  --shade-edge: #000; --shade-hi: #a8dcff; --metal-1: #6f88b4; --metal-2: #eef6ff; --probe-tip: #d9d2ff;
+  --metal-rail-hi: #24427c; --metal-rail-lo: #0a1632;
+}
+
+/* Quantum Blue: the existing navy identity with a sharper, cold metallic sheen and a measured violet depth. */
+:root:not([data-theme="light"]):not([data-theme="dark"]) .module {
+  background: linear-gradient(162deg, rgba(166, 220, 255, 0.075), rgba(166, 220, 255, 0) 34%), linear-gradient(205deg, rgba(160, 140, 255, 0.05), transparent 46%), var(--frame);
+}
+:root:not([data-theme="light"]):not([data-theme="dark"]) {
+  background:
+    radial-gradient(80rem 36rem at 8% -14rem, rgba(40, 137, 232, 0.26), transparent 70%),
+    radial-gradient(46rem 30rem at 96% -6rem, rgba(155, 108, 224, 0.10), transparent 70%),
+    radial-gradient(54rem 34rem at 104% 6rem, rgba(219, 228, 238, 0.06), transparent 65%),
+    linear-gradient(rgba(166, 220, 255, 0.028) 1px, transparent 1px) 0 0 / 4rem 4rem,
+    linear-gradient(90deg, rgba(166, 220, 255, 0.028) 1px, transparent 1px) 0 0 / 4rem 4rem,
+    var(--night);
+  background-attachment: fixed;
+}
+
+/* --- Titanium Dark ------------------------------------------------------------------------------ */
+:root[data-theme="dark"] {
+  --night: #0b0c0e; --navy: #15171b; --sapphire: #20242b; --electric: #5aa8ff; --ice: #a8dcff; --text: #eceef2;
+  --platinum: #e0e4ea; --muted: #b2b9c4; --border: rgba(255, 255, 255, 0.13); --border-soft: rgba(255, 255, 255, 0.08);
+  --hairline: rgba(255, 255, 255, 0.11); --border-strong: #4b525d; --field: #0f1114; --surface-raised: #1b1e23;
+  --frame: rgba(19, 21, 25, 0.94); --well: #0f1114; --highlight: rgba(255, 255, 255, 0.05); --shadow: 0 1.2rem 2.4rem rgba(0, 0, 0, 0.5);
+  --on-electric: #06101f; --electric-hover: #84bdff;
+  --info-bg: #20242b; --info-fg: #dfe9f5; --neutral-bg: #23272e; --neutral-fg: #d8dde5; --skipped-bg: #1c2026; --skipped-fg: #b0b8c3;
+  --core-panel: linear-gradient(180deg, #17191d, #111316);
+  --core-ink: #eceef2; --core-ink-2: #b9bfc9; --core-ink-3: #8f97a4; --core-ink-4: #808895;
+  --core-line: #23262c; --core-line-2: #30353e; --core-surface: #1c1f24; --core-well: #0d0f12; --core-grid: #15181c;
+  --s-ok: #5aa8ff; --e-ok-2: #a8dcff; --s-running: #a8dcff; --s-blocked: var(--bad-fg); --e-blk-2: #d9536b;
+  --s-failed: var(--bad-fg); --s-skipped: #808894; --s-waiting: #6b7381; --s-unknown: #aab2be; --s-result: #f6f3ee; --e-res-2: #d9d2ff;
+  --glass-2: #c3a9f5; --blocked-fill: rgba(255, 195, 205, 0.12);
+  --layer-0: #20252d; --layer-1: #252030; --layer-2: #1c2129; --layer-3: #1a1f27; --layer-4: #181d24; --layer-5: #16191f;
+  --layer-line: #363d49; --layer-top: #2a3039; --seal-overlay: rgba(4, 5, 7, 0.55); --bore: #040506;
+  --shade-hi: #ffffff; --metal-1: #7e8794; --metal-2: #eef1f5; --metal-rail-hi: #383e48; --metal-rail-lo: #15181c;
+  color-scheme: dark;
+  background: radial-gradient(70rem 34rem at 10% -12rem, rgba(90, 168, 255, 0.07), transparent 70%), radial-gradient(48rem 30rem at 96% -4rem, rgba(155, 108, 224, 0.05), transparent 70%), var(--night);
+}
+:root[data-theme="dark"] .topbar { background: rgba(10, 11, 13, 0.9); }
+:root[data-theme="dark"] .net-chip { background: #15171b; border-color: rgba(255, 255, 255, 0.16); }
+:root[data-theme="dark"] .module-logic { border-color: rgba(255, 255, 255, 0.18); }
+
+/* --- Precision Light ---------------------------------------------------------------------------- */
+:root[data-theme="light"] {
+  --night: #eef1f5; --navy: #ffffff; --sapphire: #e3e9f2; --electric: #1f4fb4; --ice: #1f4fb4; --text: #0e1626;
+  --platinum: #142033; --muted: #4a5568; --border: rgba(31, 79, 180, 0.22); --border-soft: rgba(31, 79, 180, 0.12);
+  --hairline: rgba(20, 32, 51, 0.12); --border-strong: #8ea3c4; --field: #ffffff; --surface-raised: #ffffff;
+  --frame: rgba(255, 255, 255, 0.94); --well: #f4f6fa; --highlight: rgba(255, 255, 255, 0.9); --shadow: 0 1rem 2.2rem rgba(20, 40, 80, 0.10);
+  --on-electric: #ffffff; --electric-hover: #2f62c8;
+  --ok-bg: #e2f4ee; --ok-fg: #0b6650; --bad-bg: #fbe8ec; --bad-fg: #a01d38; --refuse-bg: var(--bad-bg); --refuse-fg: var(--bad-fg); --warn-bg: #fdf1d8; --warn-fg: #7a5200;
+  --info-bg: #e3e9f2; --info-fg: #1d3a66; --neutral-bg: #e7ecf3; --neutral-fg: #2a3a52; --skipped-bg: #eef2f7; --skipped-fg: #4f5f75;
+  --core-panel: linear-gradient(180deg, #ffffff, #fafbfd);
+  --core-ink: #0e1320; --core-ink-2: #384152; --core-ink-3: #596273; --core-ink-4: #5f6878;
+  --core-line: #e1e5eb; --core-line-2: #cbd1db; --core-surface: #eef0f4; --core-well: #f6f7fa; --core-grid: #eceef3;
+  --s-ok: #1f4fb4; --e-ok-2: #3d7fe0; --s-running: #2a6fd6; --s-blocked: var(--bad-fg); --e-blk-2: #c94a63;
+  --s-failed: var(--bad-fg); --s-skipped: #677083; --s-waiting: #7d8696; --s-unknown: #4b5465; --s-result: #0d1d45; --e-res-2: #6a3fc4;
+  --beam-1: #3d9bff; --beam-2: #1f4fb4; --glass-1: #3d9bff; --glass-2: #9b6ce0; --glass-edge: #ffffff; --blocked-fill: rgba(160, 29, 56, 0.07);
+  --layer-0: #e8ebf0; --layer-1: #e7e2f3; --layer-2: #e2e6ed; --layer-3: #dde2ea; --layer-4: #d8dee7; --layer-5: #d2d9e3;
+  --layer-line: #b5bdca; --layer-top: #f5f6f9; --seal-overlay: rgba(237, 239, 243, 0.62); --bore: #1b2130;
+  --shade-edge: #2f3847; --shade-hi: #ffffff; --metal-1: #8a93a1; --metal-2: #f6f8fb; --probe-tip: #6a3fc4;
+  --metal-rail-hi: #e3e7ed; --metal-rail-lo: #b9c1cd;
+  color-scheme: light;
+  background: radial-gradient(70rem 34rem at 10% -12rem, rgba(61, 155, 255, 0.10), transparent 70%), radial-gradient(48rem 30rem at 96% -4rem, rgba(155, 108, 224, 0.07), transparent 70%), var(--night);
+}
+:root[data-theme="light"] .topbar { background: rgba(255, 255, 255, 0.88); }
+:root[data-theme="light"] .net-chip { background: #ffffff; border-color: rgba(31, 79, 180, 0.3); }
+:root[data-theme="light"] h1 { background-image: linear-gradient(180deg, #0e1626 30%, #1f4fb4); }
+:root[data-theme="light"] textarea::placeholder { color: #5f6e85; }
+:root[data-theme="light"] .module-logic { border-color: rgba(31, 79, 180, 0.3); }
+:root[data-theme="light"] .module::after { background: linear-gradient(90deg, transparent, rgba(31, 79, 180, 0.35), transparent); }
+
+/* --- Selectors (theme, Core view) ---------------------------------------------------------------- */
+.switch { display: inline-flex; flex-wrap: wrap; gap: 0.1rem; padding: 0.15rem; border: 1px solid var(--border); border-radius: 0.45rem; background: var(--field); }
+.switch button { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem; border: 0; border-radius: 0.32rem; background: none; color: var(--muted); font: 600 0.72rem/1.2 var(--mono); }
+.switch button:hover { color: var(--text); }
+.switch button[aria-checked="true"] { color: var(--on-electric); background: var(--platinum); }
+.switch-key { font-size: 0.66rem; }
+.swatch { width: 0.72rem; height: 0.72rem; flex: none; border-radius: 50%; border: 1px solid var(--border-strong); }
+.theme-switch [data-theme="light"] .swatch { background: linear-gradient(135deg, #ffffff, #dfe4ec); }
+.theme-switch [data-theme="dark"] .swatch { background: linear-gradient(135deg, #3a3f47, #0d0f12); }
+.theme-switch [data-theme="blue"] .swatch { background: linear-gradient(135deg, #3d9bff, #0d1d45 60%, #4a2a8a); }
+
+/* --- ELA Core ------------------------------------------------------------------------------------ */
+.core { margin-top: 1.1rem; border: 1px solid var(--border); border-radius: 0.65rem; background: var(--core-panel); box-shadow: inset 0 1px 0 var(--highlight); }
+.core-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.6rem 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline); }
+.core-title { color: var(--platinum); font: 600 0.78rem/1.2 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; }
+.core-body { display: grid; grid-template-columns: minmax(0, 52rem) minmax(0, 1fr); gap: 1rem 1.5rem; align-items: start; padding: 1rem; }
+.core-viz { min-width: 0; border: 1px solid var(--core-line); border-radius: 0.5rem; background: var(--core-well); overflow: hidden; }
+.core-viz svg { display: block; width: 100%; height: auto; }
+.core-viz .core-m { display: none; }
+.core-legend { display: grid; gap: 0.55rem; align-content: start; margin: 0; padding: 0.25rem 0 0; list-style: none; }
+.core-legend li { --c: var(--s-waiting); display: flex; align-items: center; gap: 0.55rem; color: var(--muted); font: 0.74rem/1.3 var(--mono); }
+.core-legend svg { width: 0.95rem; height: 0.95rem; flex: none; }
+.core-legend .ln { flex: none; width: 1.5rem; height: 2px; background: var(--c); }
+.core-legend [data-status="waiting"] .ln { background: repeating-linear-gradient(90deg, var(--c) 0 2px, transparent 2px 6px); }
+.core-legend [data-status="running"] { --c: var(--s-running); }
+.core-legend [data-status="running"] .ln { background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 10px); }
+.core-legend [data-status="ok"] { --c: var(--s-ok); }
+.core-legend [data-status="blocked"] { --c: var(--s-blocked); }
+.core-legend [data-status="blocked"] .ln { height: 3px; }
+.core-legend [data-status="failed"] { --c: var(--s-failed); }
+.core-legend [data-status="failed"] .ln { background: repeating-linear-gradient(90deg, var(--c) 0 8px, transparent 8px 11px, var(--c) 11px 12.5px, transparent 12.5px 15.5px); }
+.core-legend [data-status="skipped"] { --c: var(--s-skipped); }
+.core-legend [data-status="skipped"] .ln { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 8px); }
+.core-legend [data-status="unknown"] { --c: var(--s-unknown); }
+.core-legend [data-status="unknown"] .ln { background: repeating-linear-gradient(90deg, var(--c) 0 1.5px, transparent 1.5px 7px); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .core-moving { animation: core-flow 1.2s linear infinite; }
+  @keyframes core-flow { to { stroke-dashoffset: -20; } }
+}
+
+@media (max-width: 64rem) {
+  .core-body { grid-template-columns: minmax(0, 1fr); }
+  .core-legend { grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); }
+}
+
+/* Narrow: the Core draws geometry only; the stage list below (#flow) carries the readable text. */
+@media (max-width: 40rem) {
+  .core-viz .core-d { display: none; }
+  .core-viz .core-m { display: block; max-width: 20rem; margin-inline: auto; }
+  .core-bar .switch { display: flex; width: 100%; }
+  .core-bar .switch button { flex: 1 1 auto; justify-content: center; }
+  .core-body { padding: min(0.75rem, 10px); }
+  .core-bar { padding: min(0.7rem, 10px); }
+}
+
+/* === 7C-27 visual pass: narrow screens and large text ===========================================
+   Paddings on narrow screens are capped in px, so 200% text gets the room instead of nested
+   gutters. Nothing is hidden or shrunk: long values wrap, and the execution flow turns compact. */
+@media (max-width: 40rem) {
+  :root { --gutter: min(0.75rem, 12px); }
+  .module { padding: min(1rem, 14px); }
+  .command-panel, .result { padding: min(1rem, 12px); }
+  .core { margin-top: 0.85rem; }
+  .core-body { gap: 0.75rem; }
+  .core-legend { grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr)); gap: 0.4rem 0.75rem; }
+  .topbar-tools { flex-wrap: wrap; }
+  .theme-switch { flex-wrap: wrap; }
+  .run { width: 100%; justify-content: center; }
+  /* Compact flow: number, name, and state on one line; the RPC method below. All six stages stay. */
+  .flow > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.5rem; padding: 0.3rem 0 0.55rem 1.3rem; }
+  .flow-n { order: 0; }
+  .flow-name { order: 1; font-size: 0.92rem; }
+  .flow-state { order: 2; margin-left: auto; text-align: end; }
+  .flow-code { order: 3; flex-basis: 100%; }
+  .flow > li::before { top: 0.55rem; }
+}
+@media (max-width: 22rem) {
+  :root { --gutter: min(0.625rem, 10px); }
+  .module, .command-panel, .result { padding: min(0.65rem, 10px); }
+}
+
+/* Core: the HTML account of what the Core draws (the SVG labels are never the only source). */
+.core-caption { margin: 0 1rem 1rem; color: var(--platinum); font-size: 0.86rem; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 40rem) { .core-caption { margin: 0 min(0.75rem, 10px) min(0.75rem, 10px); } }
+
+/* Inner boxes of Diana, PQC, and Payment: on narrow screens their paddings are capped in px too, so
+   nested frames do not leave the text a column of a few characters at 200% text. */
+@media (max-width: 40rem) {
+  .schema { padding: min(0.85rem, 8px); }
+  .schema-contract, .actor, .actor-out, .prep-list, .spec, .node { padding: min(0.7rem, 8px); }
+  .rules li { padding-inline-start: min(0.9rem, 12px); }
+  .prep-list ul { padding-inline-start: min(1.1rem, 14px); }
+  .pqc-result { padding: min(0.9rem, 10px); }
 }
