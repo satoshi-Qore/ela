@@ -59,7 +59,7 @@ export class FormatError extends Error {
 
 const sha256Hex = bytes => createHash('sha256').update(bytes).digest('hex');
 
-async function latestHeight({ rest, fetch }) {
+export async function latestHeight({ rest, fetch }) {
   try {
     const response = await fetch(rest.replace(/\/+$/, '') + '/cosmos/base/tendermint/v1beta1/blocks/latest');
     const height = BigInt((await response.json())?.block?.header?.height);
@@ -103,7 +103,7 @@ export async function simulateSigned(txBytes, { rest, fetch }) {
  * (the user's typed answer) and `write(report)` (public output).
  */
 /** Reads the record (only ever after the confirmation), parses it, and zeroes its bytes. */
-function readParsedRecord(readRecord) {
+export function readParsedRecord(readRecord) {
   const recordBytes = readRecord();
   try {
     if (!(recordBytes instanceof Uint8Array) || recordBytes.length === 0 || recordBytes.length > MAX_RECORD_BYTES) throw new Error('Unreadable recovery record');
@@ -118,7 +118,7 @@ function readParsedRecord(readRecord) {
 }
 
 /** Pre-sign: re-reads the chain (nothing from PREPARE is taken as still true) and ties the record's keys to the on-chain keys. */
-async function presignChecks(account, summary, network, plan) {
+export async function presignChecks(account, summary, network, plan) {
   if (summary.pqcPublicKeySha256 !== plan.pqcPublicKeySha256) throw new Error('Record PQC key is not the registered key');
   const live = await fetchLiveState(plan.native, network);
   const failures = prepareFailures(live, plan);
@@ -129,7 +129,7 @@ async function presignChecks(account, summary, network, plan) {
   return { live, onChainKey };
 }
 
-function signPlanned(account, plan, timeoutHeight, deps) {
+export function signPlanned(account, plan, timeoutHeight, deps) {
   const registry = sdk.qorechainRegistry();
   return (deps.signHybrid ?? sdk.signHybridEth)({
     account: { privateKey: account.privateKey, publicKey: account.publicKey, pqc: account.pqc },
@@ -140,7 +140,7 @@ function signPlanned(account, plan, timeoutHeight, deps) {
   });
 }
 
-const zeroSigned = signed => { for (const bytes of [signed?.txRawBytes, signed?.bodyBytes, signed?.classicalSignature]) if (bytes instanceof Uint8Array) bytes.fill(0); };
+export const zeroSigned = signed => { for (const bytes of [signed?.txRawBytes, signed?.bodyBytes, signed?.classicalSignature]) if (bytes instanceof Uint8Array) bytes.fill(0); };
 
 /** Wraps a network so that, once sealed, every request is refused before it reaches the transport. */
 export function sealableNetwork(network) {

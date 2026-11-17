@@ -94,3 +94,20 @@ You ran `--sign-and-verify-local` once, in your own terminal, on the real Invoic
 | Account number / sequence | 16046 / 1 |
 
 The hybrid signature that SDK 0.14.0 produces for this account is valid under both on-chain keys, and it signs exactly the transaction PREPARE planned. The signed bytes were not sent, stored or printed. The transaction has not been simulated with real signatures or broadcast.
+
+## Broadcast tool (7C-16): `diana-hybrid-broadcast.mjs`
+This tool sends the first real hybrid-signed Diana transaction: the planned 1 uqor self-send. It reuses the PREPARE plan, the checks and `hybridFormatFailures` from `diana-hybrid-prepare.mjs`, and the signing steps from `diana-hybrid-sign.mjs`. No signing logic is written a second time.
+
+- **`node .\diana-hybrid-broadcast.mjs`** (default): runs PREPARE only. It is read-only and needs no vault, record or key. It never signs, and the broadcast route is never opened.
+- **`node .\diana-hybrid-broadcast.mjs --broadcast`**: runs only in your own interactive Windows terminal.
+  1. Runs PREPARE: live checks, a placeholder simulation and the gas estimate.
+  2. Asks you to type `SIGN HYBRID SELF-SEND FOR 16046`. Only then is the recovery record read and checked.
+  3. Re-reads the chain right before signing. The transaction is signed **once**, with a timeout height 300 blocks ahead (about 7 minutes). It can never be included after that height.
+  4. Requires the auth info to match the plan byte for byte, and `hybridFormatFailures` to pass with both signatures verified locally.
+  5. Simulates **those exact bytes**. It stops if the simulation fails or if `exactHybridGas` is above 350,000.
+  6. Prints the transaction hash, gas and timeout height. Then asks you to type `BROADCAST HYBRID SELF-SEND TO QORECHAIN-DIANA`.
+  7. Re-reads the chain again: chain ID, account, sequence, keys and balance. It also requires at least 20 blocks before the timeout height, and that the bytes still hash to the hash it showed.
+  8. Broadcasts the **same bytes** once, in sync mode. The guard lets the broadcast route through at most once. A lost or unreadable answer is reported as `UNKNOWN`, with the hash and the last height at which the transaction can still be included, and is never retried. A refusal shows only its public code.
+  9. Prints what to check afterwards, read-only: the transaction by hash, the account sequence (expected 2) and the balance drop (at most the 52,500 uqor fee).
+
+Running it again after a broadcast stops before signing, because the sequence has moved.
