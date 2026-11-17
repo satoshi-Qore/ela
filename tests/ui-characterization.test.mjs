@@ -531,6 +531,103 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     });
   });
 
+  // Added in the 7C-25 second round: the execution flow and the Diana route are drawn from the
+  // session's result only. A stage that did not run must never look completed.
+  uiTest('execution flow and Diana route show only what ran, for every kind of outcome', async t => {
+    const FLOW = `(() => ({
+      flow: [...document.querySelectorAll('#flow > li')].map(item => item.dataset.state).join(' '),
+      text: [...document.querySelectorAll('#flow .flow-state')].map(item => item.textContent).join(' | '),
+      route: [...document.querySelectorAll('[data-link]')].map(item => item.dataset.state + ':' + item.querySelector('.seg-state').textContent).join(' '),
+      block: document.getElementById('block-number').textContent,
+    }))()`;
+    const seen = {};
+    await openPage();
+    seen.initial = await evaluate(FLOW);
+    for (const [label, command, mode] of [
+      ['refused', 'Send 10 QOR.'], ['spaces', '   '], ['unknown', 'Merhaba'], ['unsupported', 'What is the gas price?'],
+      ['noContext', 'Tekrar kontrol et.'], ['network', 'Diana ağını kontrol et.'], ['refusedAfterRead', 'Show my private key.'],
+      ['partial', 'Diana ağını kontrol et.', 'block_fails'], ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'],
+      ['blockError', 'QoreChain son blok numarasını öğren.', 'http_500'], ['block', "What's the latest block?", 'ok'],
+    ]) {
+      if (mode) await setMode(mode);
+      await submit(command);
+      seen[label] = await evaluate(FLOW);
+    }
+    // While a query runs, nothing past the received command is shown as done.
+    await openPage('stall');
+    seen.querying = await evaluate(`(async () => {
+      document.getElementById('command').value = 'Diana ağını kontrol et.';
+      document.getElementById('command-form').requestSubmit();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      return ${FLOW};
+    })()`);
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    const idleRoute = 'idle:not run idle:not run';
+    assert.deepEqual(seen.initial, { flow: 'idle idle idle idle idle idle', text: 'not run | not run | not run | not run | not run | not run', route: idleRoute, block: '—' });
+    assert.deepEqual([seen.refused.flow, seen.refused.route], ['done blocked idle idle idle refused', idleRoute]);
+    assert.equal(seen.refused.text, 'received | blocked | not run | not run | not run | refused');
+    assert.equal(seen.spaces.flow, 'stopped idle idle idle idle clarify', 'the input check runs before the gate');
+    assert.equal(seen.unknown.flow, 'done pass clarify idle idle clarify');
+    assert.equal(seen.unsupported.flow, 'done pass unsupported idle idle unsupported');
+    assert.equal(seen.noContext.flow, 'done pass clarify idle idle clarify');
+    assert.deepEqual(seen.network, { flow: 'done pass recognized ok ok success', text: 'received | passed | recognized | succeeded | succeeded | success', route: 'ok:succeeded ok:succeeded', block: '9954992' });
+    // Changed with this round: a refusal no longer blanks the readout; the route and the readout keep
+    // the last real read (the chip already did). Every query that runs still replaces them.
+    assert.deepEqual(seen.refusedAfterRead, { flow: 'done blocked idle idle idle refused', text: 'received | blocked | not run | not run | not run | refused', route: 'ok:succeeded ok:succeeded', block: '9954992' });
+    assert.deepEqual([seen.partial.flow, seen.partial.route, seen.partial.block], ['done pass recognized ok failed partial', 'ok:succeeded failed:failed', '—']);
+    assert.deepEqual([seen.wrongChain.flow, seen.wrongChain.route, seen.wrongChain.block], ['done pass recognized failed skipped error', 'failed:failed skipped:skipped', '—']);
+    // The latest-block tool reports one error, not which read failed: neither link is shown as passed.
+    assert.deepEqual([seen.blockError.flow, seen.blockError.route], ['done pass recognized unknown unknown error', 'unknown:not itemized unknown:not itemized']);
+    assert.deepEqual([seen.block.flow, seen.block.route], ['done pass recognized ok ok success', 'ok:succeeded ok:succeeded']);
+    assert.deepEqual([seen.querying.flow, seen.querying.route], ['done wait wait wait wait wait', idleRoute]);
+  }, { timeout: 60_000 });
+
+  uiTest('verifier visuals: length gauges and the verdict follow the verifier result only', async t => {
+    await openPage();
+    await openPanel();
+    const read = () => evaluate(`(() => ({
+      result: document.getElementById('pqc-result').dataset.state,
+      gauges: ['pqc-public-key-meter', 'pqc-signature-meter'].map(id => document.getElementById(id).dataset.fit),
+      seal: getComputedStyle(document.querySelector('#pqc-result .seal')).borderTopColor,
+    }))()`);
+    const seen = { idle: await read() };
+    await pqc('pqc-load');
+    seen.valid = await read();
+    await pqc('pqc-flip');
+    seen.flipped = await read();
+    await pqc('pqc-load');
+    await pqc('pqc-verify', { 'pqc-public-key': (await evaluate(`document.getElementById('pqc-public-key').value`)).slice(0, -2) });
+    seen.shortKey = await read();
+    await pqc('pqc-load');
+    await pqc('pqc-verify', { 'pqc-signature': (await evaluate(`document.getElementById('pqc-signature').value`)) + '00' });
+    seen.longSignature = await read();
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    const green = 'rgb(142, 240, 212)';
+    const red = 'rgb(255, 195, 205)';
+    assert.deepEqual(seen.idle, { result: 'idle', gauges: ['under', 'under'], seal: 'rgb(58, 106, 168)' });
+    assert.deepEqual(seen.valid, { result: 'valid', gauges: ['exact', 'exact'], seal: green });
+    // Exact lengths alone are not shown as valid: the changed byte keeps both gauges exact and the verdict red.
+    assert.deepEqual(seen.flipped, { result: 'invalid', gauges: ['exact', 'exact'], seal: red });
+    assert.deepEqual(seen.shortKey, { result: 'invalid', gauges: ['under', 'exact'], seal: red });
+    assert.deepEqual(seen.longSignature, { result: 'invalid', gauges: ['exact', 'over'], seal: red });
+  });
+
+  uiTest('Payment Account diagram: preparation only, no amounts, no address, no control', async t => {
+    await openPage();
+    const schema = await evaluate(`(() => {
+      const figure = document.querySelector('#payment .schema');
+      return {
+        caption: figure.querySelector('figcaption').textContent,
+        rules: figure.querySelectorAll('.rules li').length,
+        numbers: (figure.textContent.match(/\\d+/g) || []),
+        addresses: /0x[0-9a-f]{6,}|qor1/i.test(document.getElementById('payment').textContent),
+        controls: figure.querySelectorAll('button, a, input, select, textarea, [tabindex]').length,
+      };
+    })()`);
+    if (PROBE) { t.diagnostic(JSON.stringify(schema)); return; }
+    assert.deepEqual(schema, { caption: 'Planned contract architecture · preparation', rules: 6, numbers: ['9800'], addresses: false, controls: 0 });
+  });
+
   uiTest('language switch: Turkish interface text, English restored exactly, no request, session unchanged', async t => {
     await openPage();
     await submit('Send 10 QOR.');

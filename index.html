@@ -58,6 +58,23 @@
     "pqc.open": "Open verifier",
     "pqc.close": "Close verifier",
     "pqc.loading": "Loading the verifier…",
+    "fs.idle": "not run",
+    "fs.wait": "waiting",
+    "fs.done": "received",
+    "fs.stopped": "stopped at input check",
+    "fs.pass": "passed",
+    "fs.blocked": "blocked",
+    "fs.ok": "succeeded",
+    "fs.failed": "failed",
+    "fs.skipped": "skipped",
+    "fs.unknown": "not itemized",
+    "fs.clarify": "needs clarification",
+    "fs.unsupported": "unsupported",
+    "fs.refused": "refused",
+    "fs.recognized": "recognized",
+    "fs.success": "success",
+    "fs.partial": "partial",
+    "fs.error": "error",
     "pqc.loadFail": "The verifier could not be loaded. Close and open the panel to try again."
   },
   "tr": {
@@ -109,6 +126,24 @@
     "pqc.loading": "Doğrulayıcı yükleniyor…",
     "pqc.loadFail": "Doğrulayıcı yüklenemedi. Tekrar denemek için paneli kapatıp açın.",
 
+    "fs.idle": "çalışmadı",
+    "fs.wait": "bekliyor",
+    "fs.done": "alındı",
+    "fs.stopped": "girdi denetiminde durdu",
+    "fs.pass": "geçti",
+    "fs.blocked": "engellendi",
+    "fs.ok": "başarılı",
+    "fs.failed": "başarısız",
+    "fs.skipped": "atlandı",
+    "fs.unknown": "ayrıntı yok",
+    "fs.clarify": "açıklama gerekli",
+    "fs.unsupported": "desteklenmiyor",
+    "fs.refused": "reddedildi",
+    "fs.recognized": "tanındı",
+    "fs.success": "başarılı",
+    "fs.partial": "kısmi",
+    "fs.error": "hata",
+
     "lang.label": "Dil",
     "net.label": "Diana test ağı",
     "hero.eyebrow": "QoreChain · Diana test ağı",
@@ -122,16 +157,25 @@
     "tag.logic": "Etkin · kural tabanlı",
     "tag.pqc": "Etkin · yalnızca doğrulama",
     "tag.payment": "Hazırlıkta · bağlı değil",
-    "diana.copy": "Diana test ağının genel EVM JSON-RPC uç noktasından yalnızca iki okuma yöntemi çalışır. Başarılı bir kontrol, bu tek uç noktanın yanıt verdiğini gösterir; tam bir ağ sağlık kontrolü değildir.",
+    "diana.copy": "Tek genel uç nokta, iki okuma yöntemi. Başarılı bir kontrol tam bir ağ sağlık kontrolü değildir.",
+    "route.label": "Okuma yolu",
+    "route.browser": "ELA · bu tarayıcı",
+    "route.browserSub": "salt okunur istemci",
+    "route.chain": "Diana test ağı",
+    "route.chainSub": "EVM zinciri 9800 · son blok",
     "diana.height": "Blok yüksekliği",
     "diana.network": "Ağ",
     "diana.evm": "EVM zincir kimliği",
-    "diana.source": "Veri kaynağı",
-    "diana.endpoint": "Uç nokta",
-    "diana.methods": "İzinli yöntemler",
     "diana.last": "Son doğrulanmış okuma",
-    "diana.note": "Değerler yalnızca bu sayfa oturumunda bir sorgu çalıştıktan sonra görünür. Önbellekten, tahminle veya simülasyonla değer gösterilmez.",
-    "logic.copy": "Her komut önce güvenlik kapısından geçer, ardından sabit yönlendirmeler ve kural tabanlı sınıflandırıcı çalışır. Yalnızca iki okuma yöntemi çalışabilir; hiçbir şey imzalanmaz veya gönderilmez.",
+    "diana.note": "Değerler yalnızca bu sayfada bir sorgu çalıştıktan sonra görünür. Önbellekten, tahminle veya simülasyonla değer gösterilmez.",
+    "logic.copy": "Her aşama son komut için gerçekte neyin çalıştığını gösterir. Çalışmayan aşamalar \"çalışmadı\" olarak kalır.",
+    "flow.label": "Yürütme akışı",
+    "flow.cmd": "Komut",
+    "flow.gate": "Güvenlik kapısı",
+    "flow.intent": "Niyet ve kapsam",
+    "flow.chain": "Ağ doğrulama",
+    "flow.block": "Veri okuma",
+    "flow.result": "Sonuç",
     "cmd.panel": "Komut",
     "cmd.label": "Komut (Türkçe veya İngilizce)",
     "cmd.placeholder": "Son blok kaç?",
@@ -144,11 +188,10 @@
     "plan.heading": "Yürütülen adımlar",
     "pqc.heading": "Kuantum Sonrası İmza Doğrulama",
     "pqc.intro": "Bir ML-DSA-87 (FIPS 204) imzasını QoreChain'in resmî test vektörüyle bu tarayıcıda kontrol edin. Yalnızca doğrulama: imzalama yok, özel anahtar yok, ağ isteği yok.",
-    "pqc.algorithm": "Algoritma",
+    "spec.caption": "ML-DSA-87 · FIPS 204 · sabit boyutlar",
     "pqc.pkSize": "Genel anahtar",
     "pqc.sigSize": "İmza",
-    "pqc.where": "Çalıştığı yer",
-    "pqc.whereValue": "Bu tarayıcı · ağ isteği yok",
+    "pqc.whereValue": "Bu tarayıcıda çalışır · ağ isteği yok",
     "pqc.bytes2592": "2.592 bayt",
     "pqc.bytes4627": "4.627 bayt",
     "pqc.pk": "Genel anahtar",
@@ -164,14 +207,26 @@
     "pqc.cmpOriginal": "Resmî test vektörü",
     "pqc.cmpChanged": "Bir mesaj baytı değiştirildi",
     "pqc.resultNote": "Doğrulama sonuçları şimdilik İngilizce gösterilir.",
-    "pay.copy": "Diana test ağı için sınırlı bir ödeme hesabı hazırlanıyor: sabit tek alıcı, ödeme başına ve toplam tutar tavanları, bir zaman aralığı ve fatura sahibinin yetkilendirmesi.",
-    "pay.prepared": "Şu ana kadar hazırlananlar (tarayıcı dışında)",
-    "pay.prepared1": "Yerel testleri olan Solidity sözleşme prototipi",
-    "pay.prepared2": "Korumalı komut satırı hazırlık araçları",
+    "pay.copy": "Diana test ağı için sınırlı bir ödeme hesabının planlanan mimarisi. Canlı bir hesap değil, bir şemadır.",
+    "pay.caption": "Planlanan sözleşme mimarisi · hazırlık",
+    "pay.issuer": "Fatura sahibi",
+    "pay.issuerRole": "her faturayı yetkilendirir",
+    "pay.executor": "Yürütücü",
+    "pay.executorRole": "ödeme çağrısını gönderir",
+    "pay.contract": "Ödeme hesabı sözleşmesi",
+    "pay.rule1": "Sabit alıcı, bir kez belirlenir",
+    "pay.rule2": "Ödeme başına tavan",
+    "pay.rule3": "Toplam tavan ve ödeme adedi",
+    "pay.rule4": "Zaman aralığı [startsAt, endsAt)",
+    "pay.rule5": "Fatura denetlenir; her fatura kimliği bir kez kullanılır",
+    "pay.rule6": "Yalnızca Diana zinciri 9800",
+    "pay.recipient": "Sabit alıcı",
+    "pay.recipientRole": "mümkün olan tek alıcı",
     "pay.absent": "Bu arayüzde olmayanlar",
     "pay.absent1": "Hesap adresi, bakiye veya ödeme geçmişi okunmaz.",
     "pay.absent2": "Bu sayfadan ödeme, imza veya dağıtım başlatılamaz.",
     "pay.absent3": "Cüzdan bağlantısı veya anahtar girişi yoktur.",
+    "pay.prototype": "Tarayıcı dışında hazırlananlar: yerel testleri olan bir Solidity prototipi ve korumalı komut satırı araçları.",
     "foot.readonly": "Salt okunur",
     "foot.nosign": "İmza yok",
     "foot.nokeys": "Anahtar yok"
@@ -184,9 +239,9 @@
       <div class="topbar-inner">
         <p class="brand">
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-            <ellipse cx="16" cy="16" rx="13.5" ry="5.2" transform="rotate(-32 16 16)"/>
-            <ellipse cx="16" cy="16" rx="13.5" ry="5.2" transform="rotate(32 16 16)"/>
-            <circle cx="16" cy="16" r="2.6"/>
+            <path d="M10 5H5v22h5" />
+            <path d="M22 5h5v22h-5" />
+            <path class="mark-node" d="M16 10l6 6-6 6-6-6z" />
           </svg>
           <span class="brand-name">ELA</span>
           <span class="brand-sub">Execution &amp; Logic Agent</span>
@@ -231,37 +286,51 @@
             <h2 id="diana-heading" data-i18n="mod.diana">Diana Network</h2>
             <span class="tag" data-tone="live" data-i18n="tag.diana">On-demand read</span>
           </div>
-          <p class="module-copy" data-i18n="diana.copy">Only two read methods run against the public EVM JSON-RPC endpoint of Diana testnet. A successful check confirms that this one endpoint answered; it is not a full network health check.</p>
-          <dl class="readout">
-            <div class="height">
-              <dt data-i18n="diana.height">Block Height</dt>
-              <dd id="block-number">—</dd>
-            </div>
-            <div class="l">
-              <dt data-i18n="diana.network">Network</dt>
-              <dd id="chain-id">—</dd>
-            </div>
-            <div class="r">
-              <dt data-i18n="diana.evm">EVM Chain ID</dt>
-              <dd id="evm-chain-id">—</dd>
-            </div>
-            <div class="l">
-              <dt data-i18n="diana.last">Last verified read</dt>
-              <dd id="last-read">—</dd>
-            </div>
-            <div class="r">
-              <dt data-i18n="diana.source">Data Source</dt>
-              <dd>EVM JSON-RPC</dd>
-            </div>
-            <div class="wide">
-              <dt data-i18n="diana.endpoint">Endpoint</dt>
-              <dd id="endpoint">evm-testnet.qore.host</dd>
-            </div>
-            <div class="wide">
-              <dt data-i18n="diana.methods">Allowed methods</dt>
-              <dd><code>eth_chainId</code> <code>eth_blockNumber</code></dd>
-            </div>
-          </dl>
+          <p class="module-copy" data-i18n="diana.copy">One public endpoint, two read methods. A successful check is not a full network health check.</p>
+          <div class="diana-body">
+            <ol class="route" aria-label="Read route" data-i18n-label="route.label">
+              <li class="node">
+                <span class="node-name" data-i18n="route.browser">ELA · this browser</span>
+                <span class="node-sub" data-i18n="route.browserSub">read-only client</span>
+              </li>
+              <li class="seg" data-link="chain" data-state="idle">
+                <code>eth_chainId</code>
+                <span class="wire" aria-hidden="true"></span>
+                <span class="seg-state">not run</span>
+              </li>
+              <li class="node">
+                <span class="node-name" id="endpoint">evm-testnet.qore.host</span>
+                <span class="node-sub">EVM JSON-RPC</span>
+              </li>
+              <li class="seg" data-link="block" data-state="idle">
+                <code>eth_blockNumber</code>
+                <span class="wire" aria-hidden="true"></span>
+                <span class="seg-state">not run</span>
+              </li>
+              <li class="node node-chain">
+                <span class="node-name" data-i18n="route.chain">Diana testnet</span>
+                <span class="node-sub" data-i18n="route.chainSub">EVM chain 9800 · latest block</span>
+              </li>
+            </ol>
+            <dl class="readout">
+              <div class="height">
+                <dt data-i18n="diana.height">Block Height</dt>
+                <dd id="block-number">—</dd>
+              </div>
+              <div>
+                <dt data-i18n="diana.network">Network</dt>
+                <dd id="chain-id">—</dd>
+              </div>
+              <div>
+                <dt data-i18n="diana.evm">EVM Chain ID</dt>
+                <dd id="evm-chain-id">—</dd>
+              </div>
+              <div>
+                <dt data-i18n="diana.last">Last verified read</dt>
+                <dd id="last-read">—</dd>
+              </div>
+            </dl>
+          </div>
           <p class="module-note" data-i18n="diana.note">Values appear only after a query runs on this page. Nothing is cached, estimated, or simulated.</p>
         </section>
 
@@ -271,48 +340,59 @@
             <h2 id="logic-heading" data-i18n="mod.logic">Execution &amp; Logic</h2>
             <span class="tag" data-tone="live" data-i18n="tag.logic">Active · rule-based</span>
           </div>
-          <p class="module-copy" data-i18n="logic.copy">Every command passes the safety gate first, then fixed routes and a rule-based classifier. Only the two read methods can run; nothing is signed or sent.</p>
+          <p class="module-copy" data-i18n="logic.copy">Each stage shows what actually ran for the last command. Stages that did not run stay marked "not run".</p>
 
-          <section class="command-panel" aria-label="Command" data-i18n-label="cmd.panel">
-            <form id="command-form">
-              <label for="command" data-i18n="cmd.label">Command (English or Turkish)</label>
-              <textarea id="command" name="command" rows="2" required aria-describedby="command-help"
-                placeholder="What's the latest block?" data-i18n-ph="cmd.placeholder"></textarea>
-              <p id="command-help" class="command-help" data-i18n="cmd.help">ELA only reads Diana testnet: it checks the network and reads the latest block. It never sends funds, signs transactions, or handles keys.</p>
-              <div class="form-actions">
-                <div class="examples" role="group" aria-label="Example commands" data-i18n-label="cmd.examples">
-                  <button type="button" class="example" data-example="What's the latest block?">What's the latest block?</button>
-                  <button type="button" class="example" data-example="Check Diana network.">Check Diana network.</button>
-                  <button type="button" class="example" lang="tr" data-example="Son blok kaç?">Son blok kaç?</button>
-                  <button type="button" class="example" lang="tr" data-example="Diana ağını kontrol et.">Diana ağını kontrol et.</button>
+          <ol id="flow" class="flow" aria-label="Execution flow" data-i18n-label="flow.label">
+            <li data-state="idle"><span class="flow-n">01</span><span class="flow-name" data-i18n="flow.cmd">Command</span><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">02</span><span class="flow-name" data-i18n="flow.gate">Safety gate</span><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">03</span><span class="flow-name" data-i18n="flow.intent">Intent &amp; scope</span><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">04</span><span class="flow-name" data-i18n="flow.chain">Network check</span><code class="flow-code">eth_chainId</code><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code">eth_blockNumber</code><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">06</span><span class="flow-name" data-i18n="flow.result">Result</span><span class="flow-state">not run</span></li>
+          </ol>
+
+          <div class="logic-body">
+            <section class="command-panel" aria-label="Command" data-i18n-label="cmd.panel">
+              <form id="command-form">
+                <label for="command" data-i18n="cmd.label">Command (English or Turkish)</label>
+                <textarea id="command" name="command" rows="2" required aria-describedby="command-help"
+                  placeholder="What's the latest block?" data-i18n-ph="cmd.placeholder"></textarea>
+                <p id="command-help" class="command-help" data-i18n="cmd.help">ELA only reads Diana testnet: it checks the network and reads the latest block. It never sends funds, signs transactions, or handles keys.</p>
+                <div class="form-actions">
+                  <div class="examples" role="group" aria-label="Example commands" data-i18n-label="cmd.examples">
+                    <button type="button" class="example" data-example="What's the latest block?">What's the latest block?</button>
+                    <button type="button" class="example" data-example="Check Diana network.">Check Diana network.</button>
+                    <button type="button" class="example" lang="tr" data-example="Son blok kaç?">Son blok kaç?</button>
+                    <button type="button" class="example" lang="tr" data-example="Diana ağını kontrol et.">Diana ağını kontrol et.</button>
+                  </div>
+                  <button type="submit" id="run" class="run"><span data-i18n="cmd.run">Run query</span> <span aria-hidden="true">→</span></button>
                 </div>
-                <button type="submit" id="run" class="run"><span data-i18n="cmd.run">Run query</span> <span aria-hidden="true">→</span></button>
+              </form>
+              <div class="context-bar">
+                <p id="context-status" class="context-status" aria-live="polite">Context: none</p>
+                <button type="button" id="clear-context" class="example" disabled data-i18n="cmd.clear">Clear context</button>
               </div>
-            </form>
-            <div class="context-bar">
-              <p id="context-status" class="context-status" aria-live="polite">Context: none</p>
-              <button type="button" id="clear-context" class="example" disabled data-i18n="cmd.clear">Clear context</button>
-            </div>
-          </section>
-
-          <section class="result" aria-labelledby="result-heading">
-            <div class="result-heading">
-              <h3 id="result-heading" data-i18n="result.heading">Analysis</h3>
-              <div class="status">
-                <span data-i18n="result.status">Status</span>
-                <span id="query-state" class="state" data-state="ready">Ready</span>
-              </div>
-            </div>
-            <p id="query-message" class="message" role="status">Waiting for a command.</p>
-            <section id="plan" class="plan" aria-labelledby="plan-heading" hidden>
-              <div class="plan-heading">
-                <h4 id="plan-heading" data-i18n="plan.heading">Executed steps</h4>
-                <span id="plan-target" class="plan-target"></span>
-              </div>
-              <ol id="plan-steps" class="plan-steps"></ol>
-              <p id="plan-source" class="plan-source"></p>
             </section>
-          </section>
+
+            <section class="result" aria-labelledby="result-heading">
+              <div class="result-heading">
+                <h3 id="result-heading" data-i18n="result.heading">Analysis</h3>
+                <div class="status">
+                  <span data-i18n="result.status">Status</span>
+                  <span id="query-state" class="state" data-state="ready">Ready</span>
+                </div>
+              </div>
+              <p id="query-message" class="message" role="status">Waiting for a command.</p>
+              <section id="plan" class="plan" aria-labelledby="plan-heading" hidden>
+                <div class="plan-heading">
+                  <h4 id="plan-heading" data-i18n="plan.heading">Executed steps</h4>
+                  <span id="plan-target" class="plan-target"></span>
+                </div>
+                <ol id="plan-steps" class="plan-steps"></ol>
+                <p id="plan-source" class="plan-source"></p>
+              </section>
+            </section>
+          </div>
         </section>
 
         <section id="pqc-panel" class="module pqc-panel" aria-labelledby="pqc-heading">
@@ -323,12 +403,14 @@
           </div>
           <h2 id="pqc-heading" class="pqc-title" data-i18n="pqc.heading">Post-Quantum Signature Verification</h2>
           <p class="pqc-intro module-copy" data-i18n="pqc.intro">Check an ML-DSA-87 (FIPS 204) signature in this browser with QoreChain's official test vector. Verification only: no signing, no private keys, no network request.</p>
-          <dl class="facts">
-            <div><dt data-i18n="pqc.algorithm">Algorithm</dt><dd>ML-DSA-87 · FIPS 204</dd></div>
-            <div><dt data-i18n="pqc.pkSize">Public key</dt><dd data-i18n="pqc.bytes2592">2,592 bytes</dd></div>
-            <div><dt data-i18n="pqc.sigSize">Signature</dt><dd data-i18n="pqc.bytes4627">4,627 bytes</dd></div>
-            <div><dt data-i18n="pqc.where">Runs in</dt><dd data-i18n="pqc.whereValue">This browser · no network request</dd></div>
-          </dl>
+          <figure class="spec">
+            <figcaption data-i18n="spec.caption">ML-DSA-87 · FIPS 204 · fixed sizes</figcaption>
+            <dl>
+              <div style="--share: 0.5602"><dt data-i18n="pqc.pkSize">Public key</dt><dd><span class="spec-bar" aria-hidden="true"></span><span data-i18n="pqc.bytes2592">2,592 bytes</span></dd></div>
+              <div style="--share: 1"><dt data-i18n="pqc.sigSize">Signature</dt><dd><span class="spec-bar" aria-hidden="true"></span><span data-i18n="pqc.bytes4627">4,627 bytes</span></dd></div>
+            </dl>
+            <p class="spec-where" data-i18n="pqc.whereValue">Runs in this browser · no network request</p>
+          </figure>
           <div class="pqc-header">
             <button type="button" id="pqc-toggle" class="pqc-toggle" aria-expanded="false" aria-controls="pqc-body">Open verifier</button>
           </div>
@@ -336,10 +418,12 @@
             <p id="pqc-loading" class="pqc-loading" role="status">Loading the verifier…</p>
             <div id="pqc-form" class="pqc-form" hidden>
               <label for="pqc-public-key"><span data-i18n="pqc.pk">Public key</span> <span class="pqc-count" id="pqc-public-key-count">hex · 2592 bytes</span></label>
+              <span class="meter" id="pqc-public-key-meter" data-fit="under" aria-hidden="true"><span></span></span>
               <textarea id="pqc-public-key" class="pqc-field" rows="3" spellcheck="false" autocomplete="off" aria-describedby="pqc-hint"></textarea>
               <label for="pqc-message"><span data-i18n="pqc.msg">Message</span> <span class="pqc-count" id="pqc-message-count">hex · at most 64 KiB</span></label>
               <textarea id="pqc-message" class="pqc-field" rows="2" spellcheck="false" autocomplete="off" aria-describedby="pqc-hint"></textarea>
               <label for="pqc-signature"><span data-i18n="pqc.sig">Signature</span> <span class="pqc-count" id="pqc-signature-count">hex · 4627 bytes</span></label>
+              <span class="meter" id="pqc-signature-meter" data-fit="under" aria-hidden="true"><span></span></span>
               <textarea id="pqc-signature" class="pqc-field" rows="3" spellcheck="false" autocomplete="off" aria-describedby="pqc-hint"></textarea>
               <p id="pqc-hint" class="pqc-hint" data-i18n="pqc.hint">Hexadecimal text only (0–9, a–f), without a 0x prefix or spaces.</p>
               <div class="pqc-actions">
@@ -351,6 +435,7 @@
               </div>
               <p class="pqc-lang-note" data-i18n="pqc.resultNote" hidden></p>
               <div id="pqc-result" class="pqc-result" data-state="idle" aria-live="polite" lang="en">
+                <span class="seal" aria-hidden="true"></span>
                 <p id="pqc-result-title" class="pqc-result-title">No verification yet</p>
                 <p id="pqc-result-detail" class="pqc-result-detail">Load the official test vector or paste your own public values, then verify.</p>
                 <p id="pqc-result-meta" class="pqc-result-meta"></p>
@@ -369,24 +454,35 @@
             <h2 id="payment-heading" data-i18n="mod.payment">Payment Account</h2>
             <span class="tag" data-tone="prep" data-i18n="tag.payment">Preparation · not connected</span>
           </div>
-          <p class="module-copy" data-i18n="pay.copy">A bounded payment account for Diana testnet is being prepared: one fixed recipient, per-payment and total caps, a time window, and invoice authorization by an issuer.</p>
-          <div class="prep-lists">
-            <div class="prep-list">
-              <h3 data-i18n="pay.prepared">Prepared so far (outside the browser)</h3>
-              <ul>
-                <li data-i18n="pay.prepared1">Solidity contract prototype with local tests</li>
-                <li data-i18n="pay.prepared2">Guarded command-line preparation tools</li>
+          <p class="module-copy" data-i18n="pay.copy">Planned architecture of a bounded payment account for Diana testnet. A diagram, not a live account.</p>
+          <figure class="schema" aria-labelledby="schema-caption">
+            <figcaption id="schema-caption" class="schema-caption" data-i18n="pay.caption">Planned contract architecture · preparation</figcaption>
+            <div class="schema-actors">
+              <p class="actor"><span class="actor-name" data-i18n="pay.issuer">Invoice issuer</span><span class="actor-role" data-i18n="pay.issuerRole">authorizes each invoice</span></p>
+              <p class="actor"><span class="actor-name" data-i18n="pay.executor">Executor</span><span class="actor-role" data-i18n="pay.executorRole">submits the payment call</span></p>
+            </div>
+            <div class="schema-contract">
+              <p class="contract-name" data-i18n="pay.contract">Payment account contract</p>
+              <ul class="rules">
+                <li data-i18n="pay.rule1">Fixed recipient, set once</li>
+                <li data-i18n="pay.rule2">Per-payment cap</li>
+                <li data-i18n="pay.rule3">Total cap and payment count</li>
+                <li data-i18n="pay.rule4">Time window [startsAt, endsAt)</li>
+                <li data-i18n="pay.rule5">Invoice checked; each invoice ID used once</li>
+                <li data-i18n="pay.rule6">Diana chain 9800 only</li>
               </ul>
             </div>
-            <div class="prep-list prep-absent">
-              <h3 data-i18n="pay.absent">Not in this interface</h3>
-              <ul>
-                <li data-i18n="pay.absent1">No account address, balance, or payment history is read.</li>
-                <li data-i18n="pay.absent2">No payment, signature, or deployment can be started from this page.</li>
-                <li data-i18n="pay.absent3">No wallet connection or key input.</li>
-              </ul>
-            </div>
+            <p class="actor actor-out"><span class="actor-name" data-i18n="pay.recipient">Fixed recipient</span><span class="actor-role" data-i18n="pay.recipientRole">the only possible payee</span></p>
+          </figure>
+          <div class="prep-list prep-absent">
+            <h3 data-i18n="pay.absent">Not in this interface</h3>
+            <ul>
+              <li data-i18n="pay.absent1">No account address, balance, or payment history is read.</li>
+              <li data-i18n="pay.absent2">No payment, signature, or deployment can be started from this page.</li>
+              <li data-i18n="pay.absent3">No wallet connection or key input.</li>
+            </ul>
           </div>
+          <p class="module-note" data-i18n="pay.prototype">Prepared outside the browser: a Solidity prototype with local tests and guarded command-line tools.</p>
         </section>
       </div>
 

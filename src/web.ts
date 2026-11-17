@@ -92,11 +92,24 @@ function showContext(): void {
   clearContext.disabled = !current;
 }
 
-/** The header chip reports only what the last query in this session actually saw. */
-function showNetwork(outcome: 'ok' | 'partial' | 'error'): void {
+// Execution flow (Command, Safety gate, Intent & scope, Network check, Data read, Result). Each
+// stage shows only what the session reported for the last command; a stage that did not run says so.
+const stages = [...document.querySelectorAll<HTMLElement>('#flow > li')];
+const links = [...document.querySelectorAll<HTMLElement>('[data-link]')];
+const mark = (items: HTMLElement[], states: string[], selector: string): void =>
+  items.forEach((item, i) => { item.dataset.state = states[i]; put(item.querySelector(selector)!, 'fs.' + states[i]); });
+const flow = (states: string): void => mark(stages, states.split(' '), '.flow-state');
+
+/**
+ * The header chip and the Diana route report only what the last query in this session actually
+ * saw: the route's two links are the network-check and data-read stages of that query.
+ */
+function showNetwork(outcome: 'ok' | 'partial' | 'error', states: string): void {
   $('.net-chip').dataset.state = outcome;
   put(networkStatus, 'net.' + outcome);
   if (outcome === 'ok') lastRead.textContent = new Date().toLocaleTimeString(lang);
+  flow(states);
+  mark(links, states.split(' ').slice(3, 5), '.seg-state');
 }
 
 function describeFailure(error: ToolError): string {
@@ -151,6 +164,8 @@ function showData(data: { readonly chainId: string; readonly evmChainId: string;
 function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void {
   const basedOn = result.decision.basedOn;
   const note = basedOn ? 'note.' + basedOn : '';
+  // A query ran: its own data replaces the readout (and "—" stays where it returned none).
+  blockNumber.textContent = chainId.textContent = evmChainId.textContent = '—';
 
   if (result.run.kind === 'network_check') {
     const checked = result.run.result;
@@ -159,18 +174,21 @@ function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void 
     put(planSource, 'plan.source', checked.source, 'plan.checked', new Date(checked.checkedAt).toLocaleString(lang));
     plan.hidden = false;
     if (checked.data) showData(checked.data);
-    showNetwork(checked.status === 'success' ? 'ok' : checked.status === 'partial' ? 'partial' : 'error');
-    showStatus(checked.status === 'success' ? 'Success' : checked.status === 'partial' ? 'Partial' : 'Error', note, checked.summary);
+    const outcome = checked.status === 'success' ? 'Success' : checked.status === 'partial' ? 'Partial' : 'Error';
+    const step = (i: number): string => (s => (s === 'succeeded' ? 'ok' : s ?? 'unknown'))(checked.steps[i]?.status);
+    showNetwork(outcome === 'Success' ? 'ok' : outcome === 'Partial' ? 'partial' : 'error', `done pass recognized ${step(0)} ${step(1)} ${outcome.toLowerCase()}`);
+    showStatus(outcome, note, checked.summary);
     return;
   }
 
   const read = result.run.result;
   if (read.ok) {
     showData(read.data as { chainId: string; evmChainId: string; blockNumber: string });
-    showNetwork('ok');
+    showNetwork('ok', 'done pass recognized ok ok success');
     showStatus('Success', note, 'msg.blockOk');
   } else {
-    showNetwork('error');
+    // The latest-block tool reports one error, not which of its two reads failed.
+    showNetwork('error', 'done pass recognized unknown unknown error');
     showStatus('Error', note, describeFailure(read.error));
   }
 }
@@ -183,17 +201,24 @@ function showResult(result: CommandResult): void {
     case 'refused':
       // Do not keep secrets on screen.
       if (result.reason === 'key_material') command.value = '';
+      flow('done blocked idle idle idle refused');
       showStatus('Refused', 'refused.' + result.reason, 'refused.tail');
       return;
     case 'unsupported':
+      flow('done pass unsupported idle idle unsupported');
       showStatus('Unsupported', 'msg.unsupported');
       return;
     case 'clarify': {
       const key = 'clarify.' + result.reason;
+      const r = result.reason;
+      // These three input checks run before the safety gate (see the order in src/agent/intent.ts).
+      const early = r === 'empty_command' || r === 'command_too_long' || (r === 'not_understood' && result.decision.source === 'input_check');
+      flow(early ? 'stopped idle idle idle idle clarify' : 'done pass clarify idle idle clarify');
       showStatus('Needs clarification', key in catalog.en ? key : 'clarify.generic');
       return;
     }
     default:
+      flow('done unknown unknown idle idle error');
       showStatus('Error', 'msg.failed');
   }
 }
@@ -204,11 +229,9 @@ form.addEventListener('submit', async event => {
   if (run.disabled) return;
   run.disabled = true;
 
-  blockNumber.textContent = '—';
-  chainId.textContent = '—';
-  evmChainId.textContent = '—';
   plan.hidden = true;
   planSteps.replaceChildren();
+  flow('done wait wait wait wait wait');
   showStatus('Querying', 'msg.working');
 
   try {
@@ -222,6 +245,8 @@ form.addEventListener('submit', async event => {
 });
 
 put(networkStatus, 'net.unchecked');
+mark(links, ['idle', 'idle'], '.seg-state');
+flow('idle idle idle idle idle idle');
 showStatus('Ready', 'msg.ready');
 showContext();
 
