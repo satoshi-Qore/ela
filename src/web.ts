@@ -2,11 +2,12 @@ import './web.css';
 import { createSession } from './agent/session.ts';
 import type { CommandResult } from './agent/session.ts';
 import type { ExecutionResult, StepResult } from './agent/executor.ts';
-import type { ToolError } from './agent/registry.ts';
+import type { BalanceReading, ToolError } from './agent/registry.ts';
 
 // Every command goes through one agent session: input checks and the safety gate first, then the
-// deterministic routes and the rule-based classifier, then only the registry's read-only tool
-// (eth_chainId, eth_blockNumber on Diana testnet). This file only renders the session's results.
+// deterministic routes and the rule-based classifier, then only the registry's read-only tools
+// (eth_chainId, eth_blockNumber; for a qor1 balance the Diana consensus status and REST bank
+// balance GETs, all on Diana testnet). This file only renders the session's results.
 //
 // Interface text lives in the #ela-i18n catalog in index.html (English and Turkish), so switching
 // the language costs the main chunk almost nothing. Text the agent itself writes (step titles and
@@ -27,6 +28,8 @@ const message = $('#query-message');
 const blockNumber = $('#block-number');
 const chainId = $('#chain-id');
 const evmChainId = $('#evm-chain-id');
+const balanceQor = $('#balance-qor');
+const balanceUqor = $('#balance-uqor');
 const lastRead = $('#last-read');
 const plan = $('#plan');
 const planTarget = $('#plan-target');
@@ -117,6 +120,11 @@ const links = [...document.querySelectorAll<HTMLElement>('[data-link]')];
 const mark = (items: HTMLElement[], states: string[], selector: string): void =>
   items.forEach((item, i) => { item.dataset.state = states[i]; put(item.querySelector(selector)!, 'fs.' + states[i]); });
 const flow = (states: string): void => mark(stages, states.split(' '), '.flow-state');
+// The network-check and data-read stages name the request they stand for: the EVM JSON-RPC methods,
+// or for a balance query the two fixed Diana GETs (consensus RPC status, REST bank balance).
+const flowCodes = [stages[3], stages[4]].map(stage => stage.querySelector<HTMLElement>('.flow-code')!);
+const defaultCodes = flowCodes.map(code => code.textContent ?? '');
+const showFlowCodes = (codes: readonly string[] = defaultCodes): void => flowCodes.forEach((code, i) => { code.textContent = codes[i]; });
 
 /**
  * The header chip and the Diana route report only what the last query in this session actually
@@ -208,7 +216,29 @@ function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void 
   const basedOn = result.decision.basedOn;
   const note = basedOn ? 'note.' + basedOn : '';
   // A query ran: its own data replaces the readout (and "—" stays where it returned none).
-  blockNumber.textContent = chainId.textContent = evmChainId.textContent = '—';
+  blockNumber.textContent = chainId.textContent = evmChainId.textContent = balanceQor.textContent = balanceUqor.textContent = '—';
+
+  if (result.run.kind === 'balance') {
+    showFlowCodes(['GET /status', 'GET /cosmos/bank/…/by_denom']);
+    const read = result.run.result;
+    if (read.ok) {
+      const data = read.data as BalanceReading;
+      chainId.textContent = data.chainId;
+      // The exact on-chain integer and its 6-decimal QOR form, as the balance tool returned them.
+      balanceQor.textContent = data.amountQor;
+      balanceUqor.textContent = data.amountUqor;
+      const at = new Date();
+      put(lastRead, () => at.toLocaleTimeString(lang));
+      flow('done pass recognized ok ok success');
+      showStatus('Success', () => F('msg.balanceOk', { address: data.address, qor: data.amountQor, uqor: data.amountUqor }));
+    } else {
+      // The balance tool reports one error, not which of its two reads failed.
+      const { code } = read.error;
+      flow('done pass recognized unknown unknown error');
+      showStatus('Error', code === 'network_error' ? 'fail.balanceNetwork' : code === 'chain_mismatch' ? 'fail.balanceChain' : describeFailure(read.error));
+    }
+    return;
+  }
 
   if (result.run.kind === 'network_check') {
     const checked = result.run.result;
@@ -274,6 +304,7 @@ form.addEventListener('submit', async event => {
 
   plan.hidden = true;
   planSteps.replaceChildren();
+  showFlowCodes();
   flow('done wait wait wait wait wait');
   showStatus('Querying', 'msg.working');
 

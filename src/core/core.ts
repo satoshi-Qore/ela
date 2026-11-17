@@ -48,7 +48,10 @@ export function readRecord(): CoreRecord {
     const mapped = STATUS[li.dataset.state ?? ''] ?? 'unknown';
     const status: Status = finished && mapped === 'waiting' ? 'skipped' : mapped;
     const rpc = li.querySelector('.flow-code')?.textContent?.trim();
-    const read = status === 'ok' ? (i === 3 ? value('#evm-chain-id') : i === 4 ? value('#block-number') : undefined) : undefined;
+    // A balance query reads the Diana chain name and the QOR balance instead of the EVM values.
+    const read = status === 'ok'
+      ? (i === 3 ? value('#evm-chain-id') ?? value('#chain-id') : i === 4 ? value('#block-number') ?? value('#balance-qor') : undefined)
+      : undefined;
     return { n: String(i + 1).padStart(2, '0'), name, short: name.split(/\s/)[0], rpc, status, value: read };
   });
   return { stages, outcome, title: state?.textContent?.trim() ?? '' };
@@ -120,7 +123,7 @@ radios($('#theme-switch')!, 'theme', theme, value => { root.dataset.theme = valu
 radios($('#view-switch')!, 'view', () => view, value => { if (value !== view) { view = value as View; store.set('view', view); void render(); } });
 
 const watch = new MutationObserver(schedule);
-for (const id of ['#flow', '#query-state', '#block-number', '#evm-chain-id']) {
+for (const id of ['#flow', '#query-state', '#block-number', '#evm-chain-id', '#chain-id', '#balance-qor']) {
   const node = $(id);
   if (node) watch.observe(node, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-state'] });
 }

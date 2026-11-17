@@ -15,7 +15,8 @@ export interface NativeBalance {
 const alphabet = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 const generators = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
 
-function normalizeAddress(address: string): string {
+/** Validates a native QoreChain Bech32 address (checksum included) and returns it in lower case. */
+export function normalizeAddress(address: string): string {
   const lower = address.toLowerCase();
   if (!/^qor1[a-z0-9]+$/.test(lower) || (address !== lower && address !== address.toUpperCase())) {
     throw new QoreChainReadError('invalid_address', 'Expected a native QoreChain Bech32 address.');

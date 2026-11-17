@@ -1,6 +1,7 @@
 import { getEvmBlockNumber } from '../qorechain/get-evm-block-number.ts';
 import { isRecord, QORECHAIN_TESTNET, QoreChainReadError } from '../qorechain/read-client.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
+import type { BalanceReading } from './balance.ts';
 import type { RpcMethod } from './planner.ts';
 
 /** The only network any registered tool may target. */
@@ -27,6 +28,11 @@ export interface ToolDefinition<Data = unknown> {
   readonly readOnly: true;
   /** Every JSON-RPC method the tool may send. Requests outside this list are blocked at runtime. */
   readonly rpcMethods: readonly RpcMethod[];
+  /**
+   * Every bodiless HTTP GET the tool may send, as patterns on the full request URL. A request that
+   * matches neither this list nor `rpcMethods` is blocked at runtime. Most tools have none.
+   */
+  readonly httpGets?: readonly RegExp[];
   readonly params: ParamSpec;
   readonly run: (params: Readonly<Record<string, unknown>>, runtime: RuntimeOptions) => Promise<Data>;
 }
@@ -61,6 +67,7 @@ function defineTool<Data>(definition: ToolDefinition<Data>): ToolDefinition<Data
   return Object.freeze({
     ...definition,
     rpcMethods: Object.freeze([...definition.rpcMethods]),
+    httpGets: Object.freeze([...(definition.httpGets ?? [])]),
     params: Object.freeze({ ...definition.params }),
   });
 }
@@ -75,11 +82,38 @@ const getEvmBlockNumberTool = defineTool({
   run: (_params, runtime) => getEvmBlockNumber(runtime),
 });
 
+export type { BalanceReading };
+
+/** A native QoreChain account address in lower case (32- or 52-byte Bech32 payload). */
+export const QOR_ADDRESS_PATTERN = /^qor1[02-9ac-hj-np-z]{38}(?:[02-9ac-hj-np-z]{20})?$/u;
+
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+/** An exact URL on a fixed Diana endpoint; `path` is a regular-expression fragment. */
+const dianaGet = (base: string, path: string): RegExp => new RegExp('^' + escapeRegExp(base.replace(/\/+$/u, '')) + path + '$', 'u');
+
+const getBalanceTool = defineTool<BalanceReading>({
+  id: 'get_balance',
+  description: 'Verify the Diana chain ID (qorechain-diana) with the consensus RPC status, then read the native uqor balance of one qor1 address from the Diana REST bank module.',
+  network: DIANA_NETWORK,
+  readOnly: true,
+  rpcMethods: [],
+  // Only these two Diana testnet reads, on the fixed endpoints from read-client.ts.
+  httpGets: [
+    dianaGet(QORECHAIN_TESTNET.rpcUrl, '/status'),
+    dianaGet(QORECHAIN_TESTNET.restUrl, '/cosmos/bank/v1beta1/balances/qor1[02-9ac-hj-np-z]{38}(?:[02-9ac-hj-np-z]{20})?/by_denom\\?denom=uqor'),
+  ],
+  params: { address: { type: 'string', required: true, pattern: QOR_ADDRESS_PATTERN } },
+  // The endpoints are fixed: the runtime supplies only fetch and timeoutMs, never a URL. The
+  // balance is read only after the consensus RPC reported Diana and is not catching up.
+  run: async (params, runtime) => (await import('./balance.ts')).readBalance(params.address as string, runtime),
+});
+
 const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.freeze(Object.assign(Object.create(null), {
   [getEvmBlockNumberTool.id]: getEvmBlockNumberTool,
+  [getBalanceTool.id]: getBalanceTool,
 }));
 
-export type ToolId = 'get_evm_block_number';
+export type ToolId = 'get_evm_block_number' | 'get_balance';
 
 /** Returns the registered tool, or `undefined` for any id that is not an own registry entry. */
 export function getTool(id: unknown): ToolDefinition | undefined {
@@ -135,12 +169,23 @@ export function isAllowedRpcRequest(body: unknown, allowed: readonly string[]): 
 }
 
 /**
- * Wraps `base` so that only requests for `allowed` RPC methods reach the network. Any other
- * request is rejected before `base` is called.
+ * Pure check: true only for a bodiless GET whose full URL (a string or `URL`, never a `Request`)
+ * matches one of `allowed`.
  */
-export function guardFetch(base: typeof globalThis.fetch, allowed: readonly string[]): typeof globalThis.fetch {
+export function isAllowedHttpGet(input: unknown, init: RequestInit | undefined, allowed: readonly RegExp[]): boolean {
+  if (allowed.length === 0 || init?.body != null || (init?.method ?? 'GET') !== 'GET') return false;
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : undefined;
+  return url !== undefined && allowed.some(pattern => pattern.test(url));
+}
+
+/**
+ * Wraps `base` so that only requests for `allowed` RPC methods, or bodiless GETs to the `gets`
+ * URLs, reach the network. Any other request is rejected before `base` is called.
+ */
+export function guardFetch(base: typeof globalThis.fetch, allowed: readonly string[], gets: readonly RegExp[] = []): typeof globalThis.fetch {
   const methods = Object.freeze([...allowed]);
-  return (input, init) => isAllowedRpcRequest(init?.body, methods)
+  const urls = Object.freeze([...gets]);
+  return (input, init) => isAllowedRpcRequest(init?.body, methods) || isAllowedHttpGet(input, init, urls)
     ? base(input, init)
     : Promise.reject(new TypeError('Blocked a request outside the tool\'s read-only methods.'));
 }
@@ -171,7 +216,7 @@ export async function invokeTool(request: ToolRequest, runtime: RuntimeOptions =
   const invalid = validateParams(tool.params, request.params);
   if (invalid) return refuse('invalid_params', invalid);
 
-  const guardedFetch = guardFetch(runtime.fetch ?? globalThis.fetch, allowed);
+  const guardedFetch = guardFetch(runtime.fetch ?? globalThis.fetch, allowed, tool.httpGets ?? []);
 
   try {
     const data = await tool.run(Object.freeze({ ...(request.params as Record<string, unknown> | undefined) }), {

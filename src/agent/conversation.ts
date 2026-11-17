@@ -6,21 +6,30 @@ import { DIANA_NETWORK, invokeTool } from './registry.ts';
 import type { NetworkId, RuntimeOptions, ToolResult } from './registry.ts';
 
 /** The kinds of successful queries a follow-up may refer to. */
-export type QueryKind = 'block_number' | 'network_check';
+export type ContextKind = 'block_number' | 'network_check';
 
 /**
- * What ELA remembers about the last successful query. It deliberately stores no block height:
- * every follow-up reads fresh data from the RPC.
+ * Every read-only query kind. A `balance` query needs an address, so it is never remembered as
+ * context: follow-ups keep referring to the last block query or network check.
+ */
+export type QueryKind = ContextKind | 'balance';
+
+/**
+ * What ELA remembers about the last successful query. It deliberately stores no block height,
+ * address, or balance: every follow-up reads fresh data from the RPC.
  */
 export interface ConversationContext {
-  readonly kind: QueryKind;
+  readonly kind: ContextKind;
   readonly network: NetworkId;
 }
 
 export interface Conversation {
   /** The last successful query in this page session, if any. */
   readonly current: ConversationContext | undefined;
-  /** Records a query outcome. Only `success` replaces the context; anything else leaves it unchanged. */
+  /**
+   * Records a query outcome. Only a successful block query or network check replaces the context;
+   * anything else (including any balance query) leaves it unchanged.
+   */
   record(kind: QueryKind, outcome: 'success' | 'partial' | 'failed'): void;
   clear(): void;
 }
@@ -46,7 +55,7 @@ export function createConversation(): Conversation {
 export type FollowUp =
   | { readonly kind: 'not_follow_up' }
   | { readonly kind: 'needs_clarification'; readonly reason: 'no_context' }
-  | { readonly kind: 'follow_up'; readonly question: 'current_value' | 'repeat'; readonly run: QueryKind; readonly basedOn: QueryKind };
+  | { readonly kind: 'follow_up'; readonly question: 'current_value' | 'repeat'; readonly run: ContextKind; readonly basedOn: ContextKind };
 
 // "Peki şimdi kaç oldu?" asks for the current block height again.
 const currentValuePattern = /^(?:peki )?(?:şimdi |artık )?kaç oldu$|^(?:peki )?şimdi kaç$/u;
@@ -80,12 +89,26 @@ export function queryLatestBlock(runtime: RuntimeOptions = {}): Promise<ToolResu
   );
 }
 
+/**
+ * Reads the native QOR balance of one validated `qor1` address on Diana testnet through the tool
+ * registry (Diana chain ID verified first). The registry allows only the two fixed Diana GETs.
+ */
+export function queryBalance(address: string, runtime: RuntimeOptions = {}): Promise<ToolResult> {
+  return invokeTool({ tool: 'get_balance', network: DIANA_NETWORK, params: { address }, rpcMethods: [] }, runtime);
+}
+
 export type QueryRun =
   | { readonly kind: 'block_number'; readonly result: ToolResult }
-  | { readonly kind: 'network_check'; readonly result: ExecutionResult };
+  | { readonly kind: 'network_check'; readonly result: ExecutionResult }
+  | { readonly kind: 'balance'; readonly address: string; readonly result: ToolResult };
+
+/** Runs a balance query with fresh data. Every call sends new requests; nothing is reused. */
+export async function runBalanceQuery(address: string, options: ReadOptions = {}): Promise<QueryRun> {
+  return { kind: 'balance', address, result: await queryBalance(address, options) };
+}
 
 /** Runs a query kind with fresh RPC data. Every call sends new requests; nothing is reused. */
-export async function runQuery(kind: QueryKind, options: ReadOptions = {}): Promise<QueryRun> {
+export async function runQuery(kind: ContextKind, options: ReadOptions = {}): Promise<QueryRun> {
   if (kind === 'network_check') {
     const plan = planCommand('Diana ağını kontrol et.');
     if (plan.kind !== 'plan') throw new Error('The Diana network check plan is unavailable.');
@@ -96,6 +119,6 @@ export async function runQuery(kind: QueryKind, options: ReadOptions = {}): Prom
 
 /** Maps a query run to the outcome used for context recording. */
 export function outcomeOf(run: QueryRun): 'success' | 'partial' | 'failed' {
-  if (run.kind === 'block_number') return run.result.ok ? 'success' : 'failed';
+  if (run.kind === 'block_number' || run.kind === 'balance') return run.result.ok ? 'success' : 'failed';
   return run.result.status;
 }
