@@ -1329,7 +1329,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     }
   }, { timeout: 600_000 });
 
-  // Added in the 7C-27 visual pass: the ELA Core uses no red or coral, readable narrow screens, compact flow.
+  // Added in the 7C-27 visual pass: ELA Core decoration stays blue and purple (red marks only a real stop),
+  // readable narrow screens, compact flow.
   const NO_WARM_RED = `(() => {
     const hits = new Set();
     const warm = value => {
@@ -1345,7 +1346,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       }
       return null;
     };
-    for (const e of document.querySelectorAll('.core, .core *')) {
+    // The legend is a color key that always lists every state, so it is checked separately (by value).
+    for (const e of [...document.querySelectorAll('.core, .core *')].filter(node => !node.closest('.core-legend'))) {
       const s = getComputedStyle(e);
       if (s.display === 'none') continue;
       for (const prop of ['color', 'backgroundColor', 'borderTopColor', 'borderLeftColor', 'outlineColor', 'fill', 'stroke', 'boxShadow', 'backgroundImage', 'textDecorationColor']) {
@@ -1356,7 +1358,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     return [...hits].slice(0, 12);
   })()`;
 
-  uiTest('the ELA Core keeps its blue and purple family: no red or coral in the Core in any theme or state', async t => {
+  uiTest('the ELA Core shows red only where execution really stopped; its decoration stays blue and purple', async t => {
     const seen = {};
     await openPage();
     try {
@@ -1367,6 +1369,18 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
           if (command) await submit(command);
           await core();
           seen[`${theme} ${label}`] = await evaluate(NO_WARM_RED);
+          if (label === 'ready') {
+            // Decorative tokens are never red, whatever the state.
+            seen[`${theme} decoration`] = await evaluate(`(() => {
+              const root = getComputedStyle(document.documentElement);
+              const names = ['--layer-0', '--layer-1', '--layer-2', '--layer-3', '--layer-4', '--layer-5', '--layer-line', '--layer-top', '--beam-1', '--beam-2', '--glass-1', '--glass-2', '--glass-edge', '--metal-1', '--metal-2', '--metal-rail-hi', '--metal-rail-lo', '--probe-tip', '--e-ok-2', '--e-res-2', '--s-ok', '--s-result', '--s-running'];
+              const probe = document.createElement('i');
+              document.body.append(probe);
+              const hits = names.filter(name => { probe.style.color = root.getPropertyValue(name).trim(); const [r, g, b] = getComputedStyle(probe).color.match(/[0-9.]+/g).map(Number); return r > 150 && r > g * 1.35 && r > b * 1.2; });
+              probe.remove();
+              return hits;
+            })()`);
+          }
         }
         await openPanel();
         await pqc('pqc-load');
@@ -1377,7 +1391,12 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       await resetCore();
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
-    for (const [label, hits] of Object.entries(seen)) assert.deepEqual(hits, [], label);
+    for (const [label, hits] of Object.entries(seen)) {
+      // Changed by the 7C-27 color decision: a real stop (refusal, error, partial failure) is red in the
+      // Core too. No stop, no red: ready, success, and the success page behind the verifier stay free of it.
+      if (/ready|success|pqc-invalid|decoration/.test(label)) assert.deepEqual(hits, [], label);
+      else assert.ok(hits.length > 0, label + ': the stop is shown in red in the Core');
+    }
   }, { timeout: 180_000 });
 
   uiTest('refusal and failure indicators are red and consistent in every theme; success stays green', async t => {
@@ -1389,6 +1408,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         gateMarker: getComputedStyle(document.querySelector('#flow > li:nth-child(2)'), '::before').backgroundColor,
         failedMarker: getComputedStyle(document.querySelector('#flow > li:nth-child(6)'), '::before').borderTopStyle,
         state: document.getElementById('query-state').dataset.state,
+        core: [
+          getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] svg path')).stroke,
+          getComputedStyle(document.querySelector('.core-legend [data-status="failed"] svg path')).stroke,
+          (document.querySelector('#core-viz .core-d g[data-status="blocked"] path') ? getComputedStyle(document.querySelector('#core-viz .core-d g[data-status="blocked"] path')).stroke : null),
+          getComputedStyle(document.querySelector('.core-legend [data-status="blocked"]')).getPropertyValue('--c').trim() ? getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] .ln')).backgroundColor : null,
+        ],
+        coreFailed: (document.querySelector('#core-viz .core-d g[data-status="failed"] path') ? getComputedStyle(document.querySelector('#core-viz .core-d g[data-status="failed"] path')).stroke : null),
       };
     })()`;
     const seen = {};
@@ -1398,9 +1424,11 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
         await openPage();
         await submit('Send 10 QOR.');
+        await core();
         seen[theme + ' refused'] = await evaluate(read);
         await setMode('wrong_chain');
         await submit('Diana ağını kontrol et.');
+        await core();
         seen[theme + ' error'] = await evaluate(read);
         await setMode('ok');
         await submit('Diana ağını kontrol et.');
@@ -1424,6 +1452,9 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.deepEqual([refused.badgeMark, error.badgeMark, error.failedMarker], ['""', '"×"', 'dashed'], theme + ' marks');
       assert.deepEqual([success.badge, success.result], [GREEN[theme], GREEN[theme]], theme + ' success');
       assert.deepEqual(seen[theme + ' invalid'], [RED[theme], RED[theme]], theme + ' not-valid signature');
+      // Inside the Core: the same red for the legend and the drawn marks of a refusal and a failure.
+      assert.deepEqual(refused.core, [RED[theme], RED[theme], RED[theme], RED[theme]], theme + ' Core refusal marks');
+      assert.equal(error.coreFailed, RED[theme], theme + ' Core failure mark');
     }
   }, { timeout: 180_000 });
 

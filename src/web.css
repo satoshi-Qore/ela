@@ -807,16 +807,18 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 /* === 7C-27: three themes and the three ELA Core views =============================================
    Blue (Quantum Blue) is the default and keeps every token above. White (Precision Light) and Black
    (Titanium Dark) redefine the same tokens on :root only (theme buttons also carry data-theme).
-   Core visuals use only the purple, white, and blue families: lavender, lilac, amethyst, violet, deep
-   purple; pearl, ice white, platinum, silver white; ice blue, electric blue, sapphire, night blue. */
+   Core decoration uses only the purple, white, and blue families: lavender, lilac, amethyst, violet,
+   deep purple; pearl, ice white, platinum, silver white; ice blue, electric blue, sapphire, night blue.
+   Core status marks of a real stop (--s-blocked, --s-failed, --e-blk-2, --blocked-fill) use the same
+   red as the status badges outside the Core (--bad-fg), so one meaning has one color on the page. */
 
 :root {
   --core-panel: linear-gradient(165deg, rgba(166, 220, 255, 0.07), rgba(166, 220, 255, 0) 38%), linear-gradient(200deg, rgba(160, 140, 255, 0.06), transparent 50%), rgba(7, 15, 33, 0.92);
   --core-ink: #eaf3ff; --core-ink-2: #b7cbea; --core-ink-3: #8fa6cc; --core-ink-4: #7189b6;
   --core-line: #16305e; --core-line-2: #22427a; --core-surface: #142a5a; --core-well: #061027; --core-grid: #0b1a3b;
-  --s-ok: #7cc4ff; --e-ok-2: #3d9bff; --s-running: #a8dcff; --s-blocked: #c3a9f5; --e-blk-2: #9b6ce0;
-  --s-failed: #a08cf2; --s-skipped: #7189b2; --s-waiting: #5f78a3; --s-unknown: #a3b6d6; --s-result: #eef6ff; --e-res-2: #d9d2ff;
-  --beam-1: #eef6ff; --beam-2: #3d9bff; --glass-1: #a8dcff; --glass-2: #9b6ce0; --glass-edge: #eef6ff; --blocked-fill: rgba(195, 169, 245, 0.13);
+  --s-ok: #7cc4ff; --e-ok-2: #3d9bff; --s-running: #a8dcff; --s-blocked: var(--bad-fg); --e-blk-2: #d9536b;
+  --s-failed: var(--bad-fg); --s-skipped: #7189b2; --s-waiting: #5f78a3; --s-unknown: #a3b6d6; --s-result: #eef6ff; --e-res-2: #d9d2ff;
+  --beam-1: #eef6ff; --beam-2: #3d9bff; --glass-1: #a8dcff; --glass-2: #9b6ce0; --glass-edge: #eef6ff; --blocked-fill: rgba(255, 195, 205, 0.12);
   --layer-0: #16295a; --layer-1: #1e2256; --layer-2: #12244e; --layer-3: #102045; --layer-4: #0e1c3e; --layer-5: #0c1836;
   --layer-line: #2a4c8a; --layer-top: #1d3870; --seal-overlay: rgba(2, 6, 18, 0.55); --bore: #020611;
   --shade-edge: #000; --shade-hi: #a8dcff; --metal-1: #6f88b4; --metal-2: #eef6ff; --probe-tip: #d9d2ff;
@@ -849,9 +851,9 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   --core-panel: linear-gradient(180deg, #17191d, #111316);
   --core-ink: #eceef2; --core-ink-2: #b9bfc9; --core-ink-3: #8f97a4; --core-ink-4: #808895;
   --core-line: #23262c; --core-line-2: #30353e; --core-surface: #1c1f24; --core-well: #0d0f12; --core-grid: #15181c;
-  --s-ok: #5aa8ff; --e-ok-2: #a8dcff; --s-running: #a8dcff; --s-blocked: #c3a9f5; --e-blk-2: #9b6ce0;
-  --s-failed: #9b84ec; --s-skipped: #808894; --s-waiting: #6b7381; --s-unknown: #aab2be; --s-result: #f6f3ee; --e-res-2: #d9d2ff;
-  --glass-2: #c3a9f5; --blocked-fill: rgba(195, 169, 245, 0.12);
+  --s-ok: #5aa8ff; --e-ok-2: #a8dcff; --s-running: #a8dcff; --s-blocked: var(--bad-fg); --e-blk-2: #d9536b;
+  --s-failed: var(--bad-fg); --s-skipped: #808894; --s-waiting: #6b7381; --s-unknown: #aab2be; --s-result: #f6f3ee; --e-res-2: #d9d2ff;
+  --glass-2: #c3a9f5; --blocked-fill: rgba(255, 195, 205, 0.12);
   --layer-0: #20252d; --layer-1: #252030; --layer-2: #1c2129; --layer-3: #1a1f27; --layer-4: #181d24; --layer-5: #16191f;
   --layer-line: #363d49; --layer-top: #2a3039; --seal-overlay: rgba(4, 5, 7, 0.55); --bore: #040506;
   --shade-hi: #ffffff; --metal-1: #7e8794; --metal-2: #eef1f5; --metal-rail-hi: #383e48; --metal-rail-lo: #15181c;
@@ -874,9 +876,9 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   --core-panel: linear-gradient(180deg, #ffffff, #fafbfd);
   --core-ink: #0e1320; --core-ink-2: #384152; --core-ink-3: #596273; --core-ink-4: #5f6878;
   --core-line: #e1e5eb; --core-line-2: #cbd1db; --core-surface: #eef0f4; --core-well: #f6f7fa; --core-grid: #eceef3;
-  --s-ok: #1f4fb4; --e-ok-2: #3d7fe0; --s-running: #2a6fd6; --s-blocked: #5b2fb8; --e-blk-2: #9b6ce0;
-  --s-failed: #4a2a8a; --s-skipped: #677083; --s-waiting: #7d8696; --s-unknown: #4b5465; --s-result: #0d1d45; --e-res-2: #6a3fc4;
-  --beam-1: #3d9bff; --beam-2: #1f4fb4; --glass-1: #3d9bff; --glass-2: #9b6ce0; --glass-edge: #ffffff; --blocked-fill: rgba(91, 47, 184, 0.08);
+  --s-ok: #1f4fb4; --e-ok-2: #3d7fe0; --s-running: #2a6fd6; --s-blocked: var(--bad-fg); --e-blk-2: #c94a63;
+  --s-failed: var(--bad-fg); --s-skipped: #677083; --s-waiting: #7d8696; --s-unknown: #4b5465; --s-result: #0d1d45; --e-res-2: #6a3fc4;
+  --beam-1: #3d9bff; --beam-2: #1f4fb4; --glass-1: #3d9bff; --glass-2: #9b6ce0; --glass-edge: #ffffff; --blocked-fill: rgba(160, 29, 56, 0.07);
   --layer-0: #e8ebf0; --layer-1: #e7e2f3; --layer-2: #e2e6ed; --layer-3: #dde2ea; --layer-4: #d8dee7; --layer-5: #d2d9e3;
   --layer-line: #b5bdca; --layer-top: #f5f6f9; --seal-overlay: rgba(237, 239, 243, 0.62); --bore: #1b2130;
   --shade-edge: #2f3847; --shade-hi: #ffffff; --metal-1: #8a93a1; --metal-2: #f6f8fb; --probe-tip: #6a3fc4;
