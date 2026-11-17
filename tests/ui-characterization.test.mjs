@@ -6,7 +6,8 @@
 // onto the agent session (src/agent/session.ts); tests whose expectations changed on purpose say
 // "Changed in 7C" and describe the old behavior. In 7C-25 the page became a module layout with a
 // language switch; the two existing tests it touched say "Changed in 7C-25". Everything else is
-// unchanged.
+// unchanged. 7C-26 changed no existing test; its new tests (marked "New in 7C-26") pin the agent's
+// results, error texts, and the verifier's results in English and Turkish.
 //
 // The production page is built with the project's Vite config, served from 127.0.0.1, and driven
 // in a real headless Chrome or Chromium over the DevTools Protocol (Node.js built-ins only). RPC
@@ -130,6 +131,8 @@ const RPC_STUB = `(() => {
       case 'bad_json': return Promise.resolve(new Response('<html>not json</html>'));
       case 'wrong_chain': return Promise.resolve(reply(id, isChain ? '0x1' : rpc.height));
       case 'block_fails': return Promise.resolve(isChain ? reply(id, '0x2648') : new Response(null, { status: 503 }));
+      // New in 7C-26: a correct answer that arrives after 300 ms, to act while a query runs.
+      case 'slow': return new Promise(resolve => setTimeout(() => resolve(reply(id, isChain ? '0x2648' : rpc.height)), 300));
       case 'stall': return new Promise((_, reject) => {
         if (init.signal) init.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
       });
@@ -731,6 +734,302 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.deepEqual(result, { scrollWidth: 0, outside: [], clipped: [], overlaps: [], lowContrast: [] }, label);
     }
   }, { timeout: 120_000 });
+
+  // --- New in 7C-26: complete English and Turkish experience ------------------------------------
+  // The agent's own texts (step titles and details, summaries, error messages) and the verifier's
+  // results follow the language switch. English stays exactly as the agent and the verifier write it;
+  // Turkish is built from the same structured result. A switch never runs a query or a verification
+  // again, and technical values (numbers, hex, URLs, RPC method names, reason codes) stay unchanged.
+
+  const ANALYSIS = `(() => ({
+    state: document.getElementById('query-state').textContent,
+    stateKey: document.getElementById('query-state').dataset.state,
+    message: document.getElementById('query-message').textContent,
+    steps: [...document.querySelectorAll('#plan-steps li')].map(item => [...item.children].map(child => child.textContent)),
+    target: document.getElementById('plan-target').textContent,
+    source: document.getElementById('plan-source').textContent,
+    readout: ['block-number', 'chain-id', 'evm-chain-id'].map(id => document.getElementById(id).textContent),
+    lastRead: document.getElementById('last-read').textContent,
+    flow: [...document.querySelectorAll('#flow .flow-state')].map(item => item.textContent).join(' | '),
+    route: [...document.querySelectorAll('[data-link] .seg-state')].map(item => item.textContent).join(' | '),
+    langMarks: document.querySelectorAll('#logic [lang]:not([data-example]), #pqc-panel [lang]').length,
+    rpc: window.__rpc.calls.map(call => call.method),
+  }))()`;
+  const switchTo = lang => evaluate(`(() => { document.querySelector('button[data-lang=${lang}]').click(); return ${ANALYSIS}; })()`);
+  const TR_SCOPE = ' Bu, yalnızca tek bir genel EVM JSON-RPC uç noktasının yanıt verdiğini doğrular; tam bir ağ sağlık kontrolü değildir.';
+  const TR_GENERIC = 'Sorgu tamamlanamadı ve hata bu dilde ayrıntılı açıklanamıyor. Hiçbir şey gönderilmedi veya değiştirilmedi.';
+
+  uiTest('network check analysis in both languages: steps, details, and summary follow the switch; values stay; nothing is sent again', async t => {
+    await openPage();
+    await submit('Diana ağını kontrol et.');
+    const en = await evaluate(ANALYSIS);
+    const tr = await switchTo('tr');
+    const back = await switchTo('en');
+    if (PROBE) { t.diagnostic(JSON.stringify({ en, tr, back })); return; }
+    assert.deepEqual(en.steps, [
+      ['succeeded', 'Verify Diana EVM chain ID eth_chainId', 'Endpoint reported 9800 (0x2648), matching Diana testnet.'],
+      ['succeeded', 'Read latest block height eth_blockNumber', 'Latest block height: 9954992.'],
+    ]);
+    assert.equal(en.message, 'Diana testnet EVM JSON-RPC answered: chain ID 9800 verified, latest block 9954992. This confirms that one public EVM JSON-RPC endpoint answered; it is not a full network health check.');
+    assert.deepEqual(tr.steps, [
+      ['başarılı', 'Diana EVM zincir kimliğini doğrula eth_chainId', 'Uç nokta 9800 (0x2648) bildirdi; Diana test ağıyla eşleşiyor.'],
+      ['başarılı', 'Son blok yüksekliğini oku eth_blockNumber', 'Son blok yüksekliği: 9954992.'],
+    ]);
+    assert.equal(tr.message, 'Diana test ağı EVM JSON-RPC yanıt verdi: zincir kimliği 9800 doğrulandı, son blok 9954992.' + TR_SCOPE);
+    assert.deepEqual([tr.state, tr.stateKey, tr.target], ['Başarılı', 'success', 'Hedef: Diana test ağı · EVM zinciri 9800']);
+    assert.match(tr.source, /^Kaynak: https:\/\/evm-testnet\.qore\.host\/ · kontrol zamanı \S/);
+    assert.equal(tr.flow, 'alındı | geçti | tanındı | başarılı | başarılı | başarılı');
+    assert.equal(tr.route, 'başarılı | başarılı');
+    assert.deepEqual(tr.readout, ['9954992', 'qorechain-diana', '9800'], 'values are not translated');
+    assert.deepEqual([en.readout, tr.lastRead !== '—'], [tr.readout, true]);
+    assert.equal(tr.langMarks, 0, 'no part of the analysis is marked as English any more');
+    assert.deepEqual(tr.rpc, BOTH, 'switching sends nothing');
+    assert.deepEqual(back, en, 'English is restored exactly');
+  });
+
+  uiTest('query failures in both languages: each code has its own text, values stay, and switching sends nothing', async t => {
+    const seen = {};
+    for (const [label, command, mode] of [
+      ['checkWrongChain', 'Diana ağını kontrol et.', 'wrong_chain'], ['checkPartial', 'Diana ağını kontrol et.', 'block_fails'],
+      ['checkNetwork', 'Diana ağını kontrol et.', 'network_error'], ['checkBadJson', 'Diana ağını kontrol et.', 'bad_json'],
+      ['blockHttp', "What's the latest block?", 'http_500'], ['blockBadJson', "What's the latest block?", 'bad_json'],
+      ['blockWrongChain', "What's the latest block?", 'wrong_chain'], ['blockNetwork', "What's the latest block?", 'network_error'],
+      ['blockTimeout', "What's the latest block?", 'stall'],
+    ]) {
+      await openPage(mode);
+      await submit(command);
+      const en = await evaluate(ANALYSIS);
+      const tr = await switchTo('tr');
+      const back = await switchTo('en');
+      seen[label] = { en, tr, back };
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, { en: v.en.message, tr: v.tr.message, steps: v.tr.steps }])))); return; }
+    for (const [label, { en, tr, back }] of Object.entries(seen)) {
+      assert.deepEqual(back, en, label + ': English restored exactly');
+      assert.deepEqual([tr.rpc, tr.stateKey, tr.readout], [en.rpc, en.stateKey, en.readout], label + ': same result, nothing sent');
+    }
+    const s = seen;
+    assert.deepEqual(s.checkWrongChain.en.steps, [
+      ['failed', 'Verify Diana EVM chain ID eth_chainId', 'Endpoint reported 1 (0x1); expected 9800 (0x2648).'],
+      ['skipped', 'Read latest block height eth_blockNumber', 'Not run because an earlier step failed.'],
+    ]);
+    assert.deepEqual(s.checkWrongChain.tr.steps, [
+      ['başarısız', 'Diana EVM zincir kimliğini doğrula eth_chainId', 'Uç nokta 1 (0x1) bildirdi; beklenen 9800 (0x2648).'],
+      ['atlandı', 'Son blok yüksekliğini oku eth_blockNumber', 'Önceki bir adım başarısız olduğu için çalıştırılmadı.'],
+    ]);
+    assert.deepEqual([s.checkWrongChain.tr.state, s.checkWrongChain.tr.message], ['Hata', 'Uç nokta kendini Diana test ağı olarak tanıtmadı, bu yüzden blok yüksekliği okunmadı.']);
+    assert.deepEqual(s.checkPartial.tr.steps, [
+      ['başarılı', 'Diana EVM zincir kimliğini doğrula eth_chainId', 'Uç nokta 9800 (0x2648) bildirdi; Diana test ağıyla eşleşiyor.'],
+      ['başarısız', 'Son blok yüksekliğini oku eth_blockNumber', 'QoreChain uç noktası HTTP 503 döndürdü.'],
+    ]);
+    assert.deepEqual([s.checkPartial.tr.state, s.checkPartial.tr.message], ['Kısmi', 'Zincir kimliği 9800 doğrulandı, ancak son blok okunamadı: QoreChain uç noktası HTTP 503 döndürdü. Blok yüksekliği bildirilmiyor.']);
+    assert.equal(s.checkPartial.tr.route, 'başarılı | başarısız');
+    assert.equal(s.checkNetwork.en.message, 'The Diana testnet check could not be completed: Could not reach the QoreChain endpoint.');
+    assert.equal(s.checkNetwork.tr.message, 'Diana test ağı kontrolü tamamlanamadı: QoreChain uç noktasına ulaşılamadı.');
+    assert.equal(s.checkNetwork.tr.steps[0][2], 'QoreChain uç noktasına ulaşılamadı.');
+    assert.equal(s.checkBadJson.en.message, 'The Diana testnet check could not be completed: QoreChain endpoint returned an unreadable JSON body.');
+    assert.equal(s.checkBadJson.tr.message, 'Diana test ağı kontrolü tamamlanamadı: QoreChain uç noktası geçersiz veya okunamayan bir yanıt döndürdü.');
+    for (const [label, en, tr] of [
+      ['blockHttp', 'QoreChain endpoint returned HTTP 500.', 'QoreChain uç noktası HTTP 500 döndürdü.'],
+      ['blockBadJson', 'QoreChain endpoint returned an unreadable JSON body.', 'QoreChain uç noktası geçersiz veya okunamayan bir yanıt döndürdü.'],
+      ['blockWrongChain', 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', 'EVM JSON-RPC, Diana test ağının zincir kimliğini (9800) bildirmedi.'],
+      ['blockNetwork', MSG.networkError, 'Tarayıcı test ağının EVM JSON-RPC uç noktasını okuyamadı. Bağlantınızı kontrol edin. Uç nokta, kaynaklar arası istekleri (CORS) kısıtlıyor olabilir.'],
+      ['blockTimeout', 'QoreChain request timed out.', 'QoreChain isteği zaman aşımına uğradı.'],
+    ]) {
+      assert.deepEqual([s[label].en.state, s[label].en.message], ['Error', en], label + ' en');
+      assert.deepEqual([s[label].tr.state, s[label].tr.message], ['Hata', tr], label + ' tr');
+      assert.equal(s[label].tr.flow, 'alındı | geçti | tanındı | ayrıntı yok | ayrıntı yok | hata', label);
+    }
+  }, { timeout: 120_000 });
+
+  uiTest('an error code without a Turkish text gets the generic Turkish text, never a guess; English keeps the agent text', async t => {
+    // The catalog is loaded with "err.http_error" removed from Turkish, as for a code ELA has no text for.
+    const { identifier } = await env.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+      const parse = JSON.parse;
+      JSON.parse = function (text, reviver) {
+        const value = parse.call(this, text, reviver);
+        if (value && value.en && value.tr && value.tr['err.http_error']) delete value.tr['err.http_error'];
+        return value;
+      };
+    })();` });
+    const seen = {};
+    try {
+      await openPage('http_500');
+      await submit("What's the latest block?");
+      seen.blockEn = await evaluate(ANALYSIS);
+      seen.blockTr = await switchTo('tr');
+      await setMode('block_fails');
+      await submit('Diana ağını kontrol et.');
+      seen.checkTr = await evaluate(ANALYSIS);
+      seen.checkEn = await switchTo('en');
+    } finally {
+      await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.equal(seen.blockEn.message, 'QoreChain endpoint returned HTTP 500.');
+    assert.deepEqual([seen.blockTr.state, seen.blockTr.message], ['Hata', TR_GENERIC]);
+    assert.equal(seen.checkTr.message, 'Zincir kimliği 9800 doğrulandı, ancak son blok okunamadı: ' + TR_GENERIC + ' Blok yüksekliği bildirilmiyor.');
+    assert.equal(seen.checkTr.steps[1][2], TR_GENERIC);
+    assert.equal(seen.checkEn.message, 'Chain ID 9800 was verified, but reading the latest block failed: QoreChain endpoint returned HTTP 503. No block height is reported.');
+  });
+
+  uiTest('switching language while a query runs keeps the query, sends nothing new, and shows its result in the new language', async t => {
+    await openPage('slow');
+    await evaluate(`window.__rpc.calls.length = 0`);
+    const during = await evaluate(`(async () => {
+      document.getElementById('command').value = 'Diana ağını kontrol et.';
+      document.getElementById('command-form').requestSubmit();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      document.querySelector('button[data-lang=tr]').click();
+      document.querySelector('button[data-lang=en]').click();
+      document.querySelector('button[data-lang=tr]').click();
+      return { ...${READ_VIEW}, value: document.getElementById('command').value };
+    })()`);
+    const settled = await evaluate(`(async () => {
+      while (document.getElementById('run').disabled) await new Promise(resolve => setTimeout(resolve, 20));
+      return ${ANALYSIS};
+    })()`);
+    const english = await switchTo('en');
+    if (PROBE) { t.diagnostic(JSON.stringify({ during, settled, english })); return; }
+    assert.deepEqual([during.state, during.stateKey, during.message, during.runEnabled, during.rpc, during.value],
+      ['Sorgulanıyor', 'querying', 'Komutunuz işleniyor…', false, ['eth_chainId'], 'Diana ağını kontrol et.']);
+    assert.deepEqual([settled.state, settled.rpc, settled.readout[0]], ['Başarılı', BOTH, '9954992'], 'one query, finished');
+    assert.equal(settled.message, 'Diana test ağı EVM JSON-RPC yanıt verdi: zincir kimliği 9800 doğrulandı, son blok 9954992.' + TR_SCOPE);
+    assert.equal(settled.steps.length, 2);
+    assert.deepEqual([english.state, english.rpc, english.readout], ['Success', BOTH, settled.readout]);
+    assert.match(english.message, /^Diana testnet EVM JSON-RPC answered: chain ID 9800 verified, latest block 9954992\./);
+    expectView(t, await view(), { context: CONTEXT_NETWORK, runEnabled: true });
+  });
+
+  // The overflow audit above cannot see text squeezed into a narrow column. Before 7C-26, at 320 px
+  // with 200% text, the step badge left the step text a column about one character wide.
+  uiTest('executed steps stay readable at 320, 390 and 1440 px with 100% and 200% text, in both languages', async t => {
+    const seen = {};
+    try {
+      for (const width of [1440, 390, 320]) for (const scale of [1, 2]) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
+        for (const lang of ['en', 'tr']) {
+          await openPage('block_fails');
+          if (lang === 'tr') await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+          await submit('Diana ağını kontrol et.');
+          seen[`${width}px ${scale * 100}% ${lang}`] = await evaluate(`[...document.querySelectorAll('#plan-steps li')].map(item => {
+            const em = parseFloat(getComputedStyle(item).fontSize);
+            return ['.step-title', '.step-detail'].map(s => Math.round(item.querySelector(s).getBoundingClientRect().width / em));
+          })`);
+        }
+      }
+    } finally {
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    // Each step's title and detail get at least 6 em of width (about a dozen characters per line); before 7C-26 it was about 1 em.
+    for (const [label, steps] of Object.entries(seen)) {
+      assert.equal(steps.length, 2, label);
+      for (const widths of steps) for (const ems of widths) assert.ok(ems >= 6, `${label}: ${JSON.stringify(steps)}`);
+    }
+  }, { timeout: 120_000 });
+
+  uiTest('refusals, clarifications, and unsupported reads in both languages', async t => {
+    const seen = [];
+    for (const command of ['Send 10 QOR.', 'Sign this transaction.', 'Show my private key.', 'Connect my wallet.', 'Deploy this contract.',
+      'What is the gas price?', 'Merhaba', '   ', 'Is mainnet working?', 'Tekrar kontrol et.', 'x'.repeat(501)]) {
+      await openPage();
+      await submit(command);
+      const en = await evaluate(ANALYSIS);
+      const tr = await switchTo('tr');
+      seen.push([en.state, en.message, tr.state, tr.message, tr.rpc.length]);
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    const tail = ' Hiçbir şey gönderilmedi. Bunun yerine son bloğu sorun veya Diana ağını kontrol ettirin.';
+    assert.deepEqual(seen, [
+      ['Refused', REFUSED.transfer, 'Reddedildi', 'ELA salt okunurdur; fon gönderemez, aktaramaz veya çekemez.' + tail, 0],
+      ['Refused', REFUSED.signing, 'Reddedildi', 'ELA mesaj veya işlem imzalamaz ya da onaylamaz.' + tail, 0],
+      ['Refused', REFUSED.key_material, 'Reddedildi', 'ELA asla özel anahtar, tohum ifadesi, kurtarma ifadesi veya parola istemez ve işlemez. Bunları paylaşmayın. Komut alanı temizlendi.' + tail, 0],
+      ['Refused', REFUSED.wallet_control, 'Reddedildi', 'ELA cüzdan bağlamaz, oluşturmaz veya yönetmez.' + tail, 0],
+      ['Refused', REFUSED.state_change, 'Reddedildi', 'ELA sözleşme dağıtamaz, stake edemez, takas yapamaz, basım yapamaz veya zincir durumunu başka şekilde değiştiremez; yalnızca Diana test ağını okur.' + tail, 0],
+      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA yalnızca Diana ağını kontrol edebilir ve son bloğunu okuyabilir. Bakiye, ücret, işlem ve diğer veriler henüz desteklenmiyor.', 0],
+      ['Needs clarification', MSG.clarifyGeneric, 'Açıklama gerekli', "Diana test ağındaki son blok numarasını sorun, ELA'dan Diana ağını kontrol etmesini isteyin veya bir örnek komut kullanın.", 0],
+      ['Needs clarification', MSG.clarifyEmpty, 'Açıklama gerekli', 'Bir komut yazın, örneğin "Diana ağını kontrol et." veya "Check Diana network."', 0],
+      ['Needs clarification', MSG.clarifyNetwork, 'Açıklama gerekli', 'Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.', 0],
+      ['Needs clarification', MSG.clarifyNoContext, 'Açıklama gerekli', 'Bu sayfa oturumunda devam edilecek başarılı bir sorgu yok. Önce Diana test ağındaki son blok numarasını sorun veya Diana ağını kontrol ettirin.', 0],
+      ['Needs clarification', 'That command is too long. Keep it under 500 characters.', 'Açıklama gerekli', 'Komut çok uzun. 500 karakterin altında tutun.', 0],
+    ]);
+  }, { timeout: 120_000 });
+
+  uiTest('post-quantum results in both languages: verdicts, reasons, counts, and timing follow the switch without verifying again', async t => {
+    await openPage();
+    await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+    await openPanel();
+    await evaluate(`window.__rpc.calls.length = 0`);
+    const start = networkLog.length;
+    const counts = () => evaluate(`['pqc-public-key-count', 'pqc-message-count', 'pqc-signature-count'].map(id => document.getElementById(id).textContent)`);
+    const lang = code => evaluate(`document.querySelector('button[data-lang=${code}]').click()`);
+    const seen = { idle: await pqc(), valid: await pqc('pqc-load'), flipped: await pqc('pqc-flip'), flippedCounts: await counts() };
+    await lang('en');
+    seen.flippedEn = await pqc();
+    seen.flippedCountsEn = await counts();
+    await lang('tr');
+    seen.flippedAgain = await pqc();
+    for (const code of ['tr', 'en']) {
+      await lang(code);
+      const r = seen[code] = {};
+      const load = () => evaluate(`(document.getElementById('pqc-load').click(), [document.getElementById('pqc-public-key').value, document.getElementById('pqc-signature').value])`);
+      const [key, sig] = await load();
+      r.shortKey = await pqc('pqc-verify', { 'pqc-public-key': key.slice(0, -2) });
+      r.longSignature = await pqc('pqc-verify', { 'pqc-public-key': key, 'pqc-signature': sig + '00' });
+      r.badHex = await pqc('pqc-verify', { 'pqc-signature': 'zz' });
+      r.notHex = await counts();
+      await load();
+      r.oversized = await pqc('pqc-oversized');
+      r.missing = await pqc('pqc-verify', { 'pqc-public-key': '', 'pqc-signature': '' });
+      await pqc('pqc-clear');
+      r.noMessage = await pqc('pqc-flip');
+      r.cleared = await pqc('pqc-clear');
+    }
+    const traffic = { rpc: await evaluate(`window.__rpc.calls.length`), requests: networkLog.slice(start), langMarks: await evaluate(`document.querySelectorAll('#pqc-panel [lang]').length`) };
+    if (PROBE) { t.diagnostic(JSON.stringify({ seen, traffic })); return; }
+    assert.deepEqual([seen.idle.title, seen.idle.detail, seen.idle.original, seen.idle.changed],
+      ['Henüz doğrulama yok', 'Resmî test vektörünü yükleyin veya kendi genel değerlerinizi yapıştırın, ardından doğrulayın.', 'çalışmadı', 'çalışmadı']);
+    assert.deepEqual([seen.valid.state, seen.valid.title, seen.valid.detail, seen.valid.original],
+      ['valid', '✓ Geçerli imza', 'İmza, ML-DSA-87 (FIPS 204) kapsamında bu genel anahtar ve mesajla eşleşiyor.', 'Geçerli']);
+    assert.match(seen.valid.meta, /^Bu tarayıcıda \d+\.\d ms içinde kontrol edildi · kontrol sırasındaki ağ istekleri: 0$/);
+    assert.deepEqual([seen.flipped.state, seen.flipped.reason, seen.flipped.title, seen.flipped.detail, seen.flipped.changed],
+      ['invalid', 'signature_mismatch', '✗ Geçersiz', 'İmza bu genel anahtar ve mesajla eşleşmiyor.', 'Geçersiz (signature_mismatch)']);
+    assert.deepEqual([seen.flippedCounts[0], seen.flippedCounts[2]], ['hex · 2592 bayt · gereken 2592', 'hex · 4627 bayt · gereken 4627']);
+    assert.match(seen.flippedCounts[1], /^hex · \d+ bayt · en fazla 64 KiB$/);
+    // The switch rewrites the shown result; it does not verify again (same timing, same byte, same verdict).
+    const ms = text => text.match(/\d+\.\d/)[0];
+    assert.deepEqual([seen.flippedEn.state, seen.flippedEn.reason, seen.flippedEn.title, seen.flippedEn.detail, seen.flippedEn.original, seen.flippedEn.changed, seen.flippedEn.lastByte],
+      ['invalid', 'signature_mismatch', '✗ Not valid', 'The signature does not match this public key and message.', 'Valid', 'Not valid (signature_mismatch)', seen.flipped.lastByte]);
+    assert.match(seen.flippedEn.meta, /^Checked in this browser in \d+\.\d ms · network requests during the check: 0$/);
+    assert.equal(ms(seen.flippedEn.meta), ms(seen.flipped.meta));
+    assert.deepEqual([seen.flippedCountsEn[0], seen.flippedCountsEn[2]], ['hex · 2592 bytes · needs 2592', 'hex · 4627 bytes · needs 4627']);
+    assert.deepEqual(seen.flippedAgain, seen.flipped, 'Turkish restored exactly');
+    const texts = r => [r.reason, r.title, r.detail];
+    assert.deepEqual(Object.fromEntries(Object.entries(seen.tr).filter(([k]) => k !== 'notHex').map(([k, r]) => [k, texts(r)])), {
+      shortKey: ['invalid_public_key_length', '✗ Geçersiz', 'Genel anahtar tam olarak 2592 bayt (5184 onaltılık karakter) olmalıdır.'],
+      longSignature: ['invalid_signature_length', '✗ Geçersiz', 'İmza tam olarak 4627 bayt (9254 onaltılık karakter) olmalıdır.'],
+      badHex: ['invalid_encoding', '✗ Geçersiz', 'Bir alan geçerli onaltılık metin değil. 0x öneki veya boşluk olmadan yalnızca 0–9 ve a–f kullanın.'],
+      oversized: ['message_too_large', '✗ Geçersiz', "Mesaj 64 KiB'tan büyük olduğu için çözülmeden önce reddedildi."],
+      missing: ['missing_input', '✗ Doğrulanmadı', 'Genel anahtarı ve imzayı doldurun veya resmî test vektörünü yükleyin.'],
+      noMessage: ['no_message', '✗ Doğrulanmadı', 'Önce resmî test vektörünü yükleyin veya onaltılık bir mesaj girin.'],
+      cleared: ['', 'Henüz doğrulama yok', 'Resmî test vektörünü yükleyin veya kendi genel değerlerinizi yapıştırın, ardından doğrulayın.'],
+    });
+    assert.deepEqual(Object.fromEntries(Object.entries(seen.en).filter(([k]) => k !== 'notHex').map(([k, r]) => [k, texts(r)])), {
+      shortKey: ['invalid_public_key_length', '✗ Not valid', 'The public key must be exactly 2592 bytes (5184 hex characters).'],
+      longSignature: ['invalid_signature_length', '✗ Not valid', 'The signature must be exactly 4627 bytes (9254 hex characters).'],
+      badHex: ['invalid_encoding', '✗ Not valid', 'A field is not valid hexadecimal text. Use 0–9 and a–f only, without a 0x prefix or spaces.'],
+      oversized: ['message_too_large', '✗ Not valid', 'The message is larger than 64 KiB, so it was refused before decoding.'],
+      missing: ['missing_input', '✗ Not verified', 'Fill in the public key and the signature, or load the official test vector.'],
+      noMessage: ['no_message', '✗ Not verified', 'Load the official test vector or enter a hexadecimal message first.'],
+      cleared: ['', 'No verification yet', 'Load the official test vector or paste your own public values, then verify.'],
+    });
+    assert.equal(seen.tr.notHex[2], 'hex · onaltılık değil · gereken 4627');
+    assert.equal(seen.en.notHex[2], 'hex · not hexadecimal · needs 4627');
+    assert.deepEqual(traffic, { rpc: 0, requests: [], langMarks: 0 });
+  });
 
   // --- New in 7F: post-quantum verification panel -------------------------------------------------
 
