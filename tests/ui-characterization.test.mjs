@@ -453,11 +453,14 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       for (const [name, value] of [['run button text', desktop.run[1]], ['text on card', desktop.textOnCard], ['muted text on card', desktop.mutedOnCard], ['example link', desktop.linkOnCard]]) {
         assert.ok(value >= 4.5, `${name}: ${value}`);
       }
-      const red = ['rgb(255, 195, 205)', 'rgb(74, 29, 42)'];
+      // Changed in the 7C-27 visual pass: no red or coral. A refusal is lilac and an error violet, two
+      // distinct purple tones (before, both were the same red); their badge marks differ too (bar, cross).
+      const lilac = ['rgb(201, 195, 255)', 'rgb(38, 35, 86)'];
+      const violet = ['rgb(236, 210, 255)', 'rgb(58, 31, 92)'];
       const amber = ['rgb(255, 224, 162)', 'rgb(70, 54, 26)'];
       const green = ['rgb(142, 240, 212)', 'rgb(14, 59, 52)'];
       assert.deepEqual(desktop.badges.map(([state, color, background]) => [state, color, background]), [
-        ['Refused', ...red], ['Unsupported', ...amber], ['Needs clarification', ...amber], ['Partial', ...amber], ['Error', ...red], ['Success', ...green],
+        ['Refused', ...lilac], ['Unsupported', ...amber], ['Needs clarification', ...amber], ['Partial', ...amber], ['Error', ...violet], ['Success', ...green],
       ]);
       for (const [state, , , contrast] of desktop.badges) assert.ok(contrast >= 4.5, `${state}: ${contrast}`);
       assert.deepEqual(desktop.focus, ["What's the latest block?", true, 'solid', '2px', 'rgb(166, 220, 255)']);
@@ -608,7 +611,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     seen.longSignature = await read();
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     const green = 'rgb(142, 240, 212)';
-    const red = 'rgb(255, 195, 205)';
+    // Changed in the 7C-27 visual pass: the not-valid verdict is violet (was red); the cross mark stays.
+    const red = 'rgb(236, 210, 255)';
     assert.deepEqual(seen.idle, { result: 'idle', gauges: ['under', 'under'], seal: 'rgb(58, 106, 168)' });
     assert.deepEqual(seen.valid, { result: 'valid', gauges: ['exact', 'exact'], seal: green });
     // Exact lengths alone are not shown as valid: the changed byte keeps both gauges exact and the verdict red.
@@ -1061,6 +1065,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       checked: [...document.querySelectorAll('#theme-switch [aria-checked="true"], #view-switch [aria-checked="true"]')].map(b => b.dataset.theme ?? b.dataset.view),
       text: host.querySelector('svg.core-d').textContent,
       label: host.querySelector('svg.core-d').getAttribute('aria-label'),
+      caption: document.getElementById('core-caption').textContent,
     };
   })()`);
   const SESSION_VIEW = `(() => ({
@@ -1119,6 +1124,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.match(seen.success.views.optik.text, /signal arrived/);
     assert.match(seen.refused.views.gravur.text, /stopped at 02/);
     assert.match(seen.refused.views.karot.text, /Not opened · 3 layers sealed/);
+    // The same meaning in HTML, for every view.
+    for (const view of ['karot', 'optik', 'gravur']) {
+      assert.equal(seen.ready.views[view].caption, 'No command has run yet. All six stages are waiting.');
+      assert.equal(seen.refused.views[view].caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.');
+      assert.equal(seen.success.views[view].caption, 'All six stages ran and succeeded.');
+      assert.equal(seen.partial.views[view].caption, 'Stopped at 05 Data read (Failed). Result: Failed.');
+    }
   }, { timeout: 180_000 });
 
   uiTest('nine theme and view combinations by click: the same record, nothing runs again, nothing is sent', async t => {
@@ -1317,6 +1329,110 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.deepEqual(result, { scrollWidth: 0, outside: [], clipped: [], overlaps: [], lowContrast: [] }, label);
     }
   }, { timeout: 600_000 });
+
+  // Added in the 7C-27 visual pass: no red or coral anywhere, readable narrow screens, compact flow.
+  const NO_WARM_RED = `(() => {
+    const hits = new Set();
+    const warm = value => {
+      for (const m of String(value).matchAll(/rgba?\\(([^)]+)\\)/g)) {
+        const [r, g, b, a = 1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
+        if (a < 0.05) continue;
+        const max = Math.max(r, g, b) / 255, min = Math.min(r, g, b) / 255, l = (max + min) / 2, d = max - min;
+        if (d < 0.08) continue;
+        const sat = d / (1 - Math.abs(2 * l - 1));
+        let h = max === r / 255 ? ((g - b) / 255 / d) % 6 : max === g / 255 ? (b - r) / 255 / d + 2 : (r - g) / 255 / d + 4;
+        h = (h * 60 + 360) % 360;
+        if ((h < 25 || h > 335) && sat > 0.35 && l > 0.12 && l < 0.94) return m[0];
+      }
+      return null;
+    };
+    for (const e of document.querySelectorAll('body, body *')) {
+      const s = getComputedStyle(e);
+      if (s.display === 'none') continue;
+      for (const prop of ['color', 'backgroundColor', 'borderTopColor', 'borderLeftColor', 'outlineColor', 'fill', 'stroke', 'boxShadow', 'backgroundImage', 'textDecorationColor']) {
+        const hit = warm(s[prop]);
+        if (hit) hits.add((e.id || e.className.baseVal || e.className || e.tagName) + ' ' + prop + ' ' + hit);
+      }
+    }
+    return [...hits].slice(0, 12);
+  })()`;
+
+  uiTest('no red or coral remains: every theme, refusal, error, partial, success, ready, and a not-valid signature', async t => {
+    const seen = {};
+    await openPage();
+    try {
+      for (const theme of ['light', 'dark', 'blue']) {
+        for (const [label, command, mode] of [['ready'], ['refused', 'Send 10 QOR.'], ['error', "What's the latest block?", 'http_500'], ['partial', 'Diana ağını kontrol et.', 'block_fails'], ['success', 'Diana ağını kontrol et.']]) {
+          await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
+          await openPage(mode ?? 'ok');
+          if (command) await submit(command);
+          await core();
+          seen[`${theme} ${label}`] = await evaluate(NO_WARM_RED);
+        }
+        await openPanel();
+        await pqc('pqc-load');
+        await pqc('pqc-flip');
+        seen[`${theme} pqc-invalid`] = await evaluate(NO_WARM_RED);
+      }
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    for (const [label, hits] of Object.entries(seen)) assert.deepEqual(hits, [], label);
+  }, { timeout: 180_000 });
+
+  uiTest('narrow screens: compact six-stage flow with real states, no squeezed text columns at 320 px and 200% text', async t => {
+    // A squeezed column: a text broken over three or more lines with under six characters per line.
+    const NARROW = `(() => {
+      const out = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent.trim();
+        if (text.length < 6 || node.parentElement instanceof SVGElement || node.parentElement.closest('script, style')) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const lines = new Set([...range.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top))).size;
+        if (lines >= 3 && text.length / lines < 6) out.push(node.parentElement.tagName + '.' + node.parentElement.className + ' "' + text.slice(0, 20) + '" ' + lines + ' lines');
+      }
+      return out;
+    })()`;
+    const FLOW = `[...document.querySelectorAll('#flow > li')].map(li => {
+      const top = el => Math.round(li.querySelector(el).getBoundingClientRect().top);
+      return [li.querySelector('.flow-n').textContent, li.dataset.state, li.querySelector('.flow-state').textContent, Math.abs(top('.flow-name') - top('.flow-state')) <= 6, Math.round(li.getBoundingClientRect().height)];
+    })`;
+    const seen = {};
+    await openPage();
+    try {
+      for (const [width, scale] of [[390, 1], [320, 1], [320, 2]]) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: true });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
+        for (const theme of ['light', 'dark', 'blue']) {
+          await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
+          await openPage();
+          await submit('Send 10 QOR.');
+          await core();
+          seen[`${width}px ${scale * 100}% ${theme}`] = { narrow: await evaluate(NARROW), flow: await evaluate(FLOW), caption: await evaluate(`document.getElementById('core-caption').textContent`) };
+        }
+      }
+    } finally {
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    for (const [label, { narrow, flow, caption }] of Object.entries(seen)) {
+      assert.deepEqual(narrow, [], label + ': no text squeezed into a column of a few characters per line');
+      assert.deepEqual(flow.map(([n, state, text]) => [n, state, text]), [
+        ['01', 'done', 'received'], ['02', 'blocked', 'blocked'], ['03', 'idle', 'not run'], ['04', 'idle', 'not run'], ['05', 'idle', 'not run'], ['06', 'refused', 'refused'],
+      ], label + ': all six stages with their real states');
+      assert.equal(caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.', label);
+      // Compact at normal text size: name and state share a line, and a stage takes at most two lines.
+      if (!label.includes('200%')) {
+        assert.ok(flow.every(([, , , sameLine]) => sameLine), label + ': name and state on one line');
+        assert.ok(flow.every(([, , , , height]) => height <= 64), label + ': ' + flow.map(f => f[4]).join(','));
+      }
+    }
+  }, { timeout: 180_000 });
 
   // --- New in 7F: post-quantum verification panel -------------------------------------------------
 

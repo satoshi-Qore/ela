@@ -30,11 +30,14 @@
   --accent: var(--electric);
   --focus: var(--ice);
 
-  /* Status colors keep their meaning: green success, red error or refusal, amber warning, blue progress */
+  /* Status colors keep their meaning: green success, lilac refusal, violet failure, amber warning, blue
+     progress. No red or coral (7C-27); refusal and failure also differ by symbol and text. */
   --ok-bg: #0e3b34;
   --ok-fg: #8ef0d4;
-  --bad-bg: #4a1d2a;
-  --bad-fg: #ffc3cd;
+  --bad-bg: #3a1f5c;
+  --bad-fg: #ecd2ff;
+  --refuse-bg: #262356;
+  --refuse-fg: #c9c3ff;
   --warn-bg: #46361a;
   --warn-fg: #ffe0a2;
   --info-bg: var(--sapphire);
@@ -106,7 +109,7 @@ code { font-family: var(--mono); }
 .net-dot { flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid currentColor; }
 .net-chip[data-state="ok"] { color: var(--ok-fg); border-color: rgba(142, 240, 212, 0.4); }
 .net-chip[data-state="partial"] { color: var(--warn-fg); border-color: rgba(255, 224, 162, 0.4); }
-.net-chip[data-state="error"] { color: var(--bad-fg); border-color: rgba(255, 195, 205, 0.4); }
+.net-chip[data-state="error"] { color: var(--bad-fg); border-color: rgba(236, 210, 255, 0.4); }
 .net-chip:not([data-state="unchecked"]) .net-dot { background: currentColor; box-shadow: 0 0 0.45rem currentColor; }
 
 .lang { display: inline-flex; padding: 0.15rem; border: 1px solid var(--border); border-radius: 0.4rem; background: var(--field); }
@@ -394,8 +397,11 @@ dd { margin-top: 0.15rem; color: var(--platinum); overflow-wrap: anywhere; font-
 .flow > [data-state="wait"] { --c: var(--ice); }
 .flow > :is([data-state="done"], [data-state="pass"], [data-state="ok"], [data-state="recognized"], [data-state="success"]) { --c: var(--ok-fg); border-top-style: solid; }
 .flow > :is([data-state="done"], [data-state="pass"], [data-state="ok"], [data-state="recognized"], [data-state="success"])::before { background: var(--ok-fg); box-shadow: 0 0 0.6rem rgba(142, 240, 212, 0.55); }
-.flow > :is([data-state="blocked"], [data-state="failed"], [data-state="error"], [data-state="refused"]) { --c: var(--bad-fg); border-top-style: solid; }
-.flow > :is([data-state="blocked"], [data-state="failed"], [data-state="error"], [data-state="refused"])::before { background: var(--bad-fg); }
+.flow > :is([data-state="blocked"], [data-state="refused"]) { --c: var(--refuse-fg); border-top-style: solid; }
+.flow > :is([data-state="blocked"], [data-state="refused"])::before { background: var(--refuse-fg); }
+/* A failure is a hollow, dashed marker; a refusal a filled one. */
+.flow > :is([data-state="failed"], [data-state="error"]) { --c: var(--bad-fg); border-top-style: solid; }
+.flow > :is([data-state="failed"], [data-state="error"])::before { border-style: dashed; }
 .flow > :is([data-state="clarify"], [data-state="unsupported"], [data-state="partial"], [data-state="stopped"], [data-state="unknown"]) { --c: var(--warn-fg); border-top-style: solid; }
 .flow > [data-state="skipped"] { --c: var(--skipped-fg); border-top-style: dotted; }
 
@@ -516,7 +522,10 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .state[data-state="querying"] { background: var(--info-bg); color: var(--info-fg); }
 .state[data-state="success"] { background: var(--ok-bg); color: var(--ok-fg); }
 .state[data-state="error"] { background: var(--bad-bg); color: var(--bad-fg); }
-.state[data-state="refused"] { background: var(--bad-bg); color: var(--bad-fg); }
+.state[data-state="refused"] { background: var(--refuse-bg); color: var(--refuse-fg); }
+/* The badge mark differs too: a barrier bar for a refusal, a cross for an error. */
+.state[data-state="refused"]::before { width: 0.6rem; height: 0.16rem; border-radius: 0.05rem; }
+.state[data-state="error"]::before { width: auto; height: auto; border-radius: 0; background: none; content: "×"; font-weight: 700; line-height: 1; }
 .state[data-state="needs clarification"] { background: var(--warn-bg); color: var(--warn-fg); }
 .state[data-state="unsupported"] { background: var(--warn-bg); color: var(--warn-fg); }
 .state[data-state="partial"] { background: var(--warn-bg); color: var(--warn-fg); }
@@ -660,7 +669,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .pqc-result[data-state="invalid"] {
   border-color: var(--bad-fg);
   background-color: var(--bad-bg);
-  background-image: repeating-linear-gradient(135deg, rgba(255, 195, 205, 0.06) 0 6px, transparent 6px 14px);
+  background-image: repeating-linear-gradient(135deg, rgba(236, 210, 255, 0.06) 0 6px, transparent 6px 14px);
 }
 
 .pqc-result[data-state="invalid"] .seal {
@@ -859,7 +868,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   --hairline: rgba(20, 32, 51, 0.12); --border-strong: #8ea3c4; --field: #ffffff; --surface-raised: #ffffff;
   --frame: rgba(255, 255, 255, 0.94); --well: #f4f6fa; --highlight: rgba(255, 255, 255, 0.9); --shadow: 0 1rem 2.2rem rgba(20, 40, 80, 0.10);
   --on-electric: #ffffff; --electric-hover: #2f62c8;
-  --ok-bg: #e2f4ee; --ok-fg: #0b6650; --bad-bg: #fbe8ec; --bad-fg: #a01d38; --warn-bg: #fdf1d8; --warn-fg: #7a5200;
+  --ok-bg: #e2f4ee; --ok-fg: #0b6650; --bad-bg: #f3e4fa; --bad-fg: #6a1b80; --refuse-bg: #ebe8fb; --refuse-fg: #43308f; --warn-bg: #fdf1d8; --warn-fg: #7a5200;
   --info-bg: #e3e9f2; --info-fg: #1d3a66; --neutral-bg: #e7ecf3; --neutral-fg: #2a3a52; --skipped-bg: #eef2f7; --skipped-fg: #4f5f75;
   --core-panel: linear-gradient(180deg, #ffffff, #fafbfd);
   --core-ink: #0e1320; --core-ink-2: #384152; --core-ink-3: #596273; --core-ink-4: #5f6878;
@@ -933,7 +942,46 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   .core-viz .core-m { display: block; max-width: 20rem; margin-inline: auto; }
   .core-bar .switch { display: flex; width: 100%; }
   .core-bar .switch button { flex: 1 1 auto; justify-content: center; }
-  .core-body { padding: 0.75rem; }
-  .theme-switch .switch-text { display: none; }
-  .theme-switch button { padding: 0.35rem 0.45rem; }
+  .core-body { padding: min(0.75rem, 10px); }
+  .core-bar { padding: min(0.7rem, 10px); }
+}
+
+/* === 7C-27 visual pass: narrow screens and large text ===========================================
+   Paddings on narrow screens are capped in px, so 200% text gets the room instead of nested
+   gutters. Nothing is hidden or shrunk: long values wrap, and the execution flow turns compact. */
+@media (max-width: 40rem) {
+  :root { --gutter: min(0.75rem, 12px); }
+  .module { padding: min(1rem, 14px); }
+  .command-panel, .result { padding: min(1rem, 12px); }
+  .core { margin-top: 0.85rem; }
+  .core-body { gap: 0.75rem; }
+  .core-legend { grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr)); gap: 0.4rem 0.75rem; }
+  .topbar-tools { flex-wrap: wrap; }
+  .theme-switch { flex-wrap: wrap; }
+  .run { width: 100%; justify-content: center; }
+  /* Compact flow: number, name, and state on one line; the RPC method below. All six stages stay. */
+  .flow > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.5rem; padding: 0.3rem 0 0.55rem 1.3rem; }
+  .flow-n { order: 0; }
+  .flow-name { order: 1; font-size: 0.92rem; }
+  .flow-state { order: 2; margin-left: auto; text-align: end; }
+  .flow-code { order: 3; flex-basis: 100%; }
+  .flow > li::before { top: 0.55rem; }
+}
+@media (max-width: 22rem) {
+  :root { --gutter: min(0.625rem, 10px); }
+  .module, .command-panel, .result { padding: min(0.65rem, 10px); }
+}
+
+/* Core: the HTML account of what the Core draws (the SVG labels are never the only source). */
+.core-caption { margin: 0 1rem 1rem; color: var(--platinum); font-size: 0.86rem; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 40rem) { .core-caption { margin: 0 min(0.75rem, 10px) min(0.75rem, 10px); } }
+
+/* Inner boxes of Diana, PQC, and Payment: on narrow screens their paddings are capped in px too, so
+   nested frames do not leave the text a column of a few characters at 200% text. */
+@media (max-width: 40rem) {
+  .schema { padding: min(0.85rem, 8px); }
+  .schema-contract, .actor, .actor-out, .prep-list, .spec, .node { padding: min(0.7rem, 8px); }
+  .rules li { padding-inline-start: min(0.9rem, 12px); }
+  .prep-list ul { padding-inline-start: min(1.1rem, 14px); }
+  .pqc-result { padding: min(0.9rem, 10px); }
 }

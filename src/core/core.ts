@@ -54,6 +54,23 @@ export function readRecord(): CoreRecord {
   return { stages, outcome, title: state?.textContent?.trim() ?? '' };
 }
 
+/** One sentence in HTML that says what the Core draws, so the SVG labels are never the only source. */
+export function caption(r: CoreRecord): string {
+  const s = r.stages;
+  const label = (st: CoreStage): string => t('core.s.' + st.status);
+  if (s.every(st => st.status === 'waiting')) return t('core.c.idle');
+  const running = s.find(st => st.status === 'running');
+  if (running) return t('core.c.running', { n: running.n, name: running.name });
+  if (s.every(st => st.status === 'ok')) return t('core.c.ok');
+  // Same rule as draw.ts stopIndex; repeated so this chunk keeps importing types only from draw.ts.
+  const stop = s.slice(0, 5).findIndex(st => st.status === 'blocked' || st.status === 'failed');
+  if (stop >= 0) {
+    const skipped = s.slice(0, 5).filter(st => st.status === 'skipped').map(st => st.n).join(', ');
+    return [t('core.c.stopped', { n: s[stop].n, name: s[stop].name, state: label(s[stop]) }), skipped && t('core.c.skipped', { list: skipped }), t('core.c.result', { state: label(s[5]) })].filter(Boolean).join(' ');
+  }
+  return s.map(st => `${st.n} ${st.name}: ${label(st)}`).join(' · ') + '.';
+}
+
 let view: View = (['karot', 'optik', 'gravur'] as const).find(v => v === store.get('view')) ?? 'karot';
 let renders = 0;
 let token = 0;
@@ -67,6 +84,8 @@ async function render(): Promise<void> {
   const record = readRecord();
   host.replaceChildren();
   draw(host, record, t);
+  const text = $('#core-caption');
+  if (text) text.textContent = caption(record);
   host.dataset.view = view;
   host.dataset.statuses = record.stages.map(s => s.status).join(' ');
   host.dataset.outcome = record.outcome;

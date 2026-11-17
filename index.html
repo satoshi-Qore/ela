@@ -137,7 +137,13 @@
     "core.g.title": "EXECUTION SEAL",
     "core.g.cols": "RING · STAGE · STATE",
     "core.g.stopped": "stopped at {n}",
-    "core.g.count": "{n} / 6 stages"
+    "core.g.count": "{n} / 6 stages",
+    "core.c.idle": "No command has run yet. All six stages are waiting.",
+    "core.c.running": "Running: {n} {name}.",
+    "core.c.stopped": "Stopped at {n} {name} ({state}).",
+    "core.c.skipped": "{list} did not run.",
+    "core.c.ok": "All six stages ran and succeeded.",
+    "core.c.result": "Result: {state}."
   },
   "tr": {
     "title": "ELA — Yürütme ve Mantık Ajanı",
@@ -264,6 +270,12 @@
     "core.g.cols": "HALKA · AŞAMA · DURUM",
     "core.g.stopped": "{n}'de durdu",
     "core.g.count": "{n} / 6 aşama",
+    "core.c.idle": "Henüz komut çalışmadı. Altı aşamanın hepsi bekliyor.",
+    "core.c.running": "Çalışıyor: {n} {name}.",
+    "core.c.stopped": "{n} {name} aşamasında durdu ({state}).",
+    "core.c.skipped": "{list} çalışmadı.",
+    "core.c.ok": "Altı aşamanın hepsi çalıştı ve başarılı oldu.",
+    "core.c.result": "Sonuç: {state}.",
 
     "fs.idle": "çalışmadı",
     "fs.wait": "bekliyor",
@@ -506,6 +518,7 @@
                 <li data-status="unknown"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-unknown);stroke-width:1.3;stroke-dasharray:1.2 2.2"/><path d="M-1.5-1.5Q0-3.4 1.5-1.5Q1.6 0 0 .5" style="fill:none;stroke:var(--s-unknown);stroke-width:1.2"/><circle cx="0" cy="2.3" r=".8" style="fill:var(--s-unknown)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.unknown">Unknown</span></li>
               </ul>
             </div>
+            <p id="core-caption" class="core-caption"></p>
           </div>
 
           <ol id="flow" class="flow" aria-label="Execution flow" data-i18n-label="flow.label">
