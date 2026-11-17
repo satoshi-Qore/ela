@@ -8,8 +8,11 @@
     <!-- No icon file: an empty data URI keeps browsers from requesting /favicon.ico. -->
     <link rel="icon" href="data:,">
     <title>ELA — Execution &amp; Logic Agent</title>
-    <!-- Interface text catalog. "en" holds most messages src/web.ts writes at run time (static English
-         text stays in the markup below); "tr" translates both. Keys missing in "tr" fall back to "en". -->
+    <!-- Interface text catalog. "en" holds most messages src/web.ts and src/pqc/panel.ts write at run
+         time (static English text stays in the markup below); "tr" translates both. Keys missing in
+         "tr" fall back to "en". {name} marks a value inserted unchanged. In English, the agent's own
+         step and error texts are shown as the agent wrote them; "stepT.", "det.", "sum." and "err."
+         are their Turkish versions, and "err.generic" covers any error code without its own text. -->
     <script type="application/json" id="ela-i18n">
 {
   "en": {
@@ -75,7 +78,30 @@
     "fs.success": "success",
     "fs.partial": "partial",
     "fs.error": "error",
-    "pqc.loadFail": "The verifier could not be loaded. Close and open the panel to try again."
+    "pqc.loadFail": "The verifier could not be loaded. Close and open the panel to try again.",
+
+    "pqc.r.idleT": "No verification yet",
+    "pqc.r.idleD": "Load the official test vector or paste your own public values, then verify.",
+    "pqc.r.valid": "✓ Valid signature",
+    "pqc.r.validD": "The signature matches this public key and message under ML-DSA-87 (FIPS 204).",
+    "pqc.r.notValid": "✗ Not valid",
+    "pqc.r.notVerified": "✗ Not verified",
+    "pqc.r.missing": "Fill in the public key and the signature, or load the official test vector.",
+    "pqc.r.noMessage": "Load the official test vector or enter a hexadecimal message first.",
+    "pqc.why.signature_mismatch": "The signature does not match this public key and message.",
+    "pqc.why.invalid_encoding": "A field is not valid hexadecimal text. Use 0–9 and a–f only, without a 0x prefix or spaces.",
+    "pqc.why.invalid_public_key_length": "The public key must be exactly {pk} bytes ({pkHex} hex characters).",
+    "pqc.why.invalid_signature_length": "The signature must be exactly {sig} bytes ({sigHex} hex characters).",
+    "pqc.why.message_too_large": "The message is larger than {kib} KiB, so it was refused before decoding.",
+    "pqc.why.invalid_input": "The input could not be read.",
+    "pqc.why.verification_error": "Verification stopped unexpectedly. The signature is treated as not valid.",
+    "pqc.meta": "Checked in this browser in {ms} ms · network requests during the check: {n}",
+    "pqc.cmp.valid": "Valid",
+    "pqc.cmp.invalid": "Not valid ({reason})",
+    "pqc.count": "hex · {size} · needs {need}",
+    "pqc.countMsg": "hex · {size} · at most 64 KiB",
+    "pqc.bytes": "{n} bytes",
+    "pqc.notHex": "not hexadecimal"
   },
   "tr": {
     "title": "ELA — Yürütme ve Mantık Ajanı",
@@ -125,6 +151,50 @@
     "pqc.close": "Doğrulayıcıyı kapat",
     "pqc.loading": "Doğrulayıcı yükleniyor…",
     "pqc.loadFail": "Doğrulayıcı yüklenemedi. Tekrar denemek için paneli kapatıp açın.",
+
+    "stepT.verify_chain_id": "Diana EVM zincir kimliğini doğrula",
+    "stepT.read_block_height": "Son blok yüksekliğini oku",
+    "det.chain": "Uç nokta 9800 (0x2648) bildirdi; Diana test ağıyla eşleşiyor.",
+    "det.block": "Son blok yüksekliği: {block}.",
+    "det.done": "Tamamlandı.",
+    "det.skipped": "Önceki bir adım başarısız olduğu için çalıştırılmadı.",
+    "det.refused": "Çalıştırılmadı: plan reddedildi.",
+    "det.mismatch": "Uç nokta {reported} bildirdi; beklenen 9800 (0x2648).",
+    "sum.ok": "Diana test ağı EVM JSON-RPC yanıt verdi: zincir kimliği {evm} doğrulandı, son blok {block}. Bu, yalnızca tek bir genel EVM JSON-RPC uç noktasının yanıt verdiğini doğrular; tam bir ağ sağlık kontrolü değildir.",
+    "sum.chain_mismatch": "Uç nokta kendini Diana test ağı olarak tanıtmadı, bu yüzden blok yüksekliği okunmadı.",
+    "sum.tool_not_allowed": "Plan, hiçbir istek gönderilmeden reddedildi.",
+    "sum.partial": "Zincir kimliği 9800 doğrulandı, ancak son blok okunamadı: {reason} Blok yüksekliği bildirilmiyor.",
+    "sum.failed": "Diana test ağı kontrolü tamamlanamadı: {reason}",
+    "err.generic": "Sorgu tamamlanamadı ve hata bu dilde ayrıntılı açıklanamıyor. Hiçbir şey gönderilmedi veya değiştirilmedi.",
+    "err.network_error": "QoreChain uç noktasına ulaşılamadı.",
+    "err.timeout": "QoreChain isteği zaman aşımına uğradı.",
+    "err.http_error": "QoreChain uç noktası HTTP {status} döndürdü.",
+    "err.invalid_response": "QoreChain uç noktası geçersiz veya okunamayan bir yanıt döndürdü.",
+    "err.chain_mismatch": "EVM JSON-RPC, Diana test ağının zincir kimliğini (9800) bildirmedi.",
+    "err.unexpected_error": "Kontrol beklenmedik biçimde başarısız oldu.",
+
+    "pqc.r.idleT": "Henüz doğrulama yok",
+    "pqc.r.idleD": "Resmî test vektörünü yükleyin veya kendi genel değerlerinizi yapıştırın, ardından doğrulayın.",
+    "pqc.r.valid": "✓ Geçerli imza",
+    "pqc.r.validD": "İmza, ML-DSA-87 (FIPS 204) kapsamında bu genel anahtar ve mesajla eşleşiyor.",
+    "pqc.r.notValid": "✗ Geçersiz",
+    "pqc.r.notVerified": "✗ Doğrulanmadı",
+    "pqc.r.missing": "Genel anahtarı ve imzayı doldurun veya resmî test vektörünü yükleyin.",
+    "pqc.r.noMessage": "Önce resmî test vektörünü yükleyin veya onaltılık bir mesaj girin.",
+    "pqc.why.signature_mismatch": "İmza bu genel anahtar ve mesajla eşleşmiyor.",
+    "pqc.why.invalid_encoding": "Bir alan geçerli onaltılık metin değil. 0x öneki veya boşluk olmadan yalnızca 0–9 ve a–f kullanın.",
+    "pqc.why.invalid_public_key_length": "Genel anahtar tam olarak {pk} bayt ({pkHex} onaltılık karakter) olmalıdır.",
+    "pqc.why.invalid_signature_length": "İmza tam olarak {sig} bayt ({sigHex} onaltılık karakter) olmalıdır.",
+    "pqc.why.message_too_large": "Mesaj {kib} KiB'tan büyük olduğu için çözülmeden önce reddedildi.",
+    "pqc.why.invalid_input": "Girdi okunamadı.",
+    "pqc.why.verification_error": "Doğrulama beklenmedik biçimde durdu. İmza geçersiz kabul edilir.",
+    "pqc.meta": "Bu tarayıcıda {ms} ms içinde kontrol edildi · kontrol sırasındaki ağ istekleri: {n}",
+    "pqc.cmp.valid": "Geçerli",
+    "pqc.cmp.invalid": "Geçersiz ({reason})",
+    "pqc.count": "hex · {size} · gereken {need}",
+    "pqc.countMsg": "hex · {size} · en fazla 64 KiB",
+    "pqc.bytes": "{n} bayt",
+    "pqc.notHex": "onaltılık değil",
 
     "fs.idle": "çalışmadı",
     "fs.wait": "bekliyor",
@@ -206,7 +276,6 @@
     "pqc.compare": "Karşılaştırma",
     "pqc.cmpOriginal": "Resmî test vektörü",
     "pqc.cmpChanged": "Bir mesaj baytı değiştirildi",
-    "pqc.resultNote": "Doğrulama sonuçları şimdilik İngilizce gösterilir.",
     "pay.copy": "Diana test ağı için sınırlı bir ödeme hesabının planlanan mimarisi. Canlı bir hesap değil, bir şemadır.",
     "pay.caption": "Planlanan sözleşme mimarisi · hazırlık",
     "pay.issuer": "Fatura sahibi",
@@ -433,16 +502,15 @@
                 <button type="button" id="pqc-oversized" class="pqc-button" data-i18n="pqc.oversized">Try a too-large message</button>
                 <button type="button" id="pqc-clear" class="pqc-button pqc-quiet" data-i18n="pqc.clear">Clear</button>
               </div>
-              <p class="pqc-lang-note" data-i18n="pqc.resultNote" hidden></p>
-              <div id="pqc-result" class="pqc-result" data-state="idle" aria-live="polite" lang="en">
+              <div id="pqc-result" class="pqc-result" data-state="idle" aria-live="polite">
                 <span class="seal" aria-hidden="true"></span>
                 <p id="pqc-result-title" class="pqc-result-title">No verification yet</p>
                 <p id="pqc-result-detail" class="pqc-result-detail">Load the official test vector or paste your own public values, then verify.</p>
                 <p id="pqc-result-meta" class="pqc-result-meta"></p>
               </div>
               <dl class="pqc-compare" aria-label="Comparison" data-i18n-label="pqc.compare">
-                <div><dt data-i18n="pqc.cmpOriginal">Official test vector</dt><dd id="pqc-cmp-original" lang="en">not run</dd></div>
-                <div><dt data-i18n="pqc.cmpChanged">One message byte changed</dt><dd id="pqc-cmp-changed" lang="en">not run</dd></div>
+                <div><dt data-i18n="pqc.cmpOriginal">Official test vector</dt><dd id="pqc-cmp-original">not run</dd></div>
+                <div><dt data-i18n="pqc.cmpChanged">One message byte changed</dt><dd id="pqc-cmp-changed">not run</dd></div>
               </dl>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import './web.css';
 import { createSession } from './agent/session.ts';
 import type { CommandResult } from './agent/session.ts';
-import type { StepResult } from './agent/executor.ts';
+import type { ExecutionResult, StepResult } from './agent/executor.ts';
 import type { ToolError } from './agent/registry.ts';
 
 // Every command goes through one agent session: input checks and the safety gate first, then the
@@ -9,8 +9,11 @@ import type { ToolError } from './agent/registry.ts';
 // (eth_chainId, eth_blockNumber on Diana testnet). This file only renders the session's results.
 //
 // Interface text lives in the #ela-i18n catalog in index.html (English and Turkish), so switching
-// the language costs the main chunk almost nothing. Text that comes from the agent itself (step
-// titles and details, reader summaries and error messages) and the verifier's results stay English.
+// the language costs the main chunk almost nothing. Text the agent itself writes (step titles and
+// details, summaries, error messages) is shown as written in English; in Turkish it is rebuilt from
+// the structured result (step id and status, error code, data). An error code without a Turkish
+// text gets a generic one instead of a guess. Technical values (numbers, URLs, RPC method names,
+// error codes) are inserted unchanged.
 
 type QueryState = 'Ready' | 'Querying' | 'Success' | 'Partial' | 'Needs clarification' | 'Refused' | 'Unsupported' | 'Error';
 type Lang = 'en' | 'tr';
@@ -41,13 +44,29 @@ catalog.en['clarify.no_context'] = 'There is no earlier successful query in this
 let lang: Lang = 'en';
 /** Looks a key up in the current language, then English; text that is not a key passes through. */
 const L = (key: string): string => catalog[lang][key] ?? catalog.en[key] ?? key;
-
-// Elements whose text was written at run time, as the keys (or raw agent text) they were built from.
-const written = new Map<HTMLElement, readonly string[]>();
-function put(element: HTMLElement, ...parts: string[]): void {
-  written.set(element, parts);
-  element.textContent = parts.map(L).join('');
+type Vars = Readonly<Record<string, string | number>>;
+/** A catalog text with its {name} slots filled. */
+const F = (key: string, vars: Vars = {}): string => L(key).replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name]));
+/** A catalog key, raw text, or a function that builds the text in the current language. */
+export type Part = string | (() => string);
+/** Agent text: as the agent wrote it in English; in Turkish, the catalog text built from the same result. */
+const A = (english: string, key: string, vars?: Vars): Part => () => lang === 'en' || !catalog.tr[key] ? english : F(key, vars);
+/** An error code as [catalog key, slots]. A code without a Turkish text gets the generic one. */
+function errorKey(code: string, english: string): [string, Vars] {
+  const status = /HTTP (\d{3})\.$/.exec(english)?.[1];
+  return catalog.tr['err.' + code] && (code !== 'http_error' || status) ? ['err.' + code, { status: status! }] : ['err.generic', {}];
 }
+
+// Elements whose text was written at run time, as the parts they were built from. A language switch
+// rebuilds the text from these parts; nothing is queried again.
+const written = new Map<HTMLElement, readonly Part[]>();
+const render = (parts: readonly Part[]): string => parts.map(part => typeof part === 'string' ? L(part) : part()).join('');
+function put(element: HTMLElement, ...parts: Part[]): void {
+  written.set(element, parts);
+  element.textContent = render(parts);
+}
+export type Put = typeof put;
+export type Format = typeof F;
 
 // Static text: [data-i18n] text, [data-i18n-label] aria-label, [data-i18n-ph] placeholder. The
 // English original is taken from the markup.
@@ -66,8 +85,7 @@ function setLanguage(next: Lang): void {
     if (label) element.setAttribute('aria-label', tr(label, englishLabel));
     if (ph) element.setAttribute('placeholder', tr(ph, englishPh));
   }
-  $('.pqc-lang-note').hidden = next === 'en';
-  for (const [element, parts] of written) element.textContent = parts.map(L).join('');
+  for (const [element, parts] of written) element.textContent = render(parts);
   for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-lang]')) button.setAttribute('aria-pressed', String(button.dataset.lang === next));
 }
 
@@ -80,7 +98,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-l
 // In-memory only: a page reload starts a new session with no context.
 const session = createSession();
 
-function showStatus(next: QueryState, ...detail: string[]): void {
+function showStatus(next: QueryState, ...detail: Part[]): void {
   state.dataset.state = next.toLowerCase();
   put(state, 'state.' + state.dataset.state);
   put(message, ...detail);
@@ -107,14 +125,15 @@ const flow = (states: string): void => mark(stages, states.split(' '), '.flow-st
 function showNetwork(outcome: 'ok' | 'partial' | 'error', states: string): void {
   $('.net-chip').dataset.state = outcome;
   put(networkStatus, 'net.' + outcome);
-  if (outcome === 'ok') lastRead.textContent = new Date().toLocaleTimeString(lang);
+  const read = new Date();
+  if (outcome === 'ok') put(lastRead, () => read.toLocaleTimeString(lang));
   flow(states);
   mark(links, states.split(' ').slice(3, 5), '.seg-state');
 }
 
-function describeFailure(error: ToolError): string {
+function describeFailure(error: ToolError): Part {
   if (error.code === 'network_error') return 'fail.network';
-  return error.code === 'unexpected_error' ? 'fail.unexpected' : error.message;
+  return error.code === 'unexpected_error' ? 'fail.unexpected' : A(error.message, ...errorKey(error.code, error.message));
 }
 
 // Example buttons (English first, then Turkish) only fill the command field; they never submit.
@@ -131,25 +150,49 @@ clearContext.addEventListener('click', () => {
   command.focus();
 });
 
-function renderSteps(steps: readonly StepResult[]): void {
-  for (const item of planSteps.children) for (const child of item.children) written.delete(child as HTMLElement);
-  planSteps.replaceChildren(...steps.map(step => {
+/**
+ * A step's detail in the current language, from the step's id and status and the check's result.
+ * Diana's fixed chain identity (9800, 0x2648) is part of the catalog text, like "plan.target".
+ */
+function stepDetail(step: StepResult, checked: ExecutionResult): Part {
+  const code = checked.error?.code ?? '';
+  if (step.status === 'skipped') return A(step.detail, code === 'tool_not_allowed' ? 'det.refused' : 'det.skipped');
+  if (step.status === 'succeeded') {
+    // The chain-ID step only succeeds when the endpoint reported Diana's chain ID.
+    return step.id === 'verify_chain_id' ? A(step.detail, 'det.chain')
+      : checked.data ? A(step.detail, 'det.block', { block: checked.data.blockNumber }) : A(step.detail, 'det.done');
+  }
+  // The reported value is shown exactly as the agent quoted it.
+  const reported = code === 'chain_mismatch' && /^Endpoint reported (.+); expected /.exec(step.detail)?.[1];
+  return reported ? A(step.detail, 'det.mismatch', { reported }) : A(step.detail, ...errorKey(code, step.detail));
+}
+
+function checkSummary(checked: ExecutionResult): Part {
+  const { code = '', message = '' } = checked.error ?? {};
+  return () => lang === 'en' ? checked.summary
+    : checked.data ? F('sum.ok', { evm: checked.data.evmChainId, block: checked.data.blockNumber })
+    : code === 'chain_mismatch' || code === 'tool_not_allowed' ? L('sum.' + code)
+    : F('sum.' + checked.status, { reason: F(...errorKey(code, message)) });
+}
+
+function renderSteps(checked: ExecutionResult): void {
+  for (const item of planSteps.children) for (const child of item.querySelectorAll('span')) written.delete(child);
+  const span = (name: string, ...parts: Part[]): HTMLElement => {
+    const element = document.createElement('span');
+    element.className = name;
+    put(element, ...parts);
+    return element;
+  };
+  planSteps.replaceChildren(...checked.steps.map(step => {
     const item = document.createElement('li');
     item.dataset.status = step.status;
-    const mark = document.createElement('span');
-    mark.className = 'step-mark';
-    put(mark, 'step.' + step.status);
+    // The title text has its own span, so a language switch rewrites it and keeps the method name.
     const title = document.createElement('span');
     title.className = 'step-title';
-    title.lang = 'en';
     const method = document.createElement('code');
     method.textContent = step.rpcMethod;
-    title.append(step.title + ' ', method);
-    const detail = document.createElement('span');
-    detail.className = 'step-detail';
-    detail.lang = 'en';
-    detail.textContent = step.detail;
-    item.append(mark, title, detail);
+    title.append(span('', A(step.title, 'stepT.' + step.id)), ' ', method);
+    item.append(span('step-mark', 'step.' + step.status), title, span('step-detail', stepDetail(step, checked)));
     return item;
   }));
 }
@@ -170,14 +213,14 @@ function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void 
   if (result.run.kind === 'network_check') {
     const checked = result.run.result;
     put(planTarget, 'plan.target');
-    renderSteps(checked.steps);
-    put(planSource, 'plan.source', checked.source, 'plan.checked', new Date(checked.checkedAt).toLocaleString(lang));
+    renderSteps(checked);
+    put(planSource, 'plan.source', checked.source, 'plan.checked', () => new Date(checked.checkedAt).toLocaleString(lang));
     plan.hidden = false;
     if (checked.data) showData(checked.data);
     const outcome = checked.status === 'success' ? 'Success' : checked.status === 'partial' ? 'Partial' : 'Error';
     const step = (i: number): string => (s => (s === 'succeeded' ? 'ok' : s ?? 'unknown'))(checked.steps[i]?.status);
     showNetwork(outcome === 'Success' ? 'ok' : outcome === 'Partial' ? 'partial' : 'error', `done pass recognized ${step(0)} ${step(1)} ${outcome.toLowerCase()}`);
-    showStatus(outcome, note, checked.summary);
+    showStatus(outcome, note, checkSummary(checked));
     return;
   }
 
@@ -266,7 +309,7 @@ pqcToggle.addEventListener('click', () => {
   put(pqcToggle, open ? 'pqc.close' : 'pqc.open');
   if (open && !pqcLoad) {
     pqcLoad = import('./pqc/panel.ts')
-      .then(panel => panel.mountPanel(pqcBody))
+      .then(panel => panel.mountPanel(pqcBody, put, F))
       .catch(() => {
         pqcLoad = undefined;
         put(pqcLoading, 'pqc.loadFail');

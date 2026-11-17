@@ -535,7 +535,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .plan-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 0.75rem; }
 .plan h4 { color: var(--platinum); font-size: 0.82rem; font-weight: 650; }
 .plan-target, .plan-source { min-width: 0; color: var(--muted); font: 0.7rem/1.5 var(--mono); overflow-wrap: anywhere; }
-.plan-steps { display: grid; gap: 0.5rem; margin-top: 0.7rem; padding: 0; list-style: none; }
+.plan-steps { display: grid; gap: 0.5rem; margin-top: 0.7rem; padding: 0; list-style: none; container-type: inline-size; }
 
 .plan-steps li {
   display: grid;
@@ -560,6 +560,13 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .plan-steps [data-status="succeeded"] .step-mark { background: var(--ok-bg); color: var(--ok-fg); }
 .plan-steps [data-status="failed"] .step-mark { background: var(--bad-bg); color: var(--bad-fg); }
 .plan-steps [data-status="skipped"] .step-mark { background: var(--skipped-bg); color: var(--skipped-fg); }
+/* When the list is narrow for the text size (320 px at 200% text), the status badge goes above the
+   step text instead of leaving the text a column one character wide. rem follows the text size. */
+@container (max-width: 18rem) {
+  .plan-steps li { grid-template-columns: minmax(0, 1fr); }
+  .step-mark { grid-row: auto; justify-self: start; }
+}
+
 .step-title { font-weight: 620; overflow-wrap: anywhere; }
 .step-title code { color: var(--muted); font-size: 0.72rem; }
 .step-detail { color: var(--muted); overflow-wrap: anywhere; }
@@ -606,14 +613,13 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .pqc-quiet { background: transparent; }
 
 .pqc-body { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-.pqc-loading, .pqc-hint, .pqc-count, .pqc-lang-note { color: var(--muted); font-size: 0.78rem; }
+.pqc-loading, .pqc-hint, .pqc-count { color: var(--muted); font-size: 0.78rem; }
 .pqc-form label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.15rem 0.75rem; margin: 0.8rem 0 0.4rem; }
 .pqc-form label:first-child { margin-top: 0; }
 .pqc-count { font-weight: 500; font-family: var(--mono); overflow-wrap: anywhere; }
 .pqc-field { min-height: 4rem; font: 0.75rem/1.4 var(--mono); word-break: break-all; }
 .pqc-hint { margin-top: 0.5rem; }
 .pqc-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
-.pqc-lang-note { margin-top: 0.75rem; }
 
 /* Length gauge: entered bytes against the fixed size. Green only when the length matches exactly. */
 .meter { display: block; height: 0.3rem; margin-bottom: 0.35rem; border-radius: 1px; background: var(--well); box-shadow: inset 0 0 0 1px var(--border-soft); }
