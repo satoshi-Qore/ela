@@ -7,7 +7,7 @@
     "node": ">=24.6.0"
   },
   "scripts": {
-    "test": "node --test diana-account-generation.test.mjs test/diana-invoice-pqc.test.mjs test/public-ml-dsa-vector.test.mjs test/diana-canonical-pqc.test.mjs test/diana-verify-recovery.test.mjs test/diana-register-pqc.test.mjs test/diana-hybrid-prepare.test.mjs test/diana-hybrid-sign.test.mjs"
+    "test": "node --test diana-account-generation.test.mjs test/diana-invoice-pqc.test.mjs test/public-ml-dsa-vector.test.mjs test/diana-canonical-pqc.test.mjs test/diana-verify-recovery.test.mjs test/diana-register-pqc.test.mjs test/diana-hybrid-prepare.test.mjs test/diana-hybrid-sign.test.mjs test/diana-hybrid-broadcast.test.mjs"
   },
   "dependencies": {
     "@noble/curves": "2.4.0",
