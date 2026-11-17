@@ -30,14 +30,15 @@
   --accent: var(--electric);
   --focus: var(--ice);
 
-  /* Status colors keep their meaning: green success, lilac refusal, violet failure, amber warning, blue
-     progress. No red or coral (7C-27); refusal and failure also differ by symbol and text. */
+  /* Status colors keep their meaning: green success, red refusal and failure, amber warning, blue progress.
+     Refusal and failure share the red, and differ by mark (bar or cross, filled or dashed) and text.
+     ELA Core visuals do not use these tokens; they keep the blue and purple family (--s-*). */
   --ok-bg: #0e3b34;
   --ok-fg: #8ef0d4;
-  --bad-bg: #3a1f5c;
-  --bad-fg: #ecd2ff;
-  --refuse-bg: #262356;
-  --refuse-fg: #c9c3ff;
+  --bad-bg: #4a1d2a;
+  --bad-fg: #ffc3cd;
+  --refuse-bg: var(--bad-bg);
+  --refuse-fg: var(--bad-fg);
   --warn-bg: #46361a;
   --warn-fg: #ffe0a2;
   --info-bg: var(--sapphire);
@@ -109,7 +110,7 @@ code { font-family: var(--mono); }
 .net-dot { flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid currentColor; }
 .net-chip[data-state="ok"] { color: var(--ok-fg); border-color: rgba(142, 240, 212, 0.4); }
 .net-chip[data-state="partial"] { color: var(--warn-fg); border-color: rgba(255, 224, 162, 0.4); }
-.net-chip[data-state="error"] { color: var(--bad-fg); border-color: rgba(236, 210, 255, 0.4); }
+.net-chip[data-state="error"] { color: var(--bad-fg); border-color: rgba(255, 195, 205, 0.4); }
 .net-chip:not([data-state="unchecked"]) .net-dot { background: currentColor; box-shadow: 0 0 0.45rem currentColor; }
 
 .lang { display: inline-flex; padding: 0.15rem; border: 1px solid var(--border); border-radius: 0.4rem; background: var(--field); }
@@ -669,7 +670,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .pqc-result[data-state="invalid"] {
   border-color: var(--bad-fg);
   background-color: var(--bad-bg);
-  background-image: repeating-linear-gradient(135deg, rgba(236, 210, 255, 0.06) 0 6px, transparent 6px 14px);
+  background-image: repeating-linear-gradient(135deg, rgba(255, 195, 205, 0.06) 0 6px, transparent 6px 14px);
 }
 
 .pqc-result[data-state="invalid"] .seal {
@@ -868,7 +869,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   --hairline: rgba(20, 32, 51, 0.12); --border-strong: #8ea3c4; --field: #ffffff; --surface-raised: #ffffff;
   --frame: rgba(255, 255, 255, 0.94); --well: #f4f6fa; --highlight: rgba(255, 255, 255, 0.9); --shadow: 0 1rem 2.2rem rgba(20, 40, 80, 0.10);
   --on-electric: #ffffff; --electric-hover: #2f62c8;
-  --ok-bg: #e2f4ee; --ok-fg: #0b6650; --bad-bg: #f3e4fa; --bad-fg: #6a1b80; --refuse-bg: #ebe8fb; --refuse-fg: #43308f; --warn-bg: #fdf1d8; --warn-fg: #7a5200;
+  --ok-bg: #e2f4ee; --ok-fg: #0b6650; --bad-bg: #fbe8ec; --bad-fg: #a01d38; --refuse-bg: var(--bad-bg); --refuse-fg: var(--bad-fg); --warn-bg: #fdf1d8; --warn-fg: #7a5200;
   --info-bg: #e3e9f2; --info-fg: #1d3a66; --neutral-bg: #e7ecf3; --neutral-fg: #2a3a52; --skipped-bg: #eef2f7; --skipped-fg: #4f5f75;
   --core-panel: linear-gradient(180deg, #ffffff, #fafbfd);
   --core-ink: #0e1320; --core-ink-2: #384152; --core-ink-3: #596273; --core-ink-4: #5f6878;

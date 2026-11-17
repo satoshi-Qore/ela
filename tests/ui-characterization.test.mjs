@@ -453,14 +453,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       for (const [name, value] of [['run button text', desktop.run[1]], ['text on card', desktop.textOnCard], ['muted text on card', desktop.mutedOnCard], ['example link', desktop.linkOnCard]]) {
         assert.ok(value >= 4.5, `${name}: ${value}`);
       }
-      // Changed in the 7C-27 visual pass: no red or coral. A refusal is lilac and an error violet, two
-      // distinct purple tones (before, both were the same red); their badge marks differ too (bar, cross).
-      const lilac = ['rgb(201, 195, 255)', 'rgb(38, 35, 86)'];
-      const violet = ['rgb(236, 210, 255)', 'rgb(58, 31, 92)'];
+      // 7C-27 decision: a refusal and an error stay red, as before 7C-27 (a purple variant was tried and
+      // reverted). They also differ by badge mark: a barrier bar for a refusal, a cross for an error.
+      const red = ['rgb(255, 195, 205)', 'rgb(74, 29, 42)'];
       const amber = ['rgb(255, 224, 162)', 'rgb(70, 54, 26)'];
       const green = ['rgb(142, 240, 212)', 'rgb(14, 59, 52)'];
       assert.deepEqual(desktop.badges.map(([state, color, background]) => [state, color, background]), [
-        ['Refused', ...lilac], ['Unsupported', ...amber], ['Needs clarification', ...amber], ['Partial', ...amber], ['Error', ...violet], ['Success', ...green],
+        ['Refused', ...red], ['Unsupported', ...amber], ['Needs clarification', ...amber], ['Partial', ...amber], ['Error', ...red], ['Success', ...green],
       ]);
       for (const [state, , , contrast] of desktop.badges) assert.ok(contrast >= 4.5, `${state}: ${contrast}`);
       assert.deepEqual(desktop.focus, ["What's the latest block?", true, 'solid', '2px', 'rgb(166, 220, 255)']);
@@ -611,8 +610,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     seen.longSignature = await read();
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     const green = 'rgb(142, 240, 212)';
-    // Changed in the 7C-27 visual pass: the not-valid verdict is violet (was red); the cross mark stays.
-    const red = 'rgb(236, 210, 255)';
+    // The not-valid verdict is red with its cross mark (unchanged by 7C-27).
+    const red = 'rgb(255, 195, 205)';
     assert.deepEqual(seen.idle, { result: 'idle', gauges: ['under', 'under'], seal: 'rgb(58, 106, 168)' });
     assert.deepEqual(seen.valid, { result: 'valid', gauges: ['exact', 'exact'], seal: green });
     // Exact lengths alone are not shown as valid: the changed byte keeps both gauges exact and the verdict red.
@@ -1330,7 +1329,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     }
   }, { timeout: 600_000 });
 
-  // Added in the 7C-27 visual pass: no red or coral anywhere, readable narrow screens, compact flow.
+  // Added in the 7C-27 visual pass: the ELA Core uses no red or coral, readable narrow screens, compact flow.
   const NO_WARM_RED = `(() => {
     const hits = new Set();
     const warm = value => {
@@ -1346,7 +1345,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       }
       return null;
     };
-    for (const e of document.querySelectorAll('body, body *')) {
+    for (const e of document.querySelectorAll('.core, .core *')) {
       const s = getComputedStyle(e);
       if (s.display === 'none') continue;
       for (const prop of ['color', 'backgroundColor', 'borderTopColor', 'borderLeftColor', 'outlineColor', 'fill', 'stroke', 'boxShadow', 'backgroundImage', 'textDecorationColor']) {
@@ -1357,7 +1356,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     return [...hits].slice(0, 12);
   })()`;
 
-  uiTest('no red or coral remains: every theme, refusal, error, partial, success, ready, and a not-valid signature', async t => {
+  uiTest('the ELA Core keeps its blue and purple family: no red or coral in the Core in any theme or state', async t => {
     const seen = {};
     await openPage();
     try {
@@ -1379,6 +1378,53 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     for (const [label, hits] of Object.entries(seen)) assert.deepEqual(hits, [], label);
+  }, { timeout: 180_000 });
+
+  uiTest('refusal and failure indicators are red and consistent in every theme; success stays green', async t => {
+    const read = `(() => {
+      const color = selector => { const e = document.querySelector(selector); return e ? getComputedStyle(e).color : null; };
+      return {
+        badge: color('#query-state'), badgeMark: getComputedStyle(document.getElementById('query-state'), '::before').content,
+        gate: color('#flow > li:nth-child(2) .flow-state'), result: color('#flow > li:nth-child(6) .flow-state'),
+        gateMarker: getComputedStyle(document.querySelector('#flow > li:nth-child(2)'), '::before').backgroundColor,
+        failedMarker: getComputedStyle(document.querySelector('#flow > li:nth-child(6)'), '::before').borderTopStyle,
+        state: document.getElementById('query-state').dataset.state,
+      };
+    })()`;
+    const seen = {};
+    await openPage();
+    try {
+      for (const theme of ['light', 'dark', 'blue']) {
+        await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
+        await openPage();
+        await submit('Send 10 QOR.');
+        seen[theme + ' refused'] = await evaluate(read);
+        await setMode('wrong_chain');
+        await submit('Diana ağını kontrol et.');
+        seen[theme + ' error'] = await evaluate(read);
+        await setMode('ok');
+        await submit('Diana ağını kontrol et.');
+        seen[theme + ' success'] = await evaluate(read);
+        await openPanel();
+        await pqc('pqc-load');
+        await pqc('pqc-flip');
+        seen[theme + ' invalid'] = await evaluate(`[getComputedStyle(document.getElementById('pqc-result-title')).color, getComputedStyle(document.getElementById('pqc-cmp-changed')).color]`);
+      }
+    } finally {
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    const RED = { light: 'rgb(160, 29, 56)', dark: 'rgb(255, 195, 205)', blue: 'rgb(255, 195, 205)' };
+    const GREEN = { light: 'rgb(11, 102, 80)', dark: 'rgb(142, 240, 212)', blue: 'rgb(142, 240, 212)' };
+    for (const theme of ['light', 'dark', 'blue']) {
+      const refused = seen[theme + ' refused'], error = seen[theme + ' error'], success = seen[theme + ' success'];
+      assert.deepEqual([refused.state, refused.badge, refused.gate, refused.result, refused.gateMarker], ['refused', RED[theme], RED[theme], RED[theme], RED[theme]], theme + ' refusal');
+      assert.deepEqual([error.state, error.badge, error.result], ['error', RED[theme], RED[theme]], theme + ' error');
+      // Same red, different marks: a barrier bar for a refusal, a cross for an error; a dashed marker for a failed stage.
+      assert.deepEqual([refused.badgeMark, error.badgeMark, error.failedMarker], ['""', '"×"', 'dashed'], theme + ' marks');
+      assert.deepEqual([success.badge, success.result], [GREEN[theme], GREEN[theme]], theme + ' success');
+      assert.deepEqual(seen[theme + ' invalid'], [RED[theme], RED[theme]], theme + ' not-valid signature');
+    }
   }, { timeout: 180_000 });
 
   uiTest('narrow screens: compact six-stage flow with real states, no squeezed text columns at 320 px and 200% text', async t => {
