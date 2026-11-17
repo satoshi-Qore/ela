@@ -116,7 +116,7 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
-  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', calls: [] };
+  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, calls: [] };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
@@ -127,6 +127,9 @@ const RPC_STUB = `(() => {
     const isChain = body && body.method === 'eth_chainId';
     // New in 7C-28: eth_getBalance answers with the scripted balance (18-decimal base units, hex).
     if (body && body.method === 'eth_getBalance' && (rpc.mode === 'ok' || rpc.mode === 'slow')) return Promise.resolve(reply(id, rpc.balance));
+    // New in 7C-29: the scripted transaction and receipt (null when unknown).
+    if (body && body.method === 'eth_getTransactionByHash' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.tx));
+    if (body && body.method === 'eth_getTransactionReceipt' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.receipt));
     switch (rpc.mode) {
       case 'network_error': return Promise.reject(new TypeError('Failed to fetch'));
       case 'http_500': return Promise.resolve(new Response('upstream detail', { status: 500 }));
@@ -1665,7 +1668,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-27: two chunks before (main, panel); now also the ELA Core chunk, its shared
     // drawing helpers, and one chunk per Core view. The main budget below is unchanged.
     // Changed in 7C-28: also the balance chunk, loaded only for a command that mentions qor1.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel'], scripts.join(', '));
+    // Changed in 7C-29: also the transaction chunk, loaded only for a command with a long 0x value.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1678,8 +1682,14 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // gzip, measured). The raw budget is unchanged.
     const balanceChunk = scripts.find(name => name.startsWith('balance-'));
     assert.ok(sizes[balanceChunk].gzip <= 2 * 1024, `${balanceChunk} gzip ${sizes[balanceChunk].gzip} bytes exceeds the 2 KiB budget`);
-    assert.ok(sizes[main].gzip <= 13.5 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13.5 KiB budget`);
-    assert.ok(sizes[main].bytes <= 36 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 36 KiB budget`);
+    // Changed in 7C-29: was 13.5 KiB gzip and 36 KiB (main was 13,759 and 36,493 bytes). The
+    // transaction rules, the gate exception, and the reader are a lazy chunk; main gains only the
+    // registry entry, the decision type, and the result text (about 245 bytes gzip and 970 bytes,
+    // measured).
+    const transactionChunk = scripts.find(name => name.startsWith('transaction-'));
+    assert.ok(sizes[transactionChunk].gzip <= 2.25 * 1024, `${transactionChunk} gzip ${sizes[transactionChunk].gzip} bytes exceeds the 2.25 KiB budget`);
+    assert.ok(sizes[main].gzip <= 13.75 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13.75 KiB budget`);
+    assert.ok(sizes[main].bytes <= 37 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 37 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
@@ -1779,6 +1789,75 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // The next block query restores the method name in the flow and clears the balance.
     await submit('Son blok kaç?');
     expectView(t, await evaluate(BALANCE_VIEW), { qor: '—', uqor: '—', codes: ['eth_chainId', 'eth_blockNumber'] }, 'after');
+  });
+
+  // New in 7C-29: status of one Diana transaction by hash, read-only (eth_chainId, then
+  // eth_getTransactionByHash and, once it is in a block, eth_getTransactionReceipt).
+  const TX_HASH = '0x37276931206bb3ba2204ea20e2911a40ec9fc194cc4a0bc1e3c040c1b8920ee0';
+  const TX_FROM = '0xd6c6bdfbe567bce731907789800205df0b78ca52';
+  const TX_TO = '0xa1378d6558b32e1f8d37b68cf90e3c93839da365';
+  const scriptTx = (block, status) => evaluate(`(() => {
+    window.__rpc.tx = { hash: '${TX_HASH}', blockNumber: ${block === null ? 'null' : `'${block}'`}, from: '${TX_FROM}', to: '${TX_TO}', value: '0xde0b6b3a7640000', nonce: '0x4bb', chainId: '0x2648' };
+    window.__rpc.receipt = ${status === null ? 'null' : `{ transactionHash: '${TX_HASH}', blockNumber: '${block}', status: '${status}', gasUsed: '0x63275', contractAddress: null }`};
+  })()`);
+  const TX_VIEW = `(() => ({
+    code: document.querySelectorAll('#flow .flow-code')[1].textContent,
+    calls: window.__rpc.calls.map(call => call.method),
+  }))()`;
+
+  uiTest('transaction query (Turkish and English): success, failure, pending, and not found are told apart and the context is unchanged', async t => {
+    await openPage();
+    await scriptTx('0x9ccb2a', '0x1');
+    const success = await submit(TX_HASH + ' işleminin durumu nedir?');
+    expectView(t, success, {
+      state: 'Success', block: '—', chain: 'qorechain-diana', evmChain: '9800', context: CONTEXT_NONE,
+      message: 'Transaction ' + TX_HASH + ' succeeded on Diana testnet (EVM JSON-RPC, chain 9800 verified) in block 10275626. From ' + TX_FROM + ' to ' + TX_TO + ', value 1 QOR, nonce 1211. Gas used: 406133.',
+      rpc: ['eth_chainId', 'eth_getTransactionByHash', 'eth_getTransactionReceipt'],
+    }, 'success');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_getTransactionByHash' }, 'flow code');
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.equal(turkish, TX_HASH + ' işlemi Diana test ağında (EVM JSON-RPC, zincir 9800 doğrulandı) 10275626 numaralı blokta başarılı oldu. Gönderen ' + TX_FROM + ', alıcı ' + TX_TO + ', değer 1 QOR, nonce 1211. Kullanılan gas: 406133.');
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+
+    await submit('Son blok kaç?');
+    await scriptTx('0x9ccb2a', '0x0');
+    const failed = await submit('What is the status of transaction ' + TX_HASH + '?');
+    expectView(t, failed, { state: 'Success', context: CONTEXT_BLOCK }, 'failed');
+    if (!PROBE) assert.match(failed.message, /^Transaction 0x37276931\S+ failed on Diana testnet .* in block 10275626: its receipt status is 0, so its state changes were reverted\./);
+
+    await scriptTx(null, null);
+    const pending = await submit('Is transaction ' + TX_HASH + ' pending?');
+    expectView(t, pending, { state: 'Success', rpc: ['eth_chainId', 'eth_getTransactionByHash'], context: CONTEXT_BLOCK }, 'pending');
+    if (!PROBE) assert.match(pending.message, /is pending on Diana testnet .*: the node knows it, but it is not in a block yet\. From /);
+
+    await evaluate(`window.__rpc.tx = null; window.__rpc.receipt = null`);
+    const missing = await submit('tx ' + TX_HASH);
+    expectView(t, missing, { state: 'Success', rpc: ['eth_chainId', 'eth_getTransactionByHash'] }, 'not found');
+    if (!PROBE) assert.match(missing.message, /^No transaction 0x37276931\S+ was found on the Diana testnet EVM JSON-RPC/);
+    // The next block query restores the method name in the flow.
+    await submit('Son blok kaç?');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_blockNumber' }, 'after');
+  });
+
+  uiTest('transaction query: invalid hash, a bare hash, a key, or a signing request sends nothing; read failures are explained', async t => {
+    await openPage();
+    for (const [command, state] of [
+      ['Transaction 0x' + 'ab'.repeat(31) + ' durumu nedir?', 'Needs clarification'],
+      [TX_HASH, 'Refused'],
+      ['Bu anahtarı kullan: ' + TX_HASH, 'Refused'],
+      ['Sign transaction ' + TX_HASH, 'Refused'],
+      [TX_HASH + ' işlemini mainnet üzerinde göster', 'Refused'],
+    ]) {
+      const observed = await submit(command);
+      expectView(t, observed, { state, rpc: [] }, command);
+    }
+    const invalid = await submit('tx 0x1234abcd5678');
+    if (!PROBE) assert.equal(invalid.message, 'That is not a valid transaction hash. Give one hash of 0x and exactly 64 hexadecimal digits, for example "What is the status of transaction 0x…?" Nothing was sent.');
+
+    await setMode('network_error');
+    expectView(t, await submit('tx ' + TX_HASH), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    await setMode('wrong_chain');
+    expectView(t, await submit('tx ' + TX_HASH), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
   });
 
   uiTest('balance query: invalid address, EVM address, or a transfer sends nothing; read failures are explained', async t => {

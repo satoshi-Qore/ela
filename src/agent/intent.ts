@@ -3,7 +3,7 @@ import { routeCommand } from '../router.ts';
 import { resolveFollowUp, runQuery } from './conversation.ts';
 import type { ContextKind, ConversationContext, QueryRun } from './conversation.ts';
 import { planCommand } from './planner.ts';
-import { DIANA_NETWORK, loadBalance } from './registry.ts';
+import { DIANA_NETWORK, loadBalance, loadTransaction } from './registry.ts';
 
 /**
  * Intent understanding foundation. A future local classifier may only pick one label from this
@@ -74,7 +74,8 @@ export type ClarifyReason =
   | 'unknown_intent'
   | 'low_confidence'
   | 'ambiguous_intent'
-  | 'invalid_address';
+  | 'invalid_address'
+  | 'invalid_hash';
 
 export type DecisionSource = 'safety_gate' | 'input_check' | 'deterministic' | 'classifier';
 
@@ -98,6 +99,18 @@ export type IntentDecision =
       readonly intent: 'balance';
       readonly source: 'deterministic';
       readonly address: string;
+      readonly basedOn?: undefined;
+    }
+  /**
+   * A transaction status read. Only the deterministic transaction rules produce it, with a hash of
+   * exactly 0x and 64 hex digits; a classifier has no label for it and can never supply one.
+   */
+  | {
+      readonly kind: 'run';
+      readonly query: 'transaction';
+      readonly intent: 'transaction';
+      readonly source: 'deterministic';
+      readonly hash: string;
       readonly basedOn?: undefined;
     }
   | { readonly kind: 'refuse'; readonly reason: RiskCategory; readonly source: 'safety_gate' }
@@ -400,6 +413,10 @@ export async function interpretCommand(
   if (normalize(command) === '') return clarify('empty_command', 'input_check');
   if (command.length > MAX_COMMAND_LENGTH) return clarify('command_too_long', 'input_check');
 
+  // A transaction hash has the form of a private key; see decideTransaction in transaction.ts.
+  const tx = /0x[0-9a-z]{8}/iu.test(command) ? (await loadTransaction()).decideTransaction(command) : undefined;
+  if (tx) return tx;
+
   const risk = assessRisk(command);
   if (risk.risk === 'blocked') return Object.freeze({ kind: 'refuse', reason: risk.category, source: 'safety_gate' });
   if (mentionsOtherNetwork(command)) return clarify('unsupported_network', 'input_check');
@@ -450,6 +467,7 @@ export async function interpretCommand(
 export async function actOnDecision(decision: IntentDecision, options: ReadOptions = {}): Promise<QueryRun | undefined> {
   if (decision.kind !== 'run') return undefined;
   if (decision.query === 'balance') return (await loadBalance()).runBalanceQuery(decision.address, options);
+  if (decision.query === 'transaction') return (await loadTransaction()).runTransactionQuery(decision.hash, options);
   if (decision.query !== 'network_check' && decision.query !== 'block_number') return undefined;
   return runQuery(decision.query, options);
 }

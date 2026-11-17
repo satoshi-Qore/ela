@@ -2,6 +2,7 @@ import { getEvmBlockNumber } from '../qorechain/get-evm-block-number.ts';
 import { isRecord, QORECHAIN_TESTNET, QoreChainReadError } from '../qorechain/read-client.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
 import type { BalanceReading } from './balance.ts';
+import type { TransactionReading } from './transaction.ts';
 import type { RpcMethod } from './planner.ts';
 
 /** The only network any registered tool may target. */
@@ -95,12 +96,29 @@ const getBalanceTool = defineTool<BalanceReading>({
   run: async (params, runtime) => (await loadBalance()).readBalance(params.address as string, runtime),
 });
 
+export type { TransactionReading };
+
+/** The transaction rules and reader, loaded on demand (a separate chunk in the web build). */
+export const loadTransaction = () => import('./transaction.ts');
+
+const getTransactionTool = defineTool<TransactionReading>({
+  id: 'get_transaction',
+  description: 'Verify the Diana EVM chain ID (9800), then read one transaction and its receipt by hash.',
+  network: DIANA_NETWORK,
+  readOnly: true,
+  rpcMethods: ['eth_chainId', 'eth_getTransactionByHash', 'eth_getTransactionReceipt'],
+  params: { hash: { type: 'string', required: true, pattern: /^0x[0-9a-f]{64}$/u } },
+  // The endpoint is fixed; the runtime supplies only fetch and timeoutMs, never a URL.
+  run: async (params, runtime) => (await loadTransaction()).readTransaction(params.hash as string, runtime),
+});
+
 const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.freeze(Object.assign(Object.create(null), {
   [getEvmBlockNumberTool.id]: getEvmBlockNumberTool,
   [getBalanceTool.id]: getBalanceTool,
+  [getTransactionTool.id]: getTransactionTool,
 }));
 
-export type ToolId = 'get_evm_block_number' | 'get_balance';
+export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction';
 
 /** Returns the registered tool, or `undefined` for any id that is not an own registry entry. */
 export function getTool(id: unknown): ToolDefinition | undefined {
