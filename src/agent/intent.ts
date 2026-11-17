@@ -1,9 +1,9 @@
 import type { ReadOptions } from '../qorechain/read-client.ts';
 import { routeCommand } from '../router.ts';
-import { resolveFollowUp, runBalanceQuery, runQuery } from './conversation.ts';
+import { resolveFollowUp, runQuery } from './conversation.ts';
 import type { ContextKind, ConversationContext, QueryRun } from './conversation.ts';
 import { planCommand } from './planner.ts';
-import { DIANA_NETWORK } from './registry.ts';
+import { DIANA_NETWORK, loadBalance } from './registry.ts';
 
 /**
  * Intent understanding foundation. A future local classifier may only pick one label from this
@@ -405,9 +405,9 @@ export async function interpretCommand(
   if (mentionsOtherNetwork(command)) return clarify('unsupported_network', 'input_check');
   // A balance query is the only intent that takes a parameter: exactly one checksum-valid qor1
   // address. Its rules load only for a command that mentions qor1 (a separate chunk on the web).
-  const balance = /qor1/iu.test(command) ? (await import('./balance.ts')).recognizeBalanceRequest(command) : { kind: 'none' as const };
+  const balance = /qor1/iu.test(command) ? (await loadBalance()).recognizeBalanceRequest(command) : { kind: 'none' as const };
   if (balance.kind === 'invalid_address') return clarify('invalid_address', 'input_check');
-  if (balance.kind === 'multiple_addresses') return clarify('unsupported_parameters', 'input_check');
+  if (balance.kind === 'multiple_addresses' || balance.kind === 'unsupported_address') return clarify('unsupported_parameters', 'input_check');
   if (balance.kind === 'balance') {
     return Object.freeze({ kind: 'run', query: 'balance', intent: 'balance', source: 'deterministic', address: balance.address });
   }
@@ -449,7 +449,7 @@ export async function interpretCommand(
  */
 export async function actOnDecision(decision: IntentDecision, options: ReadOptions = {}): Promise<QueryRun | undefined> {
   if (decision.kind !== 'run') return undefined;
-  if (decision.query === 'balance') return runBalanceQuery(decision.address, options);
+  if (decision.query === 'balance') return (await loadBalance()).runBalanceQuery(decision.address, options);
   if (decision.query !== 'network_check' && decision.query !== 'block_number') return undefined;
   return runQuery(decision.query, options);
 }

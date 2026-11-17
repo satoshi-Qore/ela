@@ -31,12 +31,11 @@
     "msg.working": "Working on your command…",
     "msg.blockOk": "Latest block received from Diana testnet via EVM JSON-RPC.",
     "msg.unsupported": "ELA can check the Diana network, read its latest block, and read the QOR balance of a qor1 address you give it. Your own balance, fees, transactions, and other data are not supported yet.",
-    "msg.balanceOk": "Balance of {address} read from Diana testnet (qorechain-diana): {qor} QOR ({uqor} uqor).",
+    "msg.balanceOk": "Balance of {address} read from Diana testnet via EVM JSON-RPC (chain 9800 verified): {amountQor} QOR, {amountUqor} uqor.",
+    "msg.belowUqor": " The QOR value includes a part below 1 uqor, which the uqor value leaves out.",
     "msg.failed": "The command failed unexpectedly. Nothing was changed.",
     "fail.network": "The browser could not read the testnet EVM JSON-RPC. Check your connection. The endpoint may restrict cross-origin requests (CORS).",
     "fail.unexpected": "The query failed unexpectedly.",
-    "fail.balanceNetwork": "The browser could not read the Diana consensus RPC or REST API. Check your connection. These endpoints may restrict cross-origin requests (CORS).",
-    "fail.balanceChain": "The consensus RPC did not report Diana testnet (qorechain-diana), so no balance was read.",
     "refused.transfer": "ELA is read-only and cannot send, transfer, or withdraw funds.",
     "refused.signing": "ELA does not sign or approve messages or transactions.",
     "refused.key_material": "ELA never asks for or handles private keys, seed phrases, recovery phrases, or passwords. Do not share them. The command field was cleared.",
@@ -47,7 +46,7 @@
     "clarify.empty_command": "Type a command, for example \"Check Diana network.\" or \"Diana ağını kontrol et.\"",
     "clarify.command_too_long": "That command is too long. Keep it under 500 characters.",
     "clarify.unsupported_network": "This interface only reads Diana testnet. Other networks, such as mainnet, are not supported.",
-    "clarify.unsupported_parameters": "ELA takes only one native qor1 address, for a balance query. It does not take EVM addresses, hashes, or amounts. Ask for the latest block, a Diana network check, or the balance of one qor1 address.",
+    "clarify.unsupported_parameters": "ELA takes only one native qor1 account address, for a balance query. It does not take EVM or module addresses, hashes, or amounts. Ask for the latest block, a Diana network check, or the balance of one qor1 address.",
     "clarify.invalid_address": "That is not a valid QoreChain address. Give one native qor1… address with a valid checksum, for example \"What is the balance of qor1…?\" Nothing was sent.",
     "note.block_number": "Follow-up to your last successful latest block query; fresh data requested. ",
     "note.network_check": "Follow-up to your last successful Diana network check; fresh data requested. ",
@@ -163,12 +162,11 @@
     "msg.working": "Komutunuz işleniyor…",
     "msg.blockOk": "Son blok, Diana test ağından EVM JSON-RPC ile alındı.",
     "msg.unsupported": "ELA Diana ağını kontrol edebilir, son bloğunu okuyabilir ve verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir. Kendi bakiyeniz, ücretler, işlemler ve diğer veriler henüz desteklenmiyor.",
-    "msg.balanceOk": "{address} adresinin bakiyesi Diana test ağından (qorechain-diana) okundu: {qor} QOR ({uqor} uqor).",
+    "msg.balanceOk": "{address} adresinin bakiyesi Diana test ağından EVM JSON-RPC ile okundu (zincir 9800 doğrulandı): {amountQor} QOR, {amountUqor} uqor.",
+    "msg.belowUqor": " QOR değeri 1 uqor'dan küçük bir kısım içerir; uqor değeri bu kısmı göstermez.",
     "msg.failed": "Komut beklenmedik biçimde başarısız oldu. Hiçbir şey değiştirilmedi.",
     "fail.network": "Tarayıcı test ağının EVM JSON-RPC uç noktasını okuyamadı. Bağlantınızı kontrol edin. Uç nokta, kaynaklar arası istekleri (CORS) kısıtlıyor olabilir.",
     "fail.unexpected": "Sorgu beklenmedik biçimde başarısız oldu.",
-    "fail.balanceNetwork": "Tarayıcı Diana konsensüs RPC'sini veya REST API'sini okuyamadı. Bağlantınızı kontrol edin. Bu uç noktalar çapraz kaynak isteklerini (CORS) kısıtlıyor olabilir.",
-    "fail.balanceChain": "Konsensüs RPC'si Diana test ağını (qorechain-diana) bildirmedi; bakiye okunmadı.",
     "refused.transfer": "ELA salt okunurdur; fon gönderemez, aktaramaz veya çekemez.",
     "refused.signing": "ELA mesaj veya işlem imzalamaz ya da onaylamaz.",
     "refused.key_material": "ELA asla özel anahtar, tohum ifadesi, kurtarma ifadesi veya parola istemez ve işlemez. Bunları paylaşmayın. Komut alanı temizlendi.",
@@ -179,7 +177,7 @@
     "clarify.empty_command": "Bir komut yazın, örneğin \"Diana ağını kontrol et.\" veya \"Check Diana network.\"",
     "clarify.command_too_long": "Komut çok uzun. 500 karakterin altında tutun.",
     "clarify.unsupported_network": "Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.",
-    "clarify.unsupported_parameters": "ELA yalnızca bakiye sorgusu için tek bir yerel qor1 adresi alır. EVM adresi, hash veya tutar almaz. Son bloğu, Diana ağı kontrolünü veya tek bir qor1 adresinin bakiyesini sorun.",
+    "clarify.unsupported_parameters": "ELA yalnızca bakiye sorgusu için tek bir yerel qor1 hesap adresi alır. EVM veya modül adresi, hash ya da tutar almaz. Son bloğu, Diana ağı kontrolünü veya tek bir qor1 adresinin bakiyesini sorun.",
     "clarify.invalid_address": "Bu geçerli bir QoreChain adresi değil. Sağlama toplamı geçerli tek bir yerel qor1… adresi verin, örneğin \"qor1… adresinin bakiyesini göster.\" Hiçbir şey gönderilmedi.",
     "clarify.no_context": "Bu sayfa oturumunda devam edilecek başarılı bir sorgu yok. Önce Diana test ağındaki son blok numarasını sorun veya Diana ağını kontrol ettirin.",
     "note.block_number": "Son başarılı blok sorgunuzun devamı; güncel veri istendi. ",
@@ -546,7 +544,7 @@
             <li data-state="idle"><span class="flow-n">02</span><span class="flow-name" data-i18n="flow.gate">Safety gate</span><span class="flow-state">not run</span></li>
             <li data-state="idle"><span class="flow-n">03</span><span class="flow-name" data-i18n="flow.intent">Intent &amp; scope</span><span class="flow-state">not run</span></li>
             <li data-state="idle"><span class="flow-n">04</span><span class="flow-name" data-i18n="flow.chain">Network check</span><code class="flow-code">eth_chainId</code><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code">eth_blockNumber</code><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code" data-balance="eth_getBalance">eth_blockNumber</code><span class="flow-state">not run</span></li>
             <li data-state="idle"><span class="flow-n">06</span><span class="flow-name" data-i18n="flow.result">Result</span><span class="flow-state">not run</span></li>
           </ol>
 

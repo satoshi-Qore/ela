@@ -116,7 +116,7 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
-  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '159040000', calls: [] };
+  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', calls: [] };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
@@ -125,18 +125,8 @@ const RPC_STUB = `(() => {
     rpc.calls.push({ url: String(input), httpMethod: init.method, credentials: init.credentials, redirect: init.redirect, method: body && body.method });
     const id = body && body.id;
     const isChain = body && body.method === 'eth_chainId';
-    // New in 7C-28: the balance tool's two Diana GETs (consensus RPC status, REST bank balance).
-    const url = String(input);
-    if (!body && (url.endsWith('/status') || url.includes('/by_denom?'))) {
-      const json = data => Promise.resolve(new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } }));
-      const status = network => json({ jsonrpc: '2.0', id: -1, result: { node_info: { network }, sync_info: { latest_block_height: '10274204', catching_up: false } } });
-      switch (rpc.mode) {
-        case 'network_error': return Promise.reject(new TypeError('Failed to fetch'));
-        case 'http_500': return Promise.resolve(new Response('upstream detail', { status: 500 }));
-        case 'wrong_chain': return url.endsWith('/status') ? status('qorechain-vladi') : json({ balance: { denom: 'uqor', amount: rpc.balance } });
-        default: return url.endsWith('/status') ? status('qorechain-diana') : json({ balance: { denom: 'uqor', amount: rpc.balance } });
-      }
-    }
+    // New in 7C-28: eth_getBalance answers with the scripted balance (18-decimal base units, hex).
+    if (body && body.method === 'eth_getBalance' && (rpc.mode === 'ok' || rpc.mode === 'slow')) return Promise.resolve(reply(id, rpc.balance));
     switch (rpc.mode) {
       case 'network_error': return Promise.reject(new TypeError('Failed to fetch'));
       case 'http_500': return Promise.resolve(new Response('upstream detail', { status: 500 }));
@@ -1682,12 +1672,14 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       const code = readFileSync(join(env.outDir, 'assets', name), 'utf8');
       for (const marker of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'handleCommand', 'verifyMlDsa87', 'f96bc953da4e941be8354a22']) assert.equal(code.includes(marker), false, name + ': ' + marker);
     }
-    // Changed in 7C-28: was 13 KiB gzip and 36 KiB. The balance rules and read are in their own lazy
-    // chunk; main gains only the registry entry, the GET guard, and the balance readout (~0.9 KiB gzip).
+    // Changed in 7C-28: the gzip budget was 13 KiB (main was 13,293 bytes, 19 under it). The balance
+    // rules, address conversion, and reader are a lazy chunk behind one dynamic import; main gains
+    // only the registry entry, the balance decision, and the two readout rows (about 460 bytes
+    // gzip, measured). The raw budget is unchanged.
     const balanceChunk = scripts.find(name => name.startsWith('balance-'));
     assert.ok(sizes[balanceChunk].gzip <= 2 * 1024, `${balanceChunk} gzip ${sizes[balanceChunk].gzip} bytes exceeds the 2 KiB budget`);
-    assert.ok(sizes[main].gzip <= 14 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14 KiB budget`);
-    assert.ok(sizes[main].bytes <= 38 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 38 KiB budget`);
+    assert.ok(sizes[main].gzip <= 13.5 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13.5 KiB budget`);
+    assert.ok(sizes[main].bytes <= 36 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 36 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
@@ -1740,8 +1732,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.ok(calls.every(call => call.url === 'https://evm-testnet.qore.host/'));
   });
 
-  // New in 7C-28: native QOR balance of one qor1 address, read-only, Diana testnet only.
+  // New in 7C-28: native QOR balance of one qor1 account, read-only, Diana testnet only, through the
+  // official Diana EVM JSON-RPC (eth_chainId, then eth_getBalance).
   const FAUCET = 'qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw08';
+  const FAUCET_HEX = '0xf1e70c24817e00aee286f7275e14e61cabd20741';
   const BALANCE_VIEW = `(() => ({
     message: document.getElementById('query-message').textContent,
     qor: document.getElementById('balance-qor').textContent,
@@ -1750,33 +1744,39 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     flow: [...document.querySelectorAll('#flow > li')].map(item => item.dataset.state),
     calls: window.__rpc.calls.map(call => [call.url, call.httpMethod, call.credentials, call.redirect, call.method]),
   }))()`;
-  const GETS = [
-    ['https://rpc-testnet.qore.host/status', 'GET', 'omit', 'error', null],
-    ['https://api-testnet.qore.host/cosmos/bank/v1beta1/balances/' + FAUCET + '/by_denom?denom=uqor', 'GET', 'omit', 'error', null],
+  const BALANCE_CALLS = [
+    ['https://evm-testnet.qore.host/', 'POST', 'omit', 'error', 'eth_chainId'],
+    ['https://evm-testnet.qore.host/', 'POST', 'omit', 'error', 'eth_getBalance'],
   ];
+  const balanceHex = (base) => `window.__rpc.balance = '0x${BigInt(base).toString(16)}'`;
 
-  uiTest('balance query (Turkish and English) shows the real uqor and QOR values from two Diana GETs and leaves the context unchanged', async t => {
+  uiTest('balance query (Turkish and English) shows the real uqor and QOR values from eth_getBalance and leaves the context unchanged', async t => {
     await openPage();
-    await evaluate(`window.__rpc.balance = '9007199254740993123456'`);
+    await evaluate(balanceHex('9007199254740993123456000000000000'));
     const tr = await submit(FAUCET + ' adresinin bakiyesini göster.');
+    expectView(t, tr, { state: 'Success', block: '—', chain: 'qorechain-diana', evmChain: '9800', planVisible: false, context: CONTEXT_NONE, clearEnabled: false });
     const trView = await evaluate(BALANCE_VIEW);
-    expectView(t, tr, { state: 'Success', block: '—', chain: 'qorechain-diana', evmChain: '—', planVisible: false, context: CONTEXT_NONE, clearEnabled: false });
     expectView(t, trView, {
-      qor: '9007199254740993.123456', uqor: '9007199254740993123456', codes: ['GET /status', 'GET /cosmos/bank/…/by_denom'],
-      flow: ['done', 'pass', 'recognized', 'ok', 'ok', 'success'], calls: GETS,
-      message: 'Balance of ' + FAUCET + ' read from Diana testnet (qorechain-diana): 9007199254740993.123456 QOR (9007199254740993123456 uqor).',
+      qor: '9007199254740993.123456', uqor: '9007199254740993123456', codes: ['eth_chainId', 'eth_getBalance'],
+      flow: ['done', 'pass', 'recognized', 'ok', 'ok', 'success'], calls: BALANCE_CALLS,
+      message: 'Balance of ' + FAUCET + ' read from Diana testnet via EVM JSON-RPC (chain 9800 verified): 9007199254740993.123456 QOR, 9007199254740993123456 uqor.',
     }, 'tr');
+    const params = await evaluate(`window.__rpc.calls.map(call => call.url)`);
+    if (!PROBE) assert.ok(params.every(url => url === 'https://evm-testnet.qore.host/'));
     const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
-    if (!PROBE) assert.equal(turkish, FAUCET + ' adresinin bakiyesi Diana test ağından (qorechain-diana) okundu: 9007199254740993.123456 QOR (9007199254740993123456 uqor).');
+    if (!PROBE) assert.equal(turkish, FAUCET + ' adresinin bakiyesi Diana test ağından EVM JSON-RPC ile okundu (zincir 9800 doğrulandı): 9007199254740993.123456 QOR, 9007199254740993123456 uqor.');
     await evaluate(`document.querySelector('button[data-lang=en]').click()`);
 
-    // A block query first, then a balance query: the context stays on the block query.
+    // A block query first, then a balance with a part below 1 uqor: the context stays on the block query.
     await submit('Son blok kaç?');
-    await evaluate(`window.__rpc.balance = '1250000'`);
+    await evaluate(balanceHex('43399778337500000000'));
     const en = await submit('How much QOR does ' + FAUCET.toUpperCase() + ' have?');
     expectView(t, en, { state: 'Success', block: '—', context: CONTEXT_BLOCK, clearEnabled: true }, 'en');
-    expectView(t, await evaluate(BALANCE_VIEW), { qor: '1.25', uqor: '1250000', calls: GETS }, 'en view');
-    // The next block query restores the EVM method names in the flow and clears the balance.
+    expectView(t, await evaluate(BALANCE_VIEW), {
+      qor: '43.3997783375', uqor: '43399778', calls: BALANCE_CALLS,
+      message: 'Balance of ' + FAUCET + ' read from Diana testnet via EVM JSON-RPC (chain 9800 verified): 43.3997783375 QOR, 43399778 uqor. The QOR value includes a part below 1 uqor, which the uqor value leaves out.',
+    }, 'en view');
+    // The next block query restores the method name in the flow and clears the balance.
     await submit('Son blok kaç?');
     expectView(t, await evaluate(BALANCE_VIEW), { qor: '—', uqor: '—', codes: ['eth_chainId', 'eth_blockNumber'] }, 'after');
   });
@@ -1785,7 +1785,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     await openPage();
     for (const [command, state] of [
       ['qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw09 adresinin bakiyesini göster', 'Needs clarification'],
-      ['Show the balance of 0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'Needs clarification'],
+      ['Show the balance of ' + FAUCET_HEX, 'Needs clarification'],
+      ['Balance of qor1qqrsu9guyv4rzwplgex4gkmzd9c8wl593jfe4gdg47mtm3xt6tvsy3zpd2', 'Needs clarification'],
       ['Send all QOR from ' + FAUCET + ' to Alice.', 'Refused'],
       [FAUCET + ' adresinin bakiyesini mainnet üzerinde göster', 'Needs clarification'],
     ]) {
@@ -1797,14 +1798,16 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
 
     await setMode('network_error');
     const offline = await submit('Balance of ' + FAUCET);
-    expectView(t, offline, { state: 'Error', context: CONTEXT_NONE, message: 'The browser could not read the Diana consensus RPC or REST API. Check your connection. These endpoints may restrict cross-origin requests (CORS).' }, 'offline');
+    expectView(t, offline, { state: 'Error', context: CONTEXT_NONE, message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    await setMode('stall');
+    const stalled = await submit('Balance of ' + FAUCET, { timeoutMs: 20_000 });
+    expectView(t, stalled, { state: 'Error', message: 'QoreChain request timed out.', rpc: ['eth_chainId'] }, 'timeout');
     await setMode('wrong_chain');
     const wrong = await submit('Balance of ' + FAUCET);
-    expectView(t, wrong, { state: 'Error', message: 'The consensus RPC did not report Diana testnet (qorechain-diana), so no balance was read.' }, 'wrong chain');
-    // Only the status read was sent: the balance is never read from another chain.
-    if (!PROBE) assert.deepEqual((await evaluate(BALANCE_VIEW)).calls, [GETS[0]]);
+    // Only the chain check was sent: the balance is never read from another chain.
+    expectView(t, wrong, { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+    expectView(t, await evaluate(BALANCE_VIEW), { qor: '—', uqor: '—' }, 'wrong chain readout');
   });
-
   uiTest('recognized Turkish variants', async t => {
     for (const [command, expected] of [
       ['Son blok numarası kaç?', 'block'], ['son blok numarasını göster', 'block'], ['Testnette son blok numarasını öğren.', 'block'],

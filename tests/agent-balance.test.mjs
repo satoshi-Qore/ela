@@ -1,35 +1,47 @@
 // 7C-28: native QOR balance of one qor1 address on Diana testnet, through the agent session and the
-// tool registry. Read-only: only the fixed Diana consensus status GET and REST bank-balance GET may
-// be sent. No signing, transfer, or wallet connection exists or is added.
+// tool registry. Read-only: only eth_chainId and eth_getBalance may be sent, to the fixed official
+// Diana EVM JSON-RPC (the only Diana endpoint a browser page may read: it allows CORS; the REST API
+// and consensus RPC do not). No signing, transfer, or wallet connection exists or is added.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { recognizeBalanceRequest } from '../src/agent/balance.ts';
 import { decideIntent, interpretCommand } from '../src/agent/intent.ts';
-import { getTool, guardFetch, invokeTool, listTools } from '../src/agent/registry.ts';
+import { getTool, guardFetch, invokeTool, isAllowedRpcRequest, listTools } from '../src/agent/registry.ts';
 import { createSession } from '../src/agent/session.ts';
+import { evmAddressOf, getEvmBalance } from '../src/qorechain/get-evm-balance.ts';
 
 const FAUCET = 'qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw08';
-const STATUS_URL = 'https://rpc-testnet.qore.host/status';
-const BALANCE_URL = 'https://api-testnet.qore.host/cosmos/bank/v1beta1/balances/' + FAUCET + '/by_denom?denom=uqor';
+const FAUCET_HEX = '0xf1e70c24817e00aee286f7275e14e61cabd20741';
+const EVM = 'https://evm-testnet.qore.host/';
+const wei = uqor => '0x' + (BigInt(uqor) * 10n ** 12n).toString(16);
 
-const status = (network = 'qorechain-diana', catchingUp = false) => ({
-  jsonrpc: '2.0', id: -1, result: { node_info: { network }, sync_info: { latest_block_height: '10274204', catching_up: catchingUp } },
-});
-
-/** A scripted Diana: records every request; answers status and balance GETs, and EVM JSON-RPC. */
-function diana({ amount = '159040000', network = 'qorechain-diana', statusReply, balanceReply } = {}) {
+/**
+ * A scripted Diana EVM JSON-RPC. Records every request. `balance` is the eth_getBalance result
+ * (18-decimal base units, hex); `chain` the eth_chainId result; `reply` replaces any response.
+ */
+function diana({ balance = wei('159040000'), chain = '0x2648', reply } = {}) {
   const requests = [];
   const fetch = async (input, init = {}) => {
-    const url = String(input);
-    requests.push({ url, method: init.method, body: init.body, credentials: init.credentials, redirect: init.redirect });
-    if (url === STATUS_URL || url.endsWith('/status')) return statusReply ? statusReply() : Response.json(status(network));
-    if (url.includes('/by_denom?')) return balanceReply ? balanceReply() : Response.json({ balance: { denom: 'uqor', amount } });
     const body = JSON.parse(init.body);
-    return Response.json({ jsonrpc: '2.0', id: body.id, result: body.method === 'eth_chainId' ? '0x2648' : '0x97e6b0' });
+    requests.push({ url: String(input), method: init.method, credentials: init.credentials, redirect: init.redirect, rpc: body.method, params: body.params });
+    if (reply) { const custom = await reply(body); if (custom) return custom; }
+    const result = body.method === 'eth_chainId' ? chain : body.method === 'eth_getBalance' ? balance : '0x97e6b0';
+    return Response.json({ jsonrpc: '2.0', id: body.id, result });
   };
   return { fetch, requests };
 }
 const noRequest = async () => assert.fail('no request may be sent');
+
+// --- Address conversion --------------------------------------------------------------------------
+
+test('a qor1 account and its EVM address are the same 20 bytes', () => {
+  // Checked against the live Diana testnet: eth_getBalance of this hex equals the bank balance of the qor1 address.
+  assert.equal(evmAddressOf(FAUCET), FAUCET_HEX);
+  assert.equal(evmAddressOf(FAUCET.toUpperCase()), FAUCET_HEX);
+  assert.throws(() => evmAddressOf('qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw09'), { code: 'invalid_address' });
+  // A valid 32-byte address has no EVM account.
+  assert.throws(() => evmAddressOf('qor1qqrsu9guyv4rzwplgex4gkmzd9c8wl593jfe4gdg47mtm3xt6tvsy3zpd2'), { code: 'invalid_address' });
+});
 
 // --- Recognition ---------------------------------------------------------------------------------
 
@@ -61,16 +73,6 @@ for (const command of RECOGNIZED) {
   });
 }
 
-test('a 32-byte (contract-length) qor1 address is accepted and reaches the fixed balance URL', async () => {
-  // Bech32 "qor" encoding of bytes 0, 7, 14, ... (32 bytes), checksum computed with BIP 173.
-  const long = 'qor1qqrsu9guyv4rzwplgex4gkmzd9c8wl593jfe4gdg47mtm3xt6tvsy3zpd2';
-  assert.deepEqual(recognizeBalanceRequest('Balance of ' + long), { kind: 'balance', address: long });
-  const net = diana();
-  const result = await createSession({ fetch: net.fetch }).handleCommand('Balance of ' + long);
-  assert.equal(result.outcome, 'success');
-  assert.equal(net.requests[1].url, BALANCE_URL.replace(FAUCET, long));
-});
-
 for (const address of [
   'qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw09', // one character changed: checksum fails
   'qor178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw0', // truncated
@@ -95,9 +97,11 @@ for (const address of [
 for (const [command, expected] of [
   ['Balance of ' + FAUCET + ' and ' + FAUCET, 'clarify:unsupported_parameters'],
   ['Balance of ' + FAUCET + ' ' + FAUCET, 'clarify:unsupported_parameters'],
+  // A valid 32-byte (module or contract) address has no EVM balance to read.
+  ['Balance of qor1qqrsu9guyv4rzwplgex4gkmzd9c8wl593jfe4gdg47mtm3xt6tvsy3zpd2', 'clarify:unsupported_parameters'],
   // Other address formats and other networks are never read.
   ['Balance of cosmos178nscfyp0cq2ac5x7un4u98xrj4ayp6pt0kw08', 'unsupported'],
-  ['Show the balance of 0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'clarify:unsupported_parameters'],
+  ['Show the balance of ' + FAUCET_HEX, 'clarify:unsupported_parameters'],
   ['Balance of ' + FAUCET + ' on mainnet', 'clarify:unsupported_network'],
   [FAUCET + ' adresinin ana ağdaki bakiyesi', 'clarify:unsupported_network'],
   ['Ethereum balance of ' + FAUCET, 'clarify:unsupported_network'],
@@ -105,6 +109,7 @@ for (const [command, expected] of [
   [FAUCET, 'clarify:unsupported_parameters'],
   [FAUCET + ' kimin adresi?', 'clarify:unsupported_parameters'],
   ['Balance of ' + FAUCET + ' at block 100', 'clarify:unsupported_parameters'],
+  ['Balance of ' + FAUCET + ' from https://evil.example/', 'clarify:unsupported_parameters'],
   [FAUCET + ' adresinin bakiyesini gösterme', 'clarify:unsupported_parameters'],
   ['Diana ağını kontrol et ve ' + FAUCET + ' bakiyesini göster', 'clarify:unsupported_parameters'],
   // Without an address, a balance question stays unsupported (ELA has no wallet of its own).
@@ -140,26 +145,39 @@ for (const [command, reason] of [
 
 // --- Session ---------------------------------------------------------------------------------------
 
-test('balance query sends exactly the two fixed Diana GETs and returns the real uqor and QOR values', async () => {
-  const net = diana({ amount: '9007199254740993123456' });
+test('balance query sends exactly eth_chainId then eth_getBalance to the Diana EVM endpoint and returns the real values', async () => {
+  const net = diana({ balance: wei('9007199254740993123456') });
   const session = createSession({ fetch: net.fetch });
   const result = await session.handleCommand('What is the balance of ' + FAUCET.toUpperCase() + '?');
   assert.equal(result.kind, 'answered');
   assert.deepEqual([result.query, result.outcome, result.run.kind, result.run.address], ['balance', 'success', 'balance', FAUCET]);
   assert.deepEqual(result.run.result, {
     ok: true, tool: 'get_balance', network: 'qorechain-diana',
-    data: { chainId: 'qorechain-diana', address: FAUCET, denom: 'uqor', amountUqor: '9007199254740993123456', amountQor: '9007199254740993.123456' },
+    data: {
+      chainId: 'qorechain-diana', evmChainId: '9800', address: FAUCET, evmAddress: FAUCET_HEX, denom: 'uqor',
+      amountUqor: '9007199254740993123456', amountQor: '9007199254740993.123456', belowUqor: false,
+    },
   });
   assert.deepEqual(net.requests, [
-    { url: STATUS_URL, method: 'GET', body: undefined, credentials: 'omit', redirect: 'error' },
-    { url: BALANCE_URL, method: 'GET', body: undefined, credentials: 'omit', redirect: 'error' },
+    { url: EVM, method: 'POST', credentials: 'omit', redirect: 'error', rpc: 'eth_chainId', params: [] },
+    { url: EVM, method: 'POST', credentials: 'omit', redirect: 'error', rpc: 'eth_getBalance', params: [FAUCET_HEX, 'latest'] },
   ]);
 });
 
-for (const [amount, qor] of [['0', '0'], ['1', '0.000001'], ['1250000', '1.25'], ['159040000', '159.04']]) {
-  test('balance ' + amount + ' uqor is shown as ' + qor + ' QOR', async () => {
-    const result = await createSession({ fetch: diana({ amount }).fetch }).handleCommand('Balance of ' + FAUCET);
-    assert.deepEqual([result.run.result.data.amountUqor, result.run.result.data.amountQor], [amount, qor]);
+for (const [balance, uqor, qor, below] of [
+  ['0x0', '0', '0', false],
+  [wei('1'), '1', '0.000001', false],
+  [wei('1250000'), '1250000', '1.25', false],
+  [wei('158980000'), '158980000', '158.98', false],
+  // Live testnet accounts have parts below 1 uqor: uqor is rounded down (as the REST bank module
+  // reports it); the QOR value keeps every digit.
+  ['0x' + (43399778337500000000n).toString(16), '43399778', '43.3997783375', true],
+  ['0x1', '0', '0.000000000000000001', true],
+]) {
+  test('EVM balance ' + balance + ' is ' + qor + ' QOR and ' + uqor + ' uqor', async () => {
+    const result = await createSession({ fetch: diana({ balance }).fetch }).handleCommand('Balance of ' + FAUCET);
+    const { amountUqor, amountQor, belowUqor } = result.run.result.data;
+    assert.deepEqual([amountUqor, amountQor, belowUqor], [uqor, qor, below]);
   });
 }
 
@@ -168,7 +186,6 @@ test('a balance query never changes the conversation context', async () => {
   const session = createSession({ fetch: net.fetch });
   await session.handleCommand('Balance of ' + FAUCET);
   assert.equal(session.context, undefined);
-  // With no context, a follow-up still needs clarification and sends nothing.
   net.requests.length = 0;
   const followUp = await session.handleCommand('Tekrar kontrol et.');
   assert.deepEqual([followUp.kind, followUp.reason, net.requests.length], ['clarify', 'no_context', 0]);
@@ -178,24 +195,26 @@ test('a balance query never changes the conversation context', async () => {
   assert.deepEqual({ ...before }, { kind: 'block_number', network: 'qorechain-diana' });
   await session.handleCommand(FAUCET + ' adresinde ne kadar QOR var?');
   assert.equal(session.context, before);
-  // "Peki şimdi kaç oldu?" still follows up on the block query, not the balance.
   net.requests.length = 0;
   const next = await session.handleCommand('Peki şimdi kaç oldu?');
   assert.deepEqual([next.kind, next.query, next.decision.basedOn], ['answered', 'block_number', 'block_number']);
-  assert.ok(net.requests.every(request => request.url === 'https://evm-testnet.qore.host/'));
+  assert.deepEqual(net.requests.map(request => request.rpc), ['eth_chainId', 'eth_blockNumber']);
   session.clear();
   assert.equal(session.context, undefined);
 });
 
+const rpcError = { jsonrpc: '2.0', id: 2, error: { code: -32000, message: 'private upstream detail' } };
 for (const [name, options, code, sent] of [
-  ['the consensus RPC reports another chain', { network: 'qorechain-vladi' }, 'chain_mismatch', 1],
-  ['the consensus node is catching up', { statusReply: () => Response.json(status('qorechain-diana', true)) }, 'node_syncing', 1],
-  ['the status endpoint fails', { statusReply: () => new Response('private upstream detail', { status: 503 }) }, 'http_error', 1],
-  ['the status endpoint is unreachable', { statusReply: () => { throw new TypeError('Failed to fetch'); } }, 'network_error', 1],
-  ['the balance endpoint fails', { balanceReply: () => new Response(null, { status: 500 }) }, 'http_error', 2],
-  ['the balance has another denom', { balanceReply: () => Response.json({ balance: { denom: 'aqor', amount: '1' } }) }, 'invalid_response', 2],
-  ['the balance is not an integer', { amount: '1.5' }, 'invalid_response', 2],
-  ['the balance body is not JSON', { balanceReply: () => new Response('<html>') }, 'invalid_response', 2],
+  ['the endpoint reports another chain', { chain: '0x1' }, 'chain_mismatch', 1],
+  ['the endpoint is unreachable', { reply: () => { throw new TypeError('Failed to fetch'); } }, 'network_error', 1],
+  ['the endpoint fails', { reply: () => new Response('private upstream detail', { status: 503 }) }, 'http_error', 1],
+  ['the balance read fails', { reply: body => body.method === 'eth_getBalance' && new Response(null, { status: 500 }) }, 'http_error', 2],
+  ['the balance read returns a JSON-RPC error', { reply: body => body.method === 'eth_getBalance' && Response.json(rpcError) }, 'invalid_response', 2],
+  ['the balance has leading zeros', { balance: '0x01' }, 'invalid_response', 2],
+  ['the balance is negative', { balance: '-0x1' }, 'invalid_response', 2],
+  ['the balance is decimal', { balance: '100' }, 'invalid_response', 2],
+  ['the balance is wider than 256 bits', { balance: '0x1' + '0'.repeat(64) }, 'invalid_response', 2],
+  ['the balance body is not JSON', { reply: body => body.method === 'eth_getBalance' && new Response('<html>') }, 'invalid_response', 2],
 ]) {
   test('balance read fails safely when ' + name, async () => {
     const net = diana(options);
@@ -204,7 +223,7 @@ for (const [name, options, code, sent] of [
     assert.deepEqual([result.kind, result.outcome], ['answered', 'failed']);
     assert.deepEqual([result.run.result.ok, result.run.result.error.stage, result.run.result.error.code], [false, 'execution', code]);
     assert.equal(result.run.result.error.message.includes('private upstream detail'), false);
-    // The balance is only read after the consensus RPC reported Diana.
+    // The balance is only read after the endpoint reported Diana (9800).
     assert.equal(net.requests.length, sent);
     assert.equal(session.context, undefined);
   });
@@ -218,30 +237,34 @@ test('balance read times out safely', async () => {
 
 // --- Registry and guard ------------------------------------------------------------------------------
 
-test('get_balance is a frozen, read-only Diana tool with no RPC methods and two fixed GETs', () => {
+test('get_balance is a frozen, read-only Diana tool that may send only eth_chainId and eth_getBalance', () => {
   const tool = getTool('get_balance');
   assert.deepEqual([tool.id, tool.network, tool.readOnly], ['get_balance', 'qorechain-diana', true]);
-  assert.deepEqual(tool.rpcMethods, []);
-  assert.equal(tool.httpGets.length, 2);
+  assert.deepEqual(tool.rpcMethods, ['eth_chainId', 'eth_getBalance']);
   assert.deepEqual(Object.keys(tool.params), ['address']);
-  assert.ok(Object.isFrozen(tool) && Object.isFrozen(tool.httpGets) && Object.isFrozen(tool.params));
-  assert.throws(() => { tool.httpGets.push(/.*/); }, TypeError);
+  assert.ok(Object.isFrozen(tool) && Object.isFrozen(tool.rpcMethods) && Object.isFrozen(tool.params));
+  assert.throws(() => { tool.rpcMethods.push('eth_sendRawTransaction'); }, TypeError);
   assert.ok(listTools().every(entry => entry.readOnly === true && entry.network === 'qorechain-diana'));
   // No tool may sign, send, or connect a wallet.
   for (const entry of listTools()) assert.doesNotMatch(entry.id, /sign|send|transfer|wallet|broadcast/u);
+  // The latest-block tool still cannot read balances.
+  assert.equal(getTool('get_evm_block_number').rpcMethods.includes('eth_getBalance'), false);
 });
 
-const balanceRequest = (overrides = {}) => ({ tool: 'get_balance', network: 'qorechain-diana', params: { address: FAUCET }, rpcMethods: [], ...overrides });
+const balanceRequest = (overrides = {}) => ({ tool: 'get_balance', network: 'qorechain-diana', params: { address: FAUCET }, rpcMethods: ['eth_chainId', 'eth_getBalance'], ...overrides });
 
 for (const [name, overrides, code] of [
   ['another network', { network: 'qorechain-mainnet' }, 'network_not_allowed'],
-  ['an EVM balance method', { rpcMethods: ['eth_getBalance'] }, 'method_not_allowed'],
   ['a transaction method', { rpcMethods: ['eth_sendRawTransaction'] }, 'method_not_allowed'],
+  ['a signing method', { rpcMethods: ['eth_sign'] }, 'method_not_allowed'],
+  ['an account method', { rpcMethods: ['eth_accounts'] }, 'method_not_allowed'],
   ['no address', { params: {} }, 'invalid_params'],
   ['an upper-case address', { params: { address: FAUCET.toUpperCase() } }, 'invalid_params'],
-  ['an EVM address', { params: { address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e' } }, 'invalid_params'],
+  ['an EVM address', { params: { address: FAUCET_HEX } }, 'invalid_params'],
+  ['a 32-byte address', { params: { address: 'qor1qqrsu9guyv4rzwplgex4gkmzd9c8wl593jfe4gdg47mtm3xt6tvsy3zpd2' } }, 'invalid_params'],
   ['a number', { params: { address: 42 } }, 'invalid_params'],
-  ['an extra parameter', { params: { address: FAUCET, restUrl: 'https://evil.example' } }, 'invalid_params'],
+  ['an endpoint parameter', { params: { address: FAUCET, url: 'https://evil.example' } }, 'invalid_params'],
+  ['a block parameter', { params: { address: FAUCET, block: 'earliest' } }, 'invalid_params'],
   ['an amount', { params: { address: FAUCET, amount: '5' } }, 'invalid_params'],
 ]) {
   test('get_balance refuses ' + name + ' before any request', async () => {
@@ -257,42 +280,39 @@ test('get_balance with a pattern-valid address that fails the checksum sends not
 
 test('runtime options cannot redirect the balance tool to another endpoint', async () => {
   const net = diana();
-  const result = await invokeTool(balanceRequest(), { fetch: net.fetch, restUrl: 'https://evil.example', rpcUrl: 'https://evil.example' });
+  const result = await invokeTool(balanceRequest(), { fetch: net.fetch, rpcUrl: 'https://evil.example', restUrl: 'https://evil.example' });
   assert.equal(result.ok, true);
-  assert.deepEqual(net.requests.map(request => request.url), [STATUS_URL, BALANCE_URL]);
+  assert.ok(net.requests.every(request => request.url === EVM));
 });
 
-test('the guard lets only the two fixed Diana GETs through', async () => {
-  const gets = getTool('get_balance').httpGets;
+test('the balance guard lets only eth_chainId and eth_getBalance POSTs through', async () => {
+  const allowed = getTool('get_balance').rpcMethods;
   let sent = 0;
-  const guarded = guardFetch(async () => { sent++; return Response.json({}); }, [], gets);
-  await guarded(STATUS_URL, { method: 'GET' });
-  await guarded(new URL(BALANCE_URL), { method: 'GET' });
+  const guarded = guardFetch(async () => { sent++; return Response.json({}); }, allowed);
+  const rpc = (method, params = []) => JSON.stringify({ jsonrpc: '2.0', id: 1, method, params });
+  await guarded(EVM, { method: 'POST', body: rpc('eth_chainId') });
+  await guarded(EVM, { method: 'POST', body: rpc('eth_getBalance', [FAUCET_HEX, 'latest']) });
   assert.equal(sent, 2);
   for (const [input, init] of [
-    [STATUS_URL, { method: 'POST', body: '{}' }],
-    [STATUS_URL, { method: 'GET', body: 'x' }],
-    [STATUS_URL, { method: 'DELETE' }],
-    [new Request(STATUS_URL), undefined],
-    ['https://rpc-testnet.qore.host/status?x=1', { method: 'GET' }],
-    ['https://rpc-testnet.qore.host.evil.example/status', { method: 'GET' }],
-    ['http://rpc-testnet.qore.host/status', { method: 'GET' }],
-    ['https://rpc-testnet.qore.host/broadcast_tx_sync?tx=00', { method: 'GET' }],
-    ['https://api-testnet.qore.host/cosmos/tx/v1beta1/txs', { method: 'POST', body: '{}' }],
-    [BALANCE_URL + '&x=1', { method: 'GET' }],
-    [BALANCE_URL.replace('denom=uqor', 'denom=aqor'), { method: 'GET' }],
-    [BALANCE_URL.replace(FAUCET, '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'), { method: 'GET' }],
-    ['https://evm-testnet.qore.host/', { method: 'POST', body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [] }) }],
+    ['https://rpc-testnet.qore.host/status', { method: 'GET' }],
+    ['https://api-testnet.qore.host/cosmos/bank/v1beta1/balances/' + FAUCET, undefined],
+    [EVM, { method: 'POST', body: rpc('eth_sendRawTransaction', ['0x00']) }],
+    [EVM, { method: 'POST', body: rpc('eth_sendTransaction') }],
+    [EVM, { method: 'POST', body: rpc('eth_sign') }],
+    [EVM, { method: 'POST', body: rpc('personal_sign') }],
+    [EVM, { method: 'POST', body: rpc('eth_call') }],
+    [EVM, { method: 'POST', body: rpc('eth_blockNumber') }],
+    [EVM, { method: 'POST', body: JSON.stringify([{ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [] }]) }],
+    [EVM, { method: 'POST', body: 'not json' }],
   ]) {
     await assert.rejects(guarded(input, init), TypeError, String(input));
   }
   assert.equal(sent, 2);
+  assert.equal(isAllowedRpcRequest(rpc('eth_getBalance'), getTool('get_evm_block_number').rpcMethods), false);
 });
 
-test('the EVM block tool still cannot send GETs to the balance endpoints', async () => {
-  const guarded = guardFetch(async () => assert.fail('blocked'), getTool('get_evm_block_number').rpcMethods, getTool('get_evm_block_number').httpGets);
-  await assert.rejects(guarded(STATUS_URL, { method: 'GET' }), TypeError);
-  await assert.rejects(guarded(BALANCE_URL, { method: 'GET' }), TypeError);
+test('getEvmBalance refuses an invalid address before any request', async () => {
+  await assert.rejects(getEvmBalance('qor1abc', { fetch: noRequest }), { code: 'invalid_address' });
 });
 
 // --- Classifier cannot reach the balance tool ---------------------------------------------------------

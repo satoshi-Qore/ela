@@ -2,7 +2,7 @@ import { dianaChainHex, evmEndpoint } from '../qorechain/get-evm-block-number.ts
 import { QORECHAIN_TESTNET } from '../qorechain/read-client.ts';
 
 /** Read-only JSON-RPC methods a plan step may depend on. */
-export type RpcMethod = 'eth_chainId' | 'eth_blockNumber';
+export type RpcMethod = 'eth_chainId' | 'eth_blockNumber' | 'eth_getBalance';
 
 export interface PlanStep {
   readonly id: 'verify_chain_id' | 'read_block_height';

@@ -89,23 +89,11 @@ export function queryLatestBlock(runtime: RuntimeOptions = {}): Promise<ToolResu
   );
 }
 
-/**
- * Reads the native QOR balance of one validated `qor1` address on Diana testnet through the tool
- * registry (Diana chain ID verified first). The registry allows only the two fixed Diana GETs.
- */
-export function queryBalance(address: string, runtime: RuntimeOptions = {}): Promise<ToolResult> {
-  return invokeTool({ tool: 'get_balance', network: DIANA_NETWORK, params: { address }, rpcMethods: [] }, runtime);
-}
-
 export type QueryRun =
   | { readonly kind: 'block_number'; readonly result: ToolResult }
   | { readonly kind: 'network_check'; readonly result: ExecutionResult }
+  /** See `runBalanceQuery` in balance.ts. */
   | { readonly kind: 'balance'; readonly address: string; readonly result: ToolResult };
-
-/** Runs a balance query with fresh data. Every call sends new requests; nothing is reused. */
-export async function runBalanceQuery(address: string, options: ReadOptions = {}): Promise<QueryRun> {
-  return { kind: 'balance', address, result: await queryBalance(address, options) };
-}
 
 /** Runs a query kind with fresh RPC data. Every call sends new requests; nothing is reused. */
 export async function runQuery(kind: ContextKind, options: ReadOptions = {}): Promise<QueryRun> {

@@ -18,7 +18,7 @@ import { ruleClassifier } from './lexicon.ts';
  * or an RPC method, so a classifier (rule-based today, a model later) can only influence the outcome
  * through `interpretCommand`, which runs the safety gate first and never shows the classifier a
  * command the gate refused. The tool registry allows only `eth_chainId` and `eth_blockNumber`, and
- * for a balance query only the fixed Diana consensus `/status` and REST bank-balance GETs, all on
+ * for a balance query only `eth_chainId` and `eth_getBalance`, all on the Diana EVM endpoint of
  * Diana testnet. A balance query never changes the context. Nothing is stored outside this session
  * object.
  */

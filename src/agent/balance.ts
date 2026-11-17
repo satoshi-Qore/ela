@@ -1,8 +1,10 @@
-import { getBalance, normalizeAddress } from '../qorechain/get-balance.ts';
-import type { NativeBalance } from '../qorechain/get-balance.ts';
-import { getBlockNumber } from '../qorechain/get-block-number.ts';
+import { normalizeAddress } from '../qorechain/get-balance.ts';
+import { evmAddressOf, getEvmBalance } from '../qorechain/get-evm-balance.ts';
+import type { EvmBalance } from '../qorechain/get-evm-balance.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
+import type { QueryRun } from './conversation.ts';
 import { foldCommand } from './intent.ts';
+import { DIANA_NETWORK, invokeTool } from './registry.ts';
 
 /**
  * Native QOR balance queries on Diana testnet: recognizing the request and the read itself. It is
@@ -10,8 +12,9 @@ import { foldCommand } from './intent.ts';
  * or when the registry's `get_balance` tool runs, so the main bundle stays small.
  *
  * It adds no new way to reach the network: `readBalance` runs only inside the tool registry, whose
- * guarded fetch allows just the two fixed Diana GETs below. The existing `get-balance.ts` module
- * performs the balance read and the Bech32 checksum check unchanged.
+ * guarded fetch allows just `eth_chainId` and `eth_getBalance` for this tool. The browser reads the
+ * official Diana EVM JSON-RPC, the only Diana endpoint that allows cross-origin reads; see
+ * `get-evm-balance.ts`. The Bech32 checksum check is the one in `get-balance.ts`, unchanged.
  */
 
 // Anything that looks like a native address, valid or not. Bech32 has no "i", so the Turkish
@@ -39,6 +42,8 @@ export type BalanceRequest =
   | { readonly kind: 'none' }
   | { readonly kind: 'balance'; readonly address: string }
   | { readonly kind: 'invalid_address' }
+  /** A valid address that is not a 20-byte account (for example a 32-byte module address). */
+  | { readonly kind: 'unsupported_address' }
   | { readonly kind: 'multiple_addresses' };
 
 /**
@@ -58,28 +63,37 @@ export function recognizeBalanceRequest(command: unknown): BalanceRequest {
   if (!cue || !words.every(w => balanceWords.has(w))) return { kind: 'none' };
   const [address, ...others] = addresses;
   if (others.length > 0) return { kind: 'multiple_addresses' };
+  let account: string;
   try {
-    return { kind: 'balance', address: normalizeAddress(address!) };
+    account = normalizeAddress(address!);
   } catch {
     return { kind: 'invalid_address' };
   }
-}
-
-/** What the balance tool returns: the chain the consensus RPC reported, and the native balance. */
-export interface BalanceReading extends NativeBalance {
-  readonly chainId: string;
+  try {
+    evmAddressOf(account);
+  } catch {
+    return { kind: 'unsupported_address' };
+  }
+  return { kind: 'balance', address: account };
 }
 
 /**
- * Verifies the Diana chain ID (`qorechain-diana`, not catching up) with the consensus RPC status,
- * then reads the native uqor balance from the Diana REST bank module. The endpoints are the fixed
- * Diana testnet ones; only `fetch` and `timeoutMs` are taken from the caller.
+ * Reads the native QOR balance of one validated `qor1` address through the tool registry, with
+ * fresh data on every call: eth_chainId (Diana, 9800) first, then eth_getBalance.
  */
-export async function readBalance(address: string, runtime: Pick<ReadOptions, 'fetch' | 'timeoutMs'>): Promise<BalanceReading> {
-  const read = { fetch: runtime.fetch, timeoutMs: runtime.timeoutMs };
-  // An invalid address (checksum included) is refused before any request is sent.
-  const account = normalizeAddress(address);
-  const { chainId } = await getBlockNumber(read);
-  const balance = await getBalance(account, read);
-  return { chainId, ...balance };
+export async function runBalanceQuery(address: string, options: Pick<ReadOptions, 'fetch' | 'timeoutMs'> = {}): Promise<QueryRun> {
+  const result = await invokeTool({ tool: 'get_balance', network: DIANA_NETWORK, params: { address }, rpcMethods: ['eth_chainId', 'eth_getBalance'] }, options);
+  return { kind: 'balance', address, result };
+}
+
+/** What the balance tool returns. */
+export type BalanceReading = EvmBalance;
+
+/**
+ * Verifies the Diana EVM chain ID (9800) with `eth_chainId`, then reads the native QOR balance
+ * with `eth_getBalance`, on the fixed Diana endpoint. Only `fetch` and `timeoutMs` are taken from
+ * the caller. An invalid or non-account address is refused before any request is sent.
+ */
+export function readBalance(address: string, runtime: Pick<ReadOptions, 'fetch' | 'timeoutMs'>): Promise<BalanceReading> {
+  return getEvmBalance(address, { fetch: runtime.fetch, timeoutMs: runtime.timeoutMs });
 }
