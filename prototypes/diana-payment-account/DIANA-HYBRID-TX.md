@@ -1,6 +1,13 @@
 # Diana Invoice Owner: first hybrid-signed transaction
 
-This document covers preparation (7C-13), the signing tool (7C-14) and local verification of a real hybrid signature (7C-14B, [result](#local-verification-result)). Nothing has been broadcast. Broadcasting the real transaction is a separate step that needs its own approval.
+This document covers:
+- preparation (7C-13);
+- the signing tool (7C-14);
+- local verification of a real hybrid signature (7C-14B, [result](#local-verification-result));
+- the broadcast tool (7C-16);
+- the first real hybrid-signed transaction, broadcast and confirmed on chain on 17 November 2026 (7C-18, [result](#first-hybrid-transaction-on-chain-7c-18)).
+
+The sections before 7C-18 describe the state at the time they were written.
 
 The Invoice Owner registered its canonical ML-DSA-87 key at block 10228530 (see `DIANA-PQC-REGISTRATION.md`). Diana requires hybrid signatures (`hybrid_signature_mode: required`), so every later Cosmos transaction from this account carries a classical signature and an ML-DSA-87 signature.
 
@@ -93,7 +100,7 @@ You ran `--sign-and-verify-local` once, in your own terminal, on the real Invoic
 | `broadcast` | `false` |
 | Account number / sequence | 16046 / 1 |
 
-The hybrid signature that SDK 0.14.0 produces for this account is valid under both on-chain keys, and it signs exactly the transaction PREPARE planned. The signed bytes were not sent, stored or printed. The transaction has not been simulated with real signatures or broadcast.
+The hybrid signature that SDK 0.14.0 produces for this account is valid under both on-chain keys, and it signs exactly the transaction PREPARE planned. The signed bytes were not sent, stored or printed. At that point (7C-14B), the transaction had not been simulated with real signatures or broadcast. Both happened later, in 7C-18; see below.
 
 ## Broadcast tool (7C-16): `diana-hybrid-broadcast.mjs`
 This tool sends the first real hybrid-signed Diana transaction: the planned 1 uqor self-send. It reuses the PREPARE plan, the checks and `hybridFormatFailures` from `diana-hybrid-prepare.mjs`, and the signing steps from `diana-hybrid-sign.mjs`. No signing logic is written a second time.
@@ -111,3 +118,26 @@ This tool sends the first real hybrid-signed Diana transaction: the planned 1 uq
   9. Prints what to check afterwards, read-only: the transaction by hash, the account sequence (expected 2) and the balance drop (at most the 52,500 uqor fee).
 
 Running it again after a broadcast stops before signing, because the sequence has moved.
+
+## First hybrid transaction on chain (7C-18)
+You ran `node .\diana-hybrid-broadcast.mjs --broadcast` once, in your own terminal, and typed both confirmations yourself. Before the broadcast, the tool checked:
+- **Local hybrid signature check: PASS.** `hybridFormatFailures` verified both signatures with the on-chain keys.
+- **Simulation with the real signatures: PASS.**
+
+It then broadcast the same bytes once. Read-only queries of the Diana REST API confirm the result:
+
+| Check | Result |
+|---|---|
+| Network | `qorechain-diana` |
+| Transaction | `367930C30784513EA1D2BA216D548DD8157AE4C70ED0ECD02CB055DC83FAF5E3` |
+| Block | **10232784**, 2026-11-17 03:40:10 UTC (06:40:10 in the explorer, UTC+3) |
+| Result | **`code: 0`** (SUCCESS) |
+| Message | `/cosmos.bank.v1beta1.MsgSend`, 1 uqor from `qor1dfw567en2l0edze2xqzqw8kwnrcpt3u5m9n88r` to itself |
+| Signature | ECDSA + ML-DSA-87, hybrid v2. The body carries one `/qorechain.pqc.v1.PQCHybridSignature` extension: algorithm 1, a 4627-byte signature, no public key attached. The chain emitted `pqc_verify` and `pqc_hybrid_verify`. |
+| Signer sequence / timeout height | 1 / 10233073 |
+| Gas | **187,049** used of a 350,000 limit |
+| Fee | **52,500 uqor** (0.0525 QOR), charged on the gas limit |
+| Account after | account number 16046, **sequence 2**, balance **99,857,500 uqor**, which is 52,500 below the previous 99,910,000 (the 1 uqor came back to the same account) |
+| PQC key | still registered, SHA-256 `a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a` |
+
+The gas actually used, 187,049, is close to the placeholder simulation (about 187,000) and below the PREPARE estimate (about 227,000). The estimate had added the SDK's 40,000 `HYBRID_VERIFY_GAS`, which this transaction did not need on top. No further transaction was sent.
