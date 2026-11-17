@@ -4,7 +4,9 @@
 // get a clarification, what the status messages say, and how the conversation context changes.
 // Written in 7A against the interface before the agent integration. In 7C the interface was moved
 // onto the agent session (src/agent/session.ts); tests whose expectations changed on purpose say
-// "Changed in 7C" and describe the old behavior. Everything else is unchanged from 7A.
+// "Changed in 7C" and describe the old behavior. In 7C-25 the page became a module layout with a
+// language switch; the two existing tests it touched say "Changed in 7C-25". Everything else is
+// unchanged.
 //
 // The production page is built with the project's Vite config, served from 127.0.0.1, and driven
 // in a real headless Chrome or Chromium over the DevTools Protocol (Node.js built-ins only). RPC
@@ -341,7 +343,9 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         status: [document.getElementById('query-message').getAttribute('role'), document.getElementById('context-status').getAttribute('aria-live')],
         icon: document.querySelector('link[rel="icon"]')?.getAttribute('href'),
         // Changed in 7F: the post-quantum panel is a separate card; the claim check covers the rest.
-        text: (() => { const copy = document.body.cloneNode(true); copy.querySelector('#pqc-panel')?.remove(); return copy.textContent; })(),
+        // Changed in 7C-25: the module index names that card too ([data-pqc-ref]); it is excluded the
+        // same way. The rest of the page, including the Payment Account card, is still checked.
+        text: (() => { const copy = document.body.cloneNode(true); for (const node of copy.querySelectorAll('#pqc-panel, [data-pqc-ref]')) node.remove(); return copy.textContent; })(),
       };
     })()`);
     if (PROBE) { t.diagnostic(JSON.stringify({ ...page, text: undefined })); return; }
@@ -406,11 +410,20 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     })()`;
     await openPage();
     const desktop = await evaluate(measure);
-    // Keyboard focus, as a user tabs: body → command field → first example button.
+    // Keyboard focus, as a user tabs: command field → first example button.
+    // Changed in 7C-25: the language switch and the module index now come before the command field
+    // (top bar, then hero), so Tab is pressed until the field has focus and then once more. Before,
+    // the field was the first stop and exactly two presses were made. The asserted element and its
+    // focus ring are unchanged, and the number of stops before the field is pinned.
     await evaluate(`document.activeElement.blur(); window.scrollTo(0, 0)`);
-    for (let press = 0; press < 2; press++) {
-      for (const type of ['keyDown', 'keyUp']) await env.page.send('Input.dispatchKeyEvent', { type, key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+    const tab = async () => { for (const type of ['keyDown', 'keyUp']) await env.page.send('Input.dispatchKeyEvent', { type, key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 }); };
+    let stops = 0;
+    while (stops < 12 && await evaluate(`document.activeElement.id`) !== 'command') { await tab(); stops++; }
+    if (!PROBE) {
+      assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
+      assert.equal(stops, 7, 'two language buttons and four module links come first');
     }
+    await tab();
     desktop.focus = await evaluate(`(() => {
       const element = document.activeElement;
       const style = getComputedStyle(element);
@@ -451,6 +464,176 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       await env.page.send('Emulation.clearDeviceMetricsOverride');
     }
   });
+
+  // --- New in 7C-25: module layout, honest status, language switch, text scaling ------------------
+
+  uiTest('module layout: four labeled modules; Payment Account is preparation only and has no controls', async t => {
+    await openPage();
+    const page = await evaluate(`(() => {
+      const section = id => document.getElementById(id);
+      const head = id => section(id).querySelector('.module-head .tag');
+      return {
+        modules: ['diana', 'logic', 'pqc-panel', 'payment'].map(id => [id, document.getElementById(section(id).getAttribute('aria-labelledby')).textContent, head(id).textContent, head(id).dataset.tone]),
+        index: [...document.querySelectorAll('.modules a')].map(link => [link.getAttribute('href'), link.querySelector('.tag').dataset.tone]),
+        paymentControls: section('payment').querySelectorAll('button, a, input, textarea, select, [tabindex]').length,
+        paymentText: section('payment').textContent.replace(/\\s+/g, ' '),
+        // Nothing on the page links away or opens a window.
+        links: [...document.querySelectorAll('a')].map(link => [link.getAttribute('href'), link.target]).filter(([href, target]) => !href.startsWith('#') || target),
+        readout: ['block-number', 'chain-id', 'evm-chain-id', 'last-read'].map(id => document.getElementById(id).textContent),
+        endpoint: document.getElementById('endpoint').textContent,
+        chip: [document.querySelector('.net-chip').dataset.state, document.getElementById('network-status').textContent],
+      };
+    })()`);
+    if (PROBE) { t.diagnostic(JSON.stringify(page)); return; }
+    assert.deepEqual(page.modules, [
+      ['diana', 'Diana Network', 'On-demand read', 'live'],
+      ['logic', 'Execution & Logic', 'Active · rule-based', 'live'],
+      ['pqc-panel', 'Post-Quantum Signature Verification', 'Active · verification only', 'live'],
+      ['payment', 'Payment Account', 'Preparation · not connected', 'prep'],
+    ]);
+    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'prep']]);
+    assert.equal(page.paymentControls, 0, 'the unconnected module offers no control that could look working');
+    assert.match(page.paymentText, /Not in this interface/);
+    assert.match(page.paymentText, /No payment, signature, or deployment can be started from this page\./);
+    assert.deepEqual(page.links, []);
+    // No value is shown before a query runs: no placeholder numbers and no assumed network state.
+    assert.deepEqual(page.readout, ['—', '—', '—', '—']);
+    assert.equal(page.endpoint, 'evm-testnet.qore.host');
+    assert.deepEqual(page.chip, ['unchecked', 'not checked yet']);
+  });
+
+  uiTest('network status chip reports only what the last query saw; refusals and clarifications leave it alone', async t => {
+    await openPage();
+    const chip = () => evaluate(`[document.querySelector('.net-chip').dataset.state, document.getElementById('network-status').textContent, document.getElementById('last-read').textContent !== '—']`);
+    const seen = {};
+    await submit('Send 10 QOR.');
+    seen.refused = await chip();
+    await submit('Merhaba');
+    seen.clarify = await chip();
+    await submit('Diana ağını kontrol et.');
+    seen.ok = await chip();
+    await setMode('block_fails');
+    await submit('Diana ağını kontrol et.');
+    seen.partial = await chip();
+    await setMode('http_500');
+    await submit("What's the latest block?");
+    seen.error = await chip();
+    await submit('Show my private key.');
+    seen.afterRefusal = await chip();
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    assert.deepEqual(seen, {
+      refused: ['unchecked', 'not checked yet', false],
+      clarify: ['unchecked', 'not checked yet', false],
+      ok: ['ok', 'chain 9800 verified', true],
+      partial: ['partial', 'partial response', true],
+      error: ['error', 'last check failed', true],
+      afterRefusal: ['error', 'last check failed', true],
+    });
+  });
+
+  uiTest('language switch: Turkish interface text, English restored exactly, no request, session unchanged', async t => {
+    await openPage();
+    await submit('Send 10 QOR.');
+    await evaluate(`window.__rpc.calls.length = 0`);
+    const read = `(() => ({
+      lang: document.documentElement.lang,
+      title: document.title,
+      pressed: [...document.querySelectorAll('button[data-lang]')].map(button => button.getAttribute('aria-pressed')),
+      label: document.querySelector('label[for=command]').textContent,
+      placeholder: document.getElementById('command').placeholder,
+      help: document.getElementById('command-help').textContent,
+      group: document.querySelector('.examples').getAttribute('aria-label'),
+      examples: [...document.querySelectorAll('button[data-example]')].map(button => button.textContent),
+      run: document.getElementById('run').textContent.trim(),
+      state: document.getElementById('query-state').textContent,
+      stateKey: document.getElementById('query-state').dataset.state,
+      message: document.getElementById('query-message').textContent,
+      context: document.getElementById('context-status').textContent,
+      chip: document.getElementById('network-status').textContent,
+      toggle: document.getElementById('pqc-toggle').textContent,
+      payment: document.getElementById('payment-heading').textContent,
+      command: document.getElementById('command').value,
+      rpc: window.__rpc.calls.length,
+    }))()`;
+    const english = await evaluate(read);
+    await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+    const turkish = await evaluate(read);
+    const turkishRun = await submit('Diana ağını kontrol et.');
+    const afterRun = await evaluate(read);
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+    const back = await evaluate(read);
+    if (PROBE) { t.diagnostic(JSON.stringify({ english, turkish, afterRun, back })); return; }
+    assert.deepEqual([turkish.lang, turkish.pressed, turkish.rpc], ['tr', ['false', 'true'], 0]);
+    assert.equal(turkish.title, 'ELA — Yürütme ve Mantık Ajanı');
+    assert.equal(turkish.label, 'Komut (Türkçe veya İngilizce)');
+    assert.equal(turkish.placeholder, 'Son blok kaç?');
+    assert.equal(turkish.group, 'Örnek komutlar');
+    assert.equal(turkish.run, 'Sorguyu çalıştır →');
+    assert.deepEqual([turkish.state, turkish.stateKey], ['Reddedildi', 'refused']);
+    assert.equal(turkish.message, 'ELA salt okunurdur; fon gönderemez, aktaramaz veya çekemez. Hiçbir şey gönderilmedi. Bunun yerine son bloğu sorun veya Diana ağını kontrol ettirin.');
+    assert.deepEqual([turkish.context, turkish.chip, turkish.toggle, turkish.payment], ['Bağlam: yok', 'henüz kontrol edilmedi', 'Doğrulayıcıyı aç', 'Ödeme Hesabı']);
+    assert.deepEqual(turkish.examples, english.examples, 'example commands are data, not interface text');
+    assert.equal(turkish.command, 'Send 10 QOR.', 'switching keeps the field');
+    // The session works the same in Turkish; only labels change.
+    assert.deepEqual([turkishRun.stateKey, turkishRun.rpc, afterRun.state, afterRun.context, afterRun.chip], ['success', BOTH, 'Başarılı', 'Bağlam: son başarılı Diana ağı kontrolü · Diana test ağı', 'zincir 9800 doğrulandı']);
+    assert.deepEqual(back.examples, english.examples);
+    assert.deepEqual([back.lang, back.title, back.label, back.placeholder, back.help, back.group, back.run, back.toggle], [english.lang, english.title, english.label, english.placeholder, english.help, english.group, english.run, english.toggle]);
+    assert.deepEqual([back.state, back.context, back.chip], ['Success', CONTEXT_NETWORK, 'chain 9800 verified']);
+  });
+
+  uiTest('layout at 1440, 390 and 320 px, at 100% and 200% text, in both languages: no overflow, clipping, overlap, or low contrast', async t => {
+    const AUDIT = `(() => {
+      const width = document.documentElement.clientWidth;
+      const shown = element => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden'; };
+      const all = [...document.querySelectorAll('body *')].filter(shown);
+      const name = element => element.tagName + '#' + element.id + '.' + (typeof element.className === 'string' ? element.className : '');
+      const leaves = all.filter(element => [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()));
+      const overlaps = [];
+      for (let i = 0; i < leaves.length; i++) for (let k = i + 1; k < leaves.length; k++) {
+        const [a, b] = [leaves[i], leaves[k]];
+        if (a.contains(b) || b.contains(a)) continue;
+        const hit = [...a.getClientRects()].some(x => [...b.getClientRects()].some(y => Math.min(x.right, y.right) - Math.max(x.left, y.left) > 1 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 1));
+        if (hit) overlaps.push(name(a) + ' × ' + name(b));
+      }
+      const rgb = value => (value.match(/[0-9.]+/g) || []).map(Number);
+      const lum = ([r, g, b]) => [r, g, b].map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+      const background = element => { for (let node = element; node; node = node.parentElement) { const c = rgb(getComputedStyle(node).backgroundColor); if (c.length >= 3 && (c[3] === undefined || c[3] >= 0.7)) return c; } return [8, 15, 32]; };
+      const lowContrast = leaves.filter(element => getComputedStyle(element).color !== 'rgba(0, 0, 0, 0)').map(element => {
+        const [x, y] = [lum(rgb(getComputedStyle(element).color)), lum(background(element))].sort((p, q) => q - p);
+        return [name(element), Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100];
+      }).filter(([, ratio]) => ratio < 4.5);
+      return {
+        scrollWidth: document.documentElement.scrollWidth - width,
+        outside: all.filter(element => { const box = element.getBoundingClientRect(); return box.right > width + 0.5 || box.left < -0.5; }).map(name),
+        clipped: all.filter(element => element.tagName !== 'TEXTAREA' && getComputedStyle(element).overflowX !== 'visible' && element.scrollWidth > element.clientWidth + 1).map(name),
+        overlaps, lowContrast,
+      };
+    })()`;
+    const results = {};
+    try {
+      for (const width of [1440, 390, 320]) {
+        for (const scale of [1, 2]) {
+          await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
+          // The browser's own text-size setting (like a user's 200% font size), not page zoom.
+          await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
+          for (const lang of ['en', 'tr']) {
+            await openPage();
+            if (lang === 'tr') await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+            await submit('Diana ağını kontrol et.');
+            await evaluate(`(async () => { document.getElementById('pqc-toggle').click(); while (document.getElementById('pqc-body').dataset.ready !== 'true') await new Promise(r => setTimeout(r, 20)); document.getElementById('pqc-load').click(); })()`);
+            results[width + 'px ' + scale * 100 + '% ' + lang] = await evaluate(AUDIT);
+          }
+        }
+      }
+    } finally {
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(results)); return; }
+    for (const [label, result] of Object.entries(results)) {
+      assert.deepEqual(result, { scrollWidth: 0, outside: [], clipped: [], overlaps: [], lowContrast: [] }, label);
+    }
+  }, { timeout: 120_000 });
 
   // --- New in 7F: post-quantum verification panel -------------------------------------------------
 
