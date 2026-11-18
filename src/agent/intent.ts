@@ -3,7 +3,7 @@ import { routeCommand } from '../router.ts';
 import { resolveFollowUp, runQuery } from './conversation.ts';
 import type { ContextKind, ConversationContext, QueryRun } from './conversation.ts';
 import { planCommand } from './planner.ts';
-import { DIANA_NETWORK, loadBalance, loadBlock, loadTransaction } from './registry.ts';
+import { DIANA_NETWORK, loadBalance, loadBlock, loadGas, loadTransaction } from './registry.ts';
 
 /**
  * Intent understanding foundation. A future local classifier may only pick one label from this
@@ -115,6 +115,8 @@ export type IntentDecision =
       readonly blockNumber: number;
       readonly basedOn?: undefined;
     }
+  /** The current gas price and fees. Only the deterministic fee rules produce it; it takes no parameter. */
+  | { readonly kind: 'run'; readonly query: 'gas'; readonly intent: 'gas'; readonly source: 'deterministic'; readonly basedOn?: undefined }
   /**
    * A transaction status read. Only the session produces it, from a `confirm` decision the user
    * explicitly confirmed (see `confirmPending` in session.ts); `interpretCommand` never returns it,
@@ -455,6 +457,9 @@ export async function interpretCommand(
   // rules load only for a command with a digit and a block word (a separate chunk on the web).
   const block = /\d/u.test(command) && /blo/iu.test(command) ? (await loadBlock()).decideBlock(command) : undefined;
   if (block) return block;
+  // A fee question, under the same order; its rules load only for a command with a fee word.
+  const gas = /gas|gaz|fee|cost|cret|maliyet/iu.test(command) ? (await loadGas()).decideGas(command) : undefined;
+  if (gas) return gas;
   if (parameterPattern.test(normalize(command))) return clarify('unsupported_parameters', 'input_check');
 
   if (planCommand(command).kind === 'plan') {
@@ -496,6 +501,7 @@ export async function actOnDecision(decision: IntentDecision, options: ReadOptio
   if (decision.query === 'balance') return (await loadBalance()).runBalanceQuery(decision.address, options);
   if (decision.query === 'transaction') return (await loadTransaction()).runTransactionQuery(decision.hash, options);
   if (decision.query === 'block') return (await loadBlock()).runBlockQuery(decision.blockNumber, options);
+  if (decision.query === 'gas') return (await loadGas()).runGasQuery(options);
   if (decision.query !== 'network_check' && decision.query !== 'block_number') return undefined;
   return runQuery(decision.query, options);
 }

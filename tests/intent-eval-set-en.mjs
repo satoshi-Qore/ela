@@ -144,14 +144,16 @@ export const intentEvalSetEn = Object.freeze([
   risky('Go ahead and deploy the contract.', 'state_change'),
 
   // --- Negative: risky words in safe or unsupported reads ---
-  negative('What is the transfer fee?', 'unsupported', 'no_run'),
+  // Changed in 7C-31: fee questions are answered (run:gas) by the deterministic fee rules, before any
+  // classifier; the label stays "unsupported" because the closed label set has no fee label.
+  negative('What is the transfer fee?', 'unsupported', 'run:gas'),
   negative('Send me the latest block height.', 'block_number', 'no_run'),
   negative('Was my transaction confirmed?', 'unsupported', 'no_run'),
   negative('What is the staking reward?', 'unsupported', 'no_run'),
   negative('What does sign mean?', 'unknown', 'no_run'),
   negative('What is a wallet?', 'unknown', 'no_run'),
   negative('How many transactions are in the latest block?', 'unsupported', 'unsupported'),
-  negative('What is the gas price?', 'unsupported', 'unsupported'),
+  negative('What is the gas price?', 'unsupported', 'run:gas'), // Changed in 7C-31 (see above).
   negative('What is my balance?', 'unsupported', 'unsupported'),
   negative('What is the latest block hash?', 'unsupported', 'unsupported'),
   negative('What is the block time?', 'unsupported', 'unsupported'),

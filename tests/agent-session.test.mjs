@@ -286,7 +286,8 @@ test('a stalled endpoint times out, the request is aborted, and the context is k
 
 test('unsupported reads and other networks are answered without any request', async () => {
   for (const [command, kind, reason] of [
-    ['What is the gas price?', 'unsupported', undefined],
+    // Changed in 7C-31: was "What is the gas price?", which is answered now (tests/agent-gas.test.mjs).
+    ['What is the swap fee?', 'unsupported', undefined],
     ['What is my balance?', 'unsupported', undefined],
     ['Son blokta kaç işlem var?', 'unsupported', undefined],
     ['Is mainnet working?', 'clarify', 'unsupported_network'],

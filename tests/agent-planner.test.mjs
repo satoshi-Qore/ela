@@ -229,7 +229,8 @@ test('registry finds the registered read-only Diana tool', () => {
   // Changed in 7C-28: the read-only Diana balance tool is registered next to it.
   // Changed in 7C-29: and the read-only Diana transaction tool.
   // Changed in 7C-30: and the read-only Diana block-by-number tool.
-  assert.deepEqual(listTools().map(entry => entry.id), ['get_evm_block_number', 'get_balance', 'get_transaction', 'get_block']);
+  // Changed in 7C-31: and the read-only Diana gas price and fee tool.
+  assert.deepEqual(listTools().map(entry => entry.id), ['get_evm_block_number', 'get_balance', 'get_transaction', 'get_block', 'get_gas_fees']);
 });
 
 test('registry entries and the tool list are immutable', () => {
@@ -674,7 +675,14 @@ const describe = decision => decision.kind === 'run' ? 'run:' + decision.query
 const countingRpc = () => rpc({
   eth_chainId: id => ok(id, '0x2648'),
   eth_blockNumber: id => ok(id, '0x' + randomHeight().toString(16)),
+  // New in 7C-31: the fee reads of a recognized fee question (see tests/agent-gas.test.mjs).
+  eth_gasPrice: id => ok(id, '0x1a3185c500'),
+  eth_feeHistory: id => ok(id, { oldestBlock: '0x9d0be2', baseFeePerGas: ['0x174876e800', '0x174876e800'], gasUsedRatio: [0] }),
+  eth_maxPriorityFeePerGas: id => ok(id, '0x2e90edd00'),
 });
+// Changed in 7C-31: a fee question reads the fee methods instead of the latest block.
+const GAS_METHODS = ['eth_chainId', 'eth_gasPrice', 'eth_feeHistory', 'eth_maxPriorityFeePerGas'];
+const readMethodsOf = decision => decision.query === 'gas' ? GAS_METHODS : ['eth_chainId', 'eth_blockNumber'];
 
 test('intent labels are the closed set of six', () => {
   assert.deepEqual([...INTENT_LABELS], ['network_check', 'block_number', 'follow_up_repeat', 'follow_up_current', 'unsupported', 'unknown']);
@@ -725,7 +733,7 @@ test('refused, unsupported, and clarification decisions send zero RPC requests',
     const run = await actOnDecision(decision, { fetch });
     if (decision.kind === 'run') {
       assert.ok(run, item.text);
-      assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber'], item.text);
+      assert.deepEqual(methods, readMethodsOf(decision), item.text);
     } else {
       silent++;
       assert.equal(run, undefined, item.text);
@@ -1034,7 +1042,7 @@ test('understood run decisions use only the registry read path (eth_chainId, eth
     if (decision.kind === 'run') {
       runs++;
       assert.ok(run, item.text);
-      assert.deepEqual(methods, ['eth_chainId', 'eth_blockNumber'], item.text);
+      assert.deepEqual(methods, readMethodsOf(decision), item.text);
     } else {
       assert.equal(run, undefined, item.text);
       assert.deepEqual(methods, [], item.text);

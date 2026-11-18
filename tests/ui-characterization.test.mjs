@@ -116,7 +116,8 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
-  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, block: null, earliest: null, calls: [] };
+  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, block: null, earliest: null, calls: [],
+    gasPrice: '0x1a3185c500', feeHistory: { oldestBlock: '0x9d0be2', baseFeePerGas: ['0x174876e800', '0x174876e800'], gasUsedRatio: [0] }, priorityFee: '0x2e90edd00' };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
@@ -132,6 +133,11 @@ const RPC_STUB = `(() => {
     if (body && body.method === 'eth_getTransactionReceipt' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.receipt));
     // New in 7C-30: the scripted block by number, and the node's oldest kept block for "earliest".
     if (body && body.method === 'eth_getBlockByNumber' && rpc.mode === 'ok') return Promise.resolve(reply(id, body.params[0] === 'earliest' ? rpc.earliest : rpc.block));
+    // New in 7C-31: the scripted fee reads; null answers "method not found", as a node without the method does.
+    const fee = body && { eth_gasPrice: 'gasPrice', eth_feeHistory: 'feeHistory', eth_maxPriorityFeePerGas: 'priorityFee' }[body.method];
+    if (fee && rpc.mode === 'ok') return Promise.resolve(rpc[fee] === null
+      ? new Response(JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32601, message: 'the method ' + body.method + ' does not exist/is not available' } }), { headers: { 'content-type': 'application/json' } })
+      : reply(id, rpc[fee]));
     switch (rpc.mode) {
       case 'network_error': return Promise.reject(new TypeError('Failed to fetch'));
       case 'http_500': return Promise.resolve(new Response('upstream detail', { status: 500 }));
@@ -317,7 +323,9 @@ const MSG = {
   // fees, transactions, and other data are not supported yet." A qor1 address's balance is readable now.
   // Changed in the PR #27 review: transaction status lookups by hash are supported now.
   // Changed in 7C-30: a block can be read by its number now.
-  unsupported: 'ELA can check the Diana network, read its latest block or a block by number, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, fees, your transaction history, and other data are not supported yet.',
+  // Changed in 7C-31: the current gas price and fees are readable now ("What is the gas price?" was the
+  // unsupported example in these tests; "What is the swap fee?" is still unsupported).
+  unsupported: 'ELA can check the Diana network, read its latest block or a block by number, show its current gas price and fees, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, your transaction history, and other data are not supported yet.',
 };
 const REFUSAL_TAIL = ' Nothing was sent. Ask for the latest block or a Diana network check instead.';
 const REFUSED = {
@@ -332,6 +340,8 @@ const CONTEXT_NONE = 'Context: none';
 const CONTEXT_BLOCK = 'Context: last successful latest block query · Diana testnet';
 const CONTEXT_NETWORK = 'Context: last successful Diana network check · Diana testnet';
 const BOTH = ['eth_chainId', 'eth_blockNumber'];
+// New in 7C-31: what a fee question reads.
+const GAS_METHODS = ['eth_chainId', 'eth_gasPrice', 'eth_feeHistory', 'eth_maxPriorityFeePerGas'];
 
 // --- Characterization ------------------------------------------------------------------------------
 
@@ -436,7 +446,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         textOnCard: ratio(card.color, card.backgroundColor),
         mutedOnCard: ratio(style('.message').color, card.backgroundColor),
         linkOnCard: ratio(style('.example').color, getComputedStyle(document.querySelector('.command-panel')).backgroundImage.match(/rgb[^)]*\\)/)[0]),
-        badges: [await badge('Send 10 QOR.'), await badge('What is the gas price?'), await badge('Merhaba')],
+        badges: [await badge('Send 10 QOR.'), await badge('What is the swap fee?'), await badge('Merhaba')],
       };
       window.__rpc.mode = 'block_fails';
       page.badges.push(await badge('Check Diana network.'));
@@ -586,7 +596,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     await openPage();
     seen.initial = await evaluate(FLOW);
     for (const [label, command, mode] of [
-      ['refused', 'Send 10 QOR.'], ['spaces', '   '], ['unknown', 'Merhaba'], ['unsupported', 'What is the gas price?'],
+      ['refused', 'Send 10 QOR.'], ['spaces', '   '], ['unknown', 'Merhaba'], ['unsupported', 'What is the swap fee?'],
       ['noContext', 'Tekrar kontrol et.'], ['network', 'Diana ağını kontrol et.'], ['refusedAfterRead', 'Show my private key.'],
       ['partial', 'Diana ağını kontrol et.', 'block_fails'], ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'],
       ['blockError', 'QoreChain son blok numarasını öğren.', 'http_500'], ['block', "What's the latest block?", 'ok'],
@@ -974,7 +984,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
   uiTest('refusals, clarifications, and unsupported reads in both languages', async t => {
     const seen = [];
     for (const command of ['Send 10 QOR.', 'Sign this transaction.', 'Show my private key.', 'Connect my wallet.', 'Deploy this contract.',
-      'What is the gas price?', 'Merhaba', '   ', 'Is mainnet working?', 'Tekrar kontrol et.', 'x'.repeat(501)]) {
+      'What is the swap fee?', 'Merhaba', '   ', 'Is mainnet working?', 'Tekrar kontrol et.', 'x'.repeat(501)]) {
       await openPage();
       await submit(command);
       const en = await evaluate(ANALYSIS);
@@ -989,8 +999,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['Refused', REFUSED.key_material, 'Reddedildi', 'ELA asla özel anahtar, tohum ifadesi, kurtarma ifadesi veya parola istemez ve işlemez. Bunları paylaşmayın. Komut alanı temizlendi.' + tail, 0],
       ['Refused', REFUSED.wallet_control, 'Reddedildi', 'ELA cüzdan bağlamaz, oluşturmaz veya yönetmez.' + tail, 0],
       ['Refused', REFUSED.state_change, 'Reddedildi', 'ELA sözleşme dağıtamaz, stake edemez, takas yapamaz, basım yapamaz veya zincir durumunu başka şekilde değiştiremez; yalnızca Diana test ağını okur.' + tail, 0],
-      // Changed in 7C-28 and 7C-30 (see MSG.unsupported).
-      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu veya numarasını verdiğiniz bir bloğu okuyabilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, ücretler, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
+      // Changed in 7C-28, 7C-30, and 7C-31 (see MSG.unsupported).
+      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu veya numarasını verdiğiniz bir bloğu okuyabilir, güncel gas fiyatını ve ücretlerini gösterebilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
       ['Needs clarification', MSG.clarifyGeneric, 'Açıklama gerekli', "Diana test ağındaki son blok numarasını sorun, ELA'dan Diana ağını kontrol etmesini isteyin veya bir örnek komut kullanın.", 0],
       ['Needs clarification', MSG.clarifyEmpty, 'Açıklama gerekli', 'Bir komut yazın, örneğin "Diana ağını kontrol et." veya "Check Diana network."', 0],
       ['Needs clarification', MSG.clarifyNetwork, 'Açıklama gerekli', 'Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.', 0],
@@ -1120,7 +1130,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       for (const [label, command, mode] of [
         ['ready'], ['refused', 'Send 10 QOR.'], ['success', 'Diana ağını kontrol et.'], ['partial', 'Diana ağını kontrol et.', 'block_fails'],
         ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'], ['blockError', "What's the latest block?", 'http_500'],
-        ['spaces', '   '], ['unsupported', 'What is the gas price?'],
+        ['spaces', '   '], ['unsupported', 'What is the swap fee?'],
       ]) {
         await openPage(mode ?? 'ok');
         if (command) await submit(command);
@@ -1698,7 +1708,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-28: also the balance chunk, loaded only for a command that mentions qor1.
     // Changed in 7C-29: also the transaction chunk, loaded only for a command with a long 0x value.
     // Changed in 7C-30: also the block chunk, loaded only for a command with a digit and a block word.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel', 'transaction'], scripts.join(', '));
+    // Changed in 7C-31: also the gas chunk, loaded only for a command with a fee word.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gas', 'gravur', 'index', 'karot', 'optik', 'panel', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1727,7 +1738,15 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // decision type and its dispatch, and the result branch (161 bytes gzip and 830 bytes, measured).
     const blockChunk = scripts.find(name => name.startsWith('block-'));
     assert.ok(sizes[blockChunk].gzip <= 2 * 1024, `${blockChunk} gzip ${sizes[blockChunk].gzip} bytes exceeds the 2 KiB budget`);
-    assert.ok(sizes[main].gzip <= 14.25 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.25 KiB budget`);
+    // Changed in 7C-31: was 14.25 KiB gzip (main was 14,438 bytes, 154 under). The fee rules, the
+    // reader, and the unit formatting are a lazy chunk; main gains only the registry entry, the
+    // decision type and its dispatch, and the fee trigger; the result shares the block branch (155
+    // bytes gzip and 476 bytes, measured; main is 14,593 bytes, 1 over the old budget). The raw
+    // budget is unchanged.
+    const gasChunk = scripts.find(name => name.startsWith('gas-'));
+    assert.ok(sizes[gasChunk].gzip <= 2 * 1024, `${gasChunk} gzip ${sizes[gasChunk].gzip} bytes exceeds the 2 KiB budget`);
+    for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', 'eth_sign']) assert.equal(readFileSync(join(env.outDir, 'assets', gasChunk), 'utf8').includes(marker), false, marker);
+    assert.ok(sizes[main].gzip <= 14.5 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.5 KiB budget`);
     assert.ok(sizes[main].bytes <= 39 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 39 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
@@ -1986,6 +2005,68 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     expectView(t, await submit('blok 10275626 göster'), { state: 'Error', block: '—', rpc: ['eth_chainId', 'eth_getBlockByNumber'] }, 'rpc failure');
   });
 
+  // New in 7C-31: the current gas price and fees on Diana.
+  const GAS_EN = {
+    price: 'Gas price on Diana testnet, read via EVM JSON-RPC (chain 9800 verified): 112500000000 wei (112.5 gwei).',
+    base: ' Base fee in block 10292194: 100000000000 wei (100 gwei).',
+    priority: ' Suggested priority fee: 12500000000 wei (12.5 gwei).',
+    estimate: ' Estimated network fee for a standard 21,000-gas transfer at this gas price: 2362500000000000 wei (0.0023625 QOR). This estimate holds only for a plain QOR transfer; other transactions use more gas, and the price can change. No transaction was created, signed, or sent.',
+  };
+
+  uiTest('fee query (Turkish and English): gas price in wei and gwei, base and priority fee apart, a 21,000-gas transfer estimate; the context is unchanged', async t => {
+    await openPage();
+    const turkishQuery = await submit("Diana'da gas ücreti ne kadar?");
+    expectView(t, turkishQuery, {
+      state: 'Success', block: '10292194', chain: 'qorechain-diana', evmChain: '9800', context: CONTEXT_NONE, planVisible: false,
+      message: GAS_EN.price + GAS_EN.base + GAS_EN.priority + GAS_EN.estimate, rpc: GAS_METHODS,
+    }, 'full');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_gasPrice' }, 'flow code');
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.equal(turkish, "Diana test ağında gas fiyatı EVM JSON-RPC ile okundu (zincir 9800 doğrulandı): 112500000000 wei (112.5 gwei). 10292194 numaralı bloktaki taban ücret (base fee): 100000000000 wei (100 gwei). Önerilen öncelik ücreti (priority fee): 12500000000 wei (12.5 gwei). Bu gas fiyatıyla standart 21.000 gas'lık bir transferin tahmini ağ ücreti: 2362500000000000 wei (0.0023625 QOR). Bu tahmin yalnızca basit bir QOR transferi için geçerlidir; diğer işlemler daha fazla gas kullanır ve fiyat değişebilir. Hiçbir işlem oluşturulmadı, imzalanmadı veya gönderilmedi.");
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+
+    await submit('Son blok kaç?');
+    const english = await submit('What is the gas price?');
+    expectView(t, english, { state: 'Success', block: '10292194', context: CONTEXT_BLOCK, rpc: GAS_METHODS }, 'english');
+    // The next latest-block query restores the method name in the flow.
+    await submit('Son blok kaç?');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_blockNumber' }, 'after');
+  });
+
+  uiTest('fee query: a node without fee history or priority fee shows only what it returned; failures, transfers, and other networks are explained', async t => {
+    await openPage();
+    await evaluate(`window.__rpc.feeHistory = null`);
+    expectView(t, await submit('What are the current fees on Diana testnet?'), {
+      state: 'Success', block: '—', rpc: GAS_METHODS,
+      message: GAS_EN.price + ' The node returned no base fee (eth_feeHistory).' + GAS_EN.priority + GAS_EN.estimate,
+    }, 'no fee history');
+    await evaluate(`window.__rpc.priorityFee = null`);
+    const priceOnly = await submit('gas price');
+    expectView(t, priceOnly, {
+      state: 'Success', block: '—', rpc: GAS_METHODS,
+      message: GAS_EN.price + ' The node returned no base fee (eth_feeHistory). The node returned no priority fee (eth_maxPriorityFeePerGas).' + GAS_EN.estimate,
+    }, 'price only');
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.match(turkish, /Düğüm taban ücret döndürmedi \(eth_feeHistory\)\. Düğüm öncelik ücreti döndürmedi \(eth_maxPriorityFeePerGas\)\. Bu gas fiyatıyla/);
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+    await evaluate(`window.__rpc.feeHistory = { oldestBlock: 'latest', baseFeePerGas: [], gasUsedRatio: [] }`);
+    expectView(t, await submit('gas price'), { state: 'Error', block: '—', message: 'Invalid EVM fee data: fee history.', rpc: ['eth_chainId', 'eth_gasPrice', 'eth_feeHistory'] }, 'bad fee history');
+
+    for (const [command, state] of [
+      ['Send 5 QOR and tell me the gas fee.', 'Refused'],
+      ['Mainnet gas ücreti ne kadar?', 'Needs clarification'],
+      ['What is the swap fee?', 'Unsupported'],
+    ]) {
+      expectView(t, await submit(command), { state, rpc: [] }, command);
+    }
+    await setMode('network_error');
+    expectView(t, await submit('Gas ücreti ne kadar?'), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    await setMode('wrong_chain');
+    expectView(t, await submit('Gas ücreti ne kadar?'), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+    await setMode('block_fails');
+    expectView(t, await submit('Gas ücreti ne kadar?'), { state: 'Error', block: '—', rpc: ['eth_chainId', 'eth_gasPrice'] }, 'rpc failure');
+  });
+
   uiTest('balance query: invalid address, EVM address, or a transfer sends nothing; read failures are explained', async t => {
     await openPage();
     for (const [command, state] of [
@@ -2106,7 +2187,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['Connect my wallet.', 'Refused', REFUSED.wallet_control],
       ['Deploy this contract.', 'Refused', REFUSED.state_change],
       ['Bakiyeyi göster.', 'Unsupported', MSG.unsupported],
-      ['What is the gas price?', 'Unsupported', MSG.unsupported],
+      ['What is the swap fee?', 'Unsupported', MSG.unsupported],
       ['Son blok numarasını öğren ve bakiyeyi göster.', 'Unsupported', MSG.unsupported],
       ['Diana kimdir?', 'Needs clarification', MSG.clarifyGeneric],
       ['Who is Diana?', 'Needs clarification', MSG.clarifyGeneric],
@@ -2162,7 +2243,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.deepEqual(attacks.calls, []);
     assert.equal(attacks.context, CONTEXT_NETWORK);
     assert.deepEqual(safe.results.filter(([, state]) => state === 'Refused'), []);
-    assert.ok(safe.calls.every(method => method === 'eth_chainId' || method === 'eth_blockNumber'), safe.calls.join());
+    // Changed in 7C-31: the two transfer-fee questions in the safe set read the fee methods.
+    assert.ok(safe.calls.every(method => [...BOTH, ...GAS_METHODS].includes(method)), safe.calls.join());
   });
 
   uiTest('a refused key-material command is cleared from the command field; other commands stay', async t => {

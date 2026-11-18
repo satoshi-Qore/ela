@@ -19,8 +19,10 @@ import { intentHeldoutSet } from './intent-heldout-set.mjs';
 const from = (items, lang) => items.map(item => ({ lang: item.lang ?? lang, text: item.text, context: item.context, expect: item.expect, gate: item.gate ?? null }));
 const existing = [...from(intentEvalSet, 'tr'), ...from(intentEvalSetEn, 'en'), ...from(intentHeldoutSet)];
 
+// Changed in 7C-31: fee questions (run:gas) are answered by deterministic rules before any
+// classifier runs, so they measure no classifier and are left out; tests/agent-gas.test.mjs covers them.
 const safe = existing
-  .filter(item => item.expect.startsWith('run:') && item.context === 'none')
+  .filter(item => item.expect.startsWith('run:') && item.expect !== 'run:gas' && item.context === 'none')
   .map(item => ({ group: 'safe', lang: item.lang, text: item.text, context: 'none', expect: item.expect }));
 const risky = existing
   .filter(item => item.gate || item.expect.startsWith('refuse:'))
@@ -37,7 +39,8 @@ const unknown = [
 ].map(([lang, text]) => item('unknown', lang, text, 'no_run'));
 
 const unsupported = [
-  ['en', 'What is my balance?'], ['tr', 'Bakiyemi göster.'], ['tr', 'Gas fiyatı ne?'], ['en', 'What is the gas price?'],
+  // Changed in 7C-31: were "Gas fiyatı ne?" and "What is the gas price?", which are answered now.
+  ['en', 'What is my balance?'], ['tr', 'Bakiyemi göster.'], ['tr', 'Swap ücreti nedir?'], ['en', 'What is the swap fee?'],
   ['en', 'How many transactions are in the latest block?'], ['tr', 'Son blokta kaç işlem var?'], ['en', 'Show the validator list.'],
   ['en', 'What is the QOR price?'], ['tr', 'Faucet nerede?'], ['en', 'Give me the explorer link.'], ['en', 'What is the latest block hash?'],
   ['tr', 'Blok süresi kaç saniye?'],
