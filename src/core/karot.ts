@@ -7,7 +7,7 @@
 // assembly casts a shadow under one light from the upper left. A collar the probe really passed
 // carries a thin state inlay; the collar on a blocked stage's floor becomes the red barrier plate.
 // The bore is lit only through sections whose stage succeeded. Nothing moves.
-import { c, E, el, G, grid, header, kit, linear, P, R, RAN, reachIndex, stopIndex, stroke, svg, symbol, txt } from './draw.ts';
+import { c, E, el, G, grid, header, kit, linear, OUT, P, R, rim, RAN, reachIndex, stopIndex, stroke, svg, symbol, txt } from './draw.ts';
 import type { CoreRecord, Render, Text } from './draw.ts';
 
 interface Geometry { x: number; top: number; w: number; h: number; ry: number; ruler: number; labelX: number; mobile: boolean }
@@ -42,7 +42,7 @@ function specimen(s: Element, r: CoreRecord, id: string, g: Geometry, t: Text): 
   const stop = stopIndex(r), reach = reachIndex(r);
   const through = stop < 0 && r.stages[5].status === 'ok';
   const depthLayer = stop >= 0 ? stop : through ? 5 : reach;
-  const depth = depthLayer < 0 ? top - 18 : top + (depthLayer + 1) * h - (depthLayer === 5 ? 10 : 6);
+  const depth = depthLayer < 0 ? top - 20 : top + (depthLayer + 1) * h - (depthLayer === 5 ? 10 : 6);
   const opened = (i: number): boolean => i <= depthLayer && r.stages[i].status === 'ok';
 
   // Key light behind the assembly, kept inside the drawing (a shape past its edge would count as overflow).
@@ -54,23 +54,32 @@ function specimen(s: Element, r: CoreRecord, id: string, g: Geometry, t: Text): 
     if (major && !mobile) txt(s, ruler - 16, y + 4, String(i / 6).padStart(2, '0'), { size: 11, color: 'var(--core-ink-4)', anchor: 'end' });
   }
 
-  // The assembly, drawn from the pedestal up so each part sits on the one below.
-  const a = G(s, { filter: u('sh') });
+  // The assembly, drawn from the pedestal up so each part sits on the one below. Every metal part is
+  // a cylinder ('mh': specular line, terminator, reflected light), a lit top face, a polished chamfer
+  // catching the key light on its front-left edge, and a dark contact line where it meets the next part.
+  const a = G(s, { filter: u('sh') }), q = ry / 15;
   const metal = (y0: number, y1: number, rx: number, e: number): void => {
-    P(a, drum(y0, y1, rx, e), `fill:${u('mh')}`);
-    E(a, cx, y0, rx, e, `fill:${u('mv')};stroke:var(--mat-edge);stroke-width:0.5;stroke-opacity:0.5`);
+    P(a, drum(y0, y1, rx, e), `fill:${u('mh')};${OUT}`);
+    E(a, cx, y0, rx, e, `fill:${u('mv')};${OUT}`);
+    rim(a, cx, y0, rx - 0.6, e - 0.4, 'var(--mat-spec)', 1.1, 27, 21, 0.9);
+    P(a, arc(y1, rx, e), 'fill:none;stroke:var(--mat-line);stroke-opacity:var(--mat-line-o);stroke-width:1.3');
   };
-  metal(bottom, bottom + 14, w / 2 + 18, ry + 4);
+  metal(bottom + 9 * q, bottom + 22 * q, w / 2 + 28 * q, ry + 6 * q);
+  metal(bottom, bottom + 10 * q, w / 2 + 15 * q, ry + 3.5 * q);
   for (let i = 5; i >= 0; i--) {
-    const st = r.stages[i], y0 = top + i * h, y1 = i < 5 ? y0 + h - 3 : bottom, mid = y0 + h / 2 + ry * 0.5, d = drum(y0, y1);
+    const st = r.stages[i], y0 = top + i * h, y1 = i < 5 ? y0 + h - 4 : bottom, mid = y0 + h / 2 + ry * 0.5, d = drum(y0, y1);
     // The collar on this section's floor: after the section below, before this one, which sits on it.
+    // Its machined groove stays dark; it carries the state inlay only when the probe really passed it.
     if (i < 5) {
-      const yc = y0 + h;
-      metal(yc - 3, yc + 3, w / 2 + 6, ry + 1.5);
+      const yc = y0 + h, ge = ry + 2, gr = w / 2 + 7;
+      metal(yc - 4, yc + 5, gr, ge);
       if (st.status === 'blocked') {
-        P(a, arc(yc + 1, w / 2 + 6, ry + 1.5), `fill:none;stroke:${c('blocked')};stroke-width:5`);
-        P(a, arc(yc + 8, w / 2, ry), `fill:none;stroke:${c('blocked')};stroke-width:0.8;opacity:0.6`);
-      } else if (opened(i)) P(a, arc(yc + 0.5, w / 2 + 6, ry + 1.5), `fill:none;stroke:${c('ok')};stroke-width:1.3`);
+        P(a, arc(yc + 1, gr, ge), `fill:none;stroke:${c('blocked')};stroke-width:5`);
+        P(a, arc(yc + 10, w / 2, ry), `fill:none;stroke:${c('blocked')};stroke-width:0.8;opacity:0.6`);
+      } else {
+        P(a, arc(yc + 1, gr, ge), opened(i) ? `fill:none;stroke:${c('ok')};stroke-width:1.7` : 'fill:none;stroke:var(--mat-lo);stroke-width:1.2');
+        P(a, arc(yc + 2.3, gr, ge), 'fill:none;stroke:var(--mat-spec);stroke-width:0.6;opacity:0.35');
+      }
     }
     P(a, d, `fill:${u('m' + i)}`);
     P(a, d, `fill:${u('shade')}`);
@@ -85,29 +94,35 @@ function specimen(s: Element, r: CoreRecord, id: string, g: Geometry, t: Text): 
       P(a, f, `fill:none;${stroke('failed', 1.5)}`);
     }
   }
-  // End cap with a glass window, and the probe drive above it.
-  metal(top - 16, top + 3, w / 2 + 7, ry + 2);
-  E(a, cx, top - 16, w / 2 - 12, ry - 4, 'fill:var(--layer-top)');
-  E(a, cx, top - 16, w / 2 - 12, ry - 4, `fill:${u('gl')};stroke:var(--mat-lo);stroke-width:1.2`);
-  for (let y = top + h / 6; y < bottom; y += h / 6) el('line', { x1: x + w + 7, y1: y, x2: x + w + 11, y2: y, style: 'stroke:var(--core-line-2);stroke-width:0.8' }, s);
+  // End cap: a metal rim around a recessed sapphire window (shadow on the near-left wall, light on the far right).
+  const wy = top - 18, wr = w / 2 - 13, we = ry - 4.6;
+  metal(wy, top + 3, w / 2 + 8, ry + 2);
+  E(a, cx, wy, w / 2 - 10, ry - 3.5, 'fill:var(--mat-lo)');
+  E(a, cx, wy + 1.2, wr, we, 'fill:var(--layer-top)');
+  E(a, cx, wy + 1.2, wr, we, `fill:${u('gl')};stroke:var(--glass-edge);stroke-width:0.6;stroke-opacity:0.5`);
+  rim(a, cx, wy + 1.2, wr, we, 'var(--mat-shadow)', 2.4, 48, 32, 0.55);
+  rim(a, cx, wy, w / 2 - 10, ry - 3.5, 'var(--mat-spec)', 0.8, 2, 20, 0.6);
+  for (let y = top + h / 6; y < bottom; y += h / 6) el('line', { x1: x + w + 8, y1: y, x2: x + w + 12, y2: y, style: 'stroke:var(--core-line-2);stroke-width:0.8' }, s);
 
-  // The bore, lit only through sections whose stage succeeded, with a ring at each joint passed.
-  if (depth > top - 16) {
-    R(s, cx - 7, top - 16, 14, depth - top + 16, 'fill:var(--bore)');
-    el('line', { x1: cx + 6.6, y1: top - 16, x2: cx + 6.6, y2: depth, style: 'stroke:var(--shade-hi);stroke-width:0.6;opacity:0.3' }, s);
+  // The bore, lit only through sections whose stage succeeded.
+  if (depth > wy) {
+    R(s, cx - 7, wy + 1, 14, depth - wy - 1, 'fill:var(--bore)');
+    el('line', { x1: cx + 6.6, y1: wy + 1, x2: cx + 6.6, y2: depth, style: 'stroke:var(--shade-hi);stroke-width:0.6;opacity:0.3' }, s);
     r.stages.forEach((st, i) => {
       const y0 = top + i * h, y1 = Math.min(y0 + h, depth);
       if (y1 <= y0) return;
       if (opened(i)) R(s, cx - 6, y0 + 3, 12, y1 - y0 - 6, `fill:${c('ok')};opacity:0.22`);
       if (st.status === 'running') R(s, cx - 6, y0, 12, y1 - y0, `fill:${u('lit')}`);
     });
-    E(s, cx, top - 16, 7, 2.4, 'fill:var(--bore);stroke:var(--mat-hi);stroke-width:0.6');
+    E(s, cx, wy + 1.2, 7, 2.4, 'fill:var(--bore);stroke:var(--mat-hi);stroke-width:0.6');
   }
-  const tip = Math.max(depth, top - 26), hd = G(s, { filter: u('ss') });
-  R(hd, cx - 16, top - 66, 32, 18, `fill:${u('mv')};stroke:var(--mat-lo);stroke-width:0.8`, 3);
-  R(hd, cx - 10, top - 59, 20, 3, 'fill:var(--mat-lo)', 1.5);
-  R(hd, cx - 2.5, top - 48, 5, tip - 10 - (top - 48), `fill:${u('mh')}`);
-  R(hd, cx - 4.5, tip - 13, 9, 3, 'fill:var(--mat-mid)', 1);
+  // The probe: a drive block, a ground rod with one specular line, a collar, a tip.
+  const tip = Math.max(depth, top - 28), hd = G(s, { filter: u('ss') });
+  R(hd, cx - 16, top - 70, 32, 18, `fill:${u('mv')};${OUT}`, 3);
+  R(hd, cx - 10, top - 63, 20, 3, 'fill:var(--mat-lo)', 1.5);
+  R(hd, cx - 2.5, top - 52, 5, tip - 10 - (top - 52), `fill:${u('mh')}`);
+  el('line', { x1: cx - 1.4, y1: top - 52, x2: cx - 1.4, y2: tip - 12, style: 'stroke:var(--mat-spec);stroke-width:0.6;opacity:0.85' }, hd);
+  R(hd, cx - 4.5, tip - 13, 9, 3, `fill:${u('mv')}`, 1);
   el('polygon', { points: `${cx - 4},${tip - 10} ${cx + 4},${tip - 10} ${cx},${tip}`, style: 'fill:var(--probe-tip)' }, hd);
 
   r.stages.forEach((st, i) => {

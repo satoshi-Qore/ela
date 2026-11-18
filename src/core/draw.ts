@@ -114,28 +114,39 @@ export function radial(defs: Element, id: string, stops: readonly (readonly [num
   for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
 }
 
-// 7C-33 material kit, shared by the three views (one light from the upper left; --mat-* per theme).
-// After kit(s, id): url(#id+'mh') metal lit across x (upright bodies), 'mv' metal lit from above
-// (lying bodies), 'md' metal lit diagonally, 'gl' sapphire glass, 'sp' key light, filter 'sh' a cast
-// shadow and 'ss' a small one.
+// 7C-33 material kit, shared by the three views. One key light from the upper left; --mat-* per theme.
+// After kit(s, id), each gradient fits a shape, not every part gets the same one:
+//   'mh' an upright cylinder: sharp specular line left of centre, terminator, reflected light far right;
+//   'mv' a lying body: polished top chamfer, then the face darkening downward, a lit lower lip;
+//   'md' a flat machined face (brushed, lit diagonally);
+//   'gl' sapphire glass: clear body with a coating tint and one narrow specular streak;
+//   'sp' the key light behind an instrument; filters 'sh' (cast shadow) and 'ss' (contact shadow).
 type Stops = readonly (readonly [number, string, number?])[];
-const H = 'var(--mat-hi)', M = 'var(--mat-mid)', LO = 'var(--mat-lo)';
+const H = 'var(--mat-hi)', M = 'var(--mat-mid)', LO = 'var(--mat-lo)', SP = 'var(--mat-spec)', GE = 'var(--glass-edge)';
 export function kit(s: Element, id: string): Element {
   const d = el('defs', {}, s);
   const lin = (n: string, stops: Stops, x2: number, y2: number): void => {
     const g = el('linearGradient', { id: id + n, x1: 0, y1: 0, x2, y2 }, d);
     for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
   };
-  lin('mh', [[0, LO], [0.14, M], [0.33, H], [0.47, M], [0.8, LO], [0.93, M], [1, LO]], 1, 0);
-  lin('mv', [[0, H], [0.3, M], [0.75, LO], [1, M]], 0, 1);
-  lin('md', [[0, H], [0.45, M], [1, LO]], 1, 1);
-  lin('gl', [[0, 'var(--glass-edge)', 0.6], [0.35, 'var(--glass-1)', 0.22], [1, 'var(--glass-2)', 0.14]], 1, 1);
-  radial(d, id + 'sp', [[0, 'var(--mat-spot)', 0.2], [1, 'var(--mat-spot)', 0]], 0.4, 0.35);
-  for (const [n, dy, b] of [['sh', 6, 5], ['ss', 1.6, 1.2]] as const) {
-    const f = el('filter', { id: id + n, x: '-20%', y: '-20%', width: '150%', height: '160%' }, d);
+  lin('mh', [[0, LO], [0.06, M], [0.17, H], [0.215, SP], [0.26, H], [0.44, M], [0.7, LO], [0.86, LO], [0.94, M, 0.9], [1, LO]], 1, 0);
+  lin('mv', [[0, SP], [0.1, H], [0.38, M], [0.8, LO], [0.92, M], [1, LO]], 0, 1);
+  lin('md', [[0, H], [0.35, M], [0.42, H, 0.9], [0.5, M], [1, LO]], 1, 1);
+  lin('gl', [[0, 'var(--glass-1)', 0.16], [0.2, GE, 0.06], [0.25, GE, 0.8], [0.3, GE, 0.06], [0.65, 'var(--glass-1)', 0.2], [1, 'var(--glass-2)', 0.34]], 1, 1);
+  radial(d, id + 'sp', [[0, 'var(--mat-spot)', 0.22], [1, 'var(--mat-spot)', 0]], 0.4, 0.35);
+  for (const [n, dy, b] of [['sh', 6, 4], ['ss', 1.6, 1]] as const) {
+    const f = el('filter', { id: id + n, x: '-15%', y: '-15%', width: '135%', height: '140%' }, d);
     el('feDropShadow', { dx: dy / 2, dy, stdDeviation: b, style: 'flood-color:var(--mat-shadow);flood-opacity:var(--mat-shadow-o)' }, f);
   }
   return d;
+}
+/** The crisp contact outline of a machined part (strong in Precision Light, quiet in the dark themes). */
+export const OUT = 'stroke:var(--mat-line);stroke-opacity:var(--mat-line-o);stroke-width:0.8';
+/** Light or shadow on one arc of an ellipse only (a chamfer facing the key light, or a recess wall
+ *  turned from it): `from` and `len` are in percent of the outline, which starts at 3 o'clock and
+ *  runs clockwise (25 = 6 o'clock, 50 = 9, 75 = 12). */
+export function rim(p: Element, cx: number, cy: number, rx: number, ry: number, color: string, w: number, from: number, len: number, o = 1): SVGElement {
+  return el('ellipse', { cx, cy, rx, ry, pathLength: 100, style: `fill:none;stroke:${color};stroke-width:${w};opacity:${o};stroke-dasharray:${len} ${100 - len};stroke-dashoffset:${-from}` }, p);
 }
 /** Shape shorthands for the views. */
 export const R = (p: Element, x: number, y: number, w: number, h: number, style: string, rx?: number): SVGElement => el('rect', { x, y, width: w, height: h, rx, style }, p);

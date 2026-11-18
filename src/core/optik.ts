@@ -8,7 +8,7 @@
 // source is an emitter head, the detector a sensor body with a window. A station whose stage never
 // ran is a dim outline in its state's dash. Only the beam segment entering a running station moves
 // (not under reduced motion). The drawing shows execution, not a light measurement.
-import { c, E, el, G, grid, header, kit, P, R, RAN, reachIndex, stopIndex, stroke, svg, symbol, txt } from './draw.ts';
+import { c, E, el, G, grid, header, kit, OUT, P, R, rim, RAN, reachIndex, stopIndex, stroke, svg, symbol, txt } from './draw.ts';
 import type { CoreRecord, CoreStage, Render } from './draw.ts';
 
 const KIND = [0, 1, 2, 3, 2, 0]; // aperture, filter, lens, beam-splitter cube, lens, aperture
@@ -36,30 +36,42 @@ function station(s: Element, id: string, x: number, y: number, rot: string, st: 
   const u = (n: string): string => `url(#${id}${n})`, quiet = !RAN.has(st.status), k = KIND[i], top = k === 3 ? 18 : 56;
   const g = G(s, { transform: `translate(${x} ${y})${rot}`, filter: quiet ? undefined : u('ss'), opacity: quiet ? 0.45 : undefined });
   R(g, -3, top, 6, L - 44 - top, `fill:${u('mh')}`);
-  R(g, -7, L - 46, 14, 38, `fill:${u('mh')}`, 2);
-  R(g, -9, L - 49, 18, 5, `fill:${u('mv')}`, 1.5);
-  R(g, -22, L - 9, 44, 10, `fill:${u('mv')};stroke:var(--mat-lo);stroke-width:0.6`, 2);
+  R(g, -7, L - 46, 14, 38, `fill:${u('mh')};${OUT}`, 2);
+  R(g, -9, L - 49, 18, 5, `fill:${u('mv')};${OUT}`, 1.5);
+  R(g, -22, L - 9, 44, 10, `fill:${u('mv')};${OUT}`, 2);
+  P(g, `M-20 ${L - 8.2} h40`, 'stroke:var(--mat-spec);stroke-width:0.7;opacity:0.8');
   for (const dx of [-15, 15]) E(g, dx, L - 4, 1.6, 1.6, 'fill:var(--mat-lo)');
   if (k === 3) {
     R(g, -12, -18, 32, 36, 'fill:var(--mat-lo)', 3);
-    R(g, -16, -18, 32, 36, `fill:${u('mv')};stroke:var(--mat-edge);stroke-width:0.5;stroke-opacity:0.5`, 3);
+    R(g, -16, -18, 32, 36, `fill:${u('mv')};${OUT}`, 3);
+    P(g, 'M-13 -17.2 h26', 'stroke:var(--mat-spec);stroke-width:0.8;opacity:0.85');
+    R(g, -11, -13, 22, 26, 'fill:var(--mat-line);opacity:0.75', 1.5);
     R(g, -10, -12, 20, 24, 'fill:var(--core-well)');
-    R(g, -10, -12, 20, 24, `fill:${u('gl')}`);
+    R(g, -10, -12, 20, 24, `fill:${u('gl')};stroke:var(--glass-edge);stroke-width:0.6;stroke-opacity:0.6`);
     P(g, 'M-10 12 L10 -12', 'stroke:var(--glass-edge);stroke-width:0.8;opacity:0.7');
     R(g, -19, -21, 38, 42, `fill:none;${stroke(st.status, 1)}`, 5);
   } else {
     E(g, 5, 0, 12, 58, 'fill:var(--mat-lo)');
-    E(g, 0, 0, 12, 58, `fill:${u('mh')};stroke:var(--mat-edge);stroke-width:0.5;stroke-opacity:0.5`);
-    E(g, 0, 0, 7.5, 47, 'fill:var(--core-well)');
-    if (k) E(g, 0, 0, 7.5, 47, `fill:${k === 1 ? 'var(--glass-2);fill-opacity:0.45' : u('gl')}`);
-    else E(g, 0, 0, 2.6, 10, `fill:${u('gl')};stroke:var(--mat-mid);stroke-width:0.6`);
-    if (k === 2) P(g, 'M-3 -34 Q-5.5 -4 -3 26', 'fill:none;stroke:var(--glass-edge);stroke-width:1.2;opacity:0.6');
+    // Ring mount: a turned rim (chamfer catching the key light), a dark seat, then the optic.
+    E(g, 0, 0, 12, 58, `fill:${u('mh')};${OUT}`);
+    rim(g, 0, 0, 11.2, 57.2, 'var(--mat-spec)', 1, 54, 16, 0.85);
+    E(g, 0, 0, 8.6, 48.5, 'fill:var(--mat-line);opacity:0.8');
+    E(g, 0, 0, 7.5, 47, k ? 'fill:var(--core-well)' : `fill:${u('md')}`);
+    if (k) {
+      // Glass: coating tint, one narrow specular streak, and its edge thickness as a second rim.
+      E(g, 0, 0, 7.5, 47, `fill:${k === 1 ? 'var(--glass-2);fill-opacity:0.42' : u('gl')}`);
+      E(g, 1.4, 0, 6.6, 46, 'fill:none;stroke:var(--glass-1);stroke-width:0.8;opacity:0.45');
+      E(g, 0, 0, 7.5, 47, 'fill:none;stroke:var(--glass-edge);stroke-width:0.6;opacity:0.6');
+    } else E(g, 0, 0, 2.6, 10, `fill:${u('gl')};stroke:var(--mat-line);stroke-width:0.8`);
+    if (k === 2) P(g, 'M-3.2 -36 Q-5.6 -6 -3.2 24', 'fill:none;stroke:var(--glass-edge);stroke-width:0.9;opacity:0.85');
     for (const dy of [-52, 52]) E(g, 0, dy, 1.4, 1.4, 'fill:var(--mat-lo)');
     E(g, 0, 0, 15, 61, `fill:none;${stroke(st.status, 1)}`);
   }
   if (st.status === 'blocked' && i < 5) {
-    R(g, -9, -20, 18, 40, `fill:${u('mv')};stroke:${c('blocked')};stroke-width:2.2`, 2);
-    E(g, 0, -20, 2.4, 2.4, `fill:var(--core-well);stroke:${c('blocked')};stroke-width:1`);
+    // Shutter: a machined blade swung across the optic on its pivot screw; the red edge is the state.
+    R(g, -9, -20, 18, 40, `fill:${u('md')};stroke:${c('blocked')};stroke-width:2.2`, 2);
+    P(g, 'M-7 -17.5 h14', 'stroke:var(--mat-spec);stroke-width:0.8;opacity:0.8');
+    E(g, 0, -20, 2.6, 2.6, `fill:${u('mv')};${OUT}`);
   }
 }
 /** Measurement point on the axis: a reticle where the signal passed, scatter where it failed. */
@@ -82,9 +94,13 @@ export const render: Render = (host, r, t) => {
     grid(s, 800, 540, 'og'); kit(s, id); header(s, t('core.o.title'));
     const by = 236, rail = 384, xs = [176, 274, 372, 470, 568, 666], p = path(r);
     R(s, 0, 40, 800, 440, `fill:${u('sp')}`);
-    R(G(s, { filter: u('sh') }), 24, 396, 752, 20, `fill:${u('mv')}`, 3);
-    R(s, 36, rail, 728, 12, `fill:${u('mv')};stroke:var(--mat-lo);stroke-width:0.6`, 2);
-    el('line', { x1: 40, y1: rail + 6, x2: 760, y2: rail + 6, style: 'stroke:var(--mat-lo);stroke-width:1' }, s);
+    // Table slab and rail: each with a lit top face, a darker side face, and a crisp contact line.
+    R(G(s, { filter: u('sh') }), 24, 396, 752, 20, `fill:${u('mv')};${OUT}`, 3);
+    el('line', { x1: 27, y1: 397, x2: 773, y2: 397, style: 'stroke:var(--mat-spec);stroke-width:0.8;opacity:0.8' }, s);
+    R(s, 36, rail, 728, 12, `fill:${u('mv')};${OUT}`, 2);
+    R(s, 37, rail + 0.5, 726, 3, 'fill:var(--mat-hi);opacity:0.55', 1);
+    el('line', { x1: 40, y1: rail + 6.5, x2: 760, y2: rail + 6.5, style: 'stroke:var(--mat-line);stroke-opacity:var(--mat-line-o);stroke-width:1.4' }, s);
+    el('line', { x1: 40, y1: rail + 7.8, x2: 760, y2: rail + 7.8, style: 'stroke:var(--mat-spec);stroke-width:0.6;opacity:0.4' }, s);
     for (let x = 36, i = 0; x <= 764; x += 10, i++) {
       const major = i % 10 === 0;
       el('line', { x1: x, y1: 424, x2: x, y2: major ? 436 : 429, style: `stroke:var(${major ? '--core-ink-4' : '--core-line-2'});stroke-width:0.8` }, s);
@@ -94,9 +110,10 @@ export const render: Render = (host, r, t) => {
     // Source: an emitter head on its own post.
     const src = G(s, { filter: u('ss') });
     R(src, 71, 252, 6, 90, `fill:${u('mh')}`);
-    R(src, 67, 338, 14, 46, `fill:${u('mh')}`, 2);
-    R(src, 40, by - 18, 64, 36, `fill:${u('mv')};stroke:var(--mat-lo);stroke-width:0.6`, 5);
-    R(src, 100, by - 21, 9, 42, `fill:${u('mv')};stroke:var(--mat-lo);stroke-width:0.6`, 2);
+    R(src, 67, 338, 14, 46, `fill:${u('mh')};${OUT}`, 2);
+    R(src, 40, by - 18, 64, 36, `fill:${u('mv')};${OUT}`, 5);
+    R(src, 100, by - 21, 9, 42, `fill:${u('mv')};${OUT}`, 2);
+    el('path', { d: `M44 ${by - 16.6} h56 M102 ${by - 19.6} h5`, style: 'stroke:var(--mat-spec);stroke-width:0.8;opacity:0.85' }, src);
     el('path', { d: `M52 ${by - 17} v34 M59 ${by - 17} v34 M66 ${by - 17} v34`, style: 'stroke:var(--mat-lo);stroke-width:1;opacity:0.6' }, src);
     E(s, 110, by, 2.5, 6, 'fill:var(--core-well);stroke:var(--beam-2);stroke-width:1');
     txt(s, 72, 204, t('core.o.cmd'), { size: 11, color: 'var(--core-ink-3)', anchor: 'middle', spacing: 1 });
@@ -123,10 +140,12 @@ export const render: Render = (host, r, t) => {
     // Detector: a sensor body with a window on its own post.
     const res = r.stages[5], det = G(s, { filter: u('ss') });
     R(det, 737, 296, 6, 50, `fill:${u('mh')}`);
-    R(det, 733, 338, 14, 46, `fill:${u('mh')}`, 2);
-    R(det, 712, by - 30, 52, 60, `fill:${u('mv')};stroke:var(--mat-lo);stroke-width:0.6`, 6);
-    R(s, 724, by - 15, 30, 30, 'fill:var(--core-well);stroke:var(--mat-lo);stroke-width:1', 3);
-    R(s, 724, by - 15, 30, 30, `fill:${u('gl')};opacity:0.5`, 3);
+    R(det, 733, 338, 14, 46, `fill:${u('mh')};${OUT}`, 2);
+    R(det, 712, by - 30, 52, 60, `fill:${u('mv')};${OUT}`, 6);
+    el('line', { x1: 717, y1: by - 28.8, x2: 759, y2: by - 28.8, style: 'stroke:var(--mat-spec);stroke-width:0.8;opacity:0.85' }, s);
+    R(s, 722, by - 17, 34, 34, 'fill:var(--mat-line);opacity:0.75', 4);
+    R(s, 724, by - 15, 30, 30, 'fill:var(--core-well)', 3);
+    R(s, 724, by - 15, 30, 30, `fill:${u('gl')};opacity:0.6;stroke:var(--glass-edge);stroke-width:0.6;stroke-opacity:0.5`, 3);
     E(s, 712, by, 3, 9, 'fill:var(--core-well);stroke:var(--mat-hi);stroke-width:0.8');
     if (p.through) symbol(s, 739, by, res.status, 9);
     txt(s, 738, 196, t('core.o.det'), { size: 11, color: 'var(--core-ink-3)', anchor: 'middle', spacing: 1 });
