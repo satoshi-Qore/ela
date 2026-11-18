@@ -266,6 +266,30 @@ async function submit(command, { timeoutMs = 20_000 } = {}) {
 
 const view = () => evaluate(READ_VIEW);
 
+/**
+ * New in the PR #27 review: a transaction lookup waits for the confirm button. Checks that the
+ * command sent nothing, cleared the field, and showed the masked hash, then presses the button.
+ */
+async function confirmTx(command) {
+  const waiting = await submit(command);
+  const shown = await evaluate(`({ hidden: document.getElementById('tx-confirm').hidden, field: document.getElementById('command').value })`);
+  if (!PROBE) {
+    assert.equal(waiting.state, 'Needs confirmation', command);
+    assert.deepEqual(waiting.rpc, [], command);
+    assert.deepEqual(shown, { hidden: false, field: '' }, command);
+  }
+  return evaluate(`(async () => {
+    document.getElementById('tx-confirm-yes').click();
+    const started = Date.now();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    while (document.getElementById('run').disabled || document.getElementById('query-state').dataset.state === 'querying') {
+      if (Date.now() - started > 20000) throw new Error('interface did not settle');
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    return ${READ_VIEW};
+  })()`);
+}
+
 /** In probe mode, prints the observation; otherwise asserts the expected subset of fields. */
 function expectView(t, observed, expected, label = '') {
   if (PROBE) {
@@ -289,7 +313,8 @@ const MSG = {
   clarifyEmpty: 'Type a command, for example "Check Diana network." or "Diana ağını kontrol et."',
   // Changed in 7C-28: was "ELA can only check the Diana network and read its latest block. Balances,
   // fees, transactions, and other data are not supported yet." A qor1 address's balance is readable now.
-  unsupported: 'ELA can check the Diana network, read its latest block, and read the QOR balance of a qor1 address you give it. Your own balance, fees, transactions, and other data are not supported yet.',
+  // Changed in the PR #27 review: transaction status lookups by hash are supported now.
+  unsupported: 'ELA can check the Diana network, read its latest block, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, fees, your transaction history, and other data are not supported yet.',
 };
 const REFUSAL_TAIL = ' Nothing was sent. Ask for the latest block or a Diana network check instead.';
 const REFUSED = {
@@ -962,7 +987,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['Refused', REFUSED.wallet_control, 'Reddedildi', 'ELA cüzdan bağlamaz, oluşturmaz veya yönetmez.' + tail, 0],
       ['Refused', REFUSED.state_change, 'Reddedildi', 'ELA sözleşme dağıtamaz, stake edemez, takas yapamaz, basım yapamaz veya zincir durumunu başka şekilde değiştiremez; yalnızca Diana test ağını okur.' + tail, 0],
       // Changed in 7C-28 (see MSG.unsupported).
-      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu okuyabilir ve verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir. Kendi bakiyeniz, ücretler, işlemler ve diğer veriler henüz desteklenmiyor.', 0],
+      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu okuyabilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, ücretler, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
       ['Needs clarification', MSG.clarifyGeneric, 'Açıklama gerekli', "Diana test ağındaki son blok numarasını sorun, ELA'dan Diana ağını kontrol etmesini isteyin veya bir örnek komut kullanın.", 0],
       ['Needs clarification', MSG.clarifyEmpty, 'Açıklama gerekli', 'Bir komut yazın, örneğin "Diana ağını kontrol et." veya "Check Diana network."', 0],
       ['Needs clarification', MSG.clarifyNetwork, 'Açıklama gerekli', 'Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.', 0],
@@ -1688,8 +1713,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // measured).
     const transactionChunk = scripts.find(name => name.startsWith('transaction-'));
     assert.ok(sizes[transactionChunk].gzip <= 2.25 * 1024, `${transactionChunk} gzip ${sizes[transactionChunk].gzip} bytes exceeds the 2.25 KiB budget`);
-    assert.ok(sizes[main].gzip <= 13.75 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 13.75 KiB budget`);
-    assert.ok(sizes[main].bytes <= 37 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 37 KiB budget`);
+    // Changed in the PR #27 review: was 13.75 KiB gzip and 37 KiB (main was 14,009 and 37,465
+    // bytes). A transaction lookup now waits for an explicit confirm button before any request, so
+    // the session keeps the waiting lookup and the page has the confirm and cancel handlers. Main
+    // gains about 270 bytes gzip and 1,055 bytes (measured, after folding the confirm path into the
+    // existing session handler); the rules stay in the lazy transaction chunk.
+    assert.ok(sizes[main].gzip <= 14 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14 KiB budget`);
+    assert.ok(sizes[main].bytes <= 38 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 38 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
@@ -1808,7 +1838,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
   uiTest('transaction query (Turkish and English): success, failure, pending, and not found are told apart and the context is unchanged', async t => {
     await openPage();
     await scriptTx('0x9ccb2a', '0x1');
-    const success = await submit(TX_HASH + ' işleminin durumu nedir?');
+    const success = await confirmTx(TX_HASH + ' işleminin durumu nedir?');
     expectView(t, success, {
       state: 'Success', block: '—', chain: 'qorechain-diana', evmChain: '9800', context: CONTEXT_NONE,
       message: 'Transaction ' + TX_HASH + ' succeeded on Diana testnet (EVM JSON-RPC, chain 9800 verified) in block 10275626. From ' + TX_FROM + ' to ' + TX_TO + ', value 1 QOR, nonce 1211. Gas used: 406133.',
@@ -1821,17 +1851,17 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
 
     await submit('Son blok kaç?');
     await scriptTx('0x9ccb2a', '0x0');
-    const failed = await submit('What is the status of transaction ' + TX_HASH + '?');
+    const failed = await confirmTx('What is the status of transaction ' + TX_HASH + '?');
     expectView(t, failed, { state: 'Success', context: CONTEXT_BLOCK }, 'failed');
     if (!PROBE) assert.match(failed.message, /^Transaction 0x37276931\S+ failed on Diana testnet .* in block 10275626: its receipt status is 0, so its state changes were reverted\./);
 
     await scriptTx(null, null);
-    const pending = await submit('Is transaction ' + TX_HASH + ' pending?');
+    const pending = await confirmTx('Is transaction ' + TX_HASH + ' pending?');
     expectView(t, pending, { state: 'Success', rpc: ['eth_chainId', 'eth_getTransactionByHash'], context: CONTEXT_BLOCK }, 'pending');
     if (!PROBE) assert.match(pending.message, /is pending on Diana testnet .*: the node knows it, but it is not in a block yet\. From /);
 
     await evaluate(`window.__rpc.tx = null; window.__rpc.receipt = null`);
-    const missing = await submit('tx ' + TX_HASH);
+    const missing = await confirmTx('tx ' + TX_HASH);
     expectView(t, missing, { state: 'Success', rpc: ['eth_chainId', 'eth_getTransactionByHash'] }, 'not found');
     if (!PROBE) assert.match(missing.message, /^No transaction 0x37276931\S+ was found on the Diana testnet EVM JSON-RPC/);
     // The next block query restores the method name in the flow.
@@ -1854,10 +1884,30 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const invalid = await submit('tx 0x1234abcd5678');
     if (!PROBE) assert.equal(invalid.message, 'That is not a valid transaction hash. Give one hash of 0x and exactly 64 hexadecimal digits, for example "What is the status of transaction 0x…?" Nothing was sent.');
 
+    // The confirmation explains why it is needed, in both languages, and shows the masked hash only.
+    const waiting = await submit('tx ' + TX_HASH);
+    if (!PROBE) {
+      assert.match(waiting.message, /^Nothing has been sent yet\. A transaction hash and a private key look the same .* which 0x3727…0ee0 is\. Confirm only if it is a public transaction hash/);
+      assert.equal(waiting.message.includes(TX_HASH.slice(6, -4)), false);
+    }
+    const turkishWait = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return [document.getElementById('query-message').textContent, document.getElementById('tx-confirm-yes').textContent]; })()`);
+    if (!PROBE) assert.deepEqual([turkishWait[0].slice(0, 36), turkishWait[1]], ['Henüz hiçbir şey gönderilmedi. İşlem', "Bu bir işlem hash'i, sorgula"]);
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+    // Cancel: nothing is sent and the buttons go away.
+    const cancelled = await evaluate(`(() => { document.getElementById('tx-confirm-no').click(); return { hidden: document.getElementById('tx-confirm').hidden, calls: window.__rpc.calls.length, message: document.getElementById('query-message').textContent }; })()`);
+    if (!PROBE) assert.deepEqual(cancelled, { hidden: true, calls: 0, message: 'Cancelled. Nothing was sent.' });
+    // A new command drops a waiting lookup and hides the buttons; typed "confirm" sends nothing.
+    await submit('tx ' + TX_HASH);
+    for (const typed of ['confirm', 'onayla', 'evet']) {
+      const observed = await submit(typed);
+      expectView(t, observed, { rpc: [] }, typed);
+      if (!PROBE) assert.equal(await evaluate(`document.getElementById('tx-confirm').hidden`), true, typed);
+    }
+
     await setMode('network_error');
-    expectView(t, await submit('tx ' + TX_HASH), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    expectView(t, await confirmTx('tx ' + TX_HASH), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
     await setMode('wrong_chain');
-    expectView(t, await submit('tx ' + TX_HASH), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+    expectView(t, await confirmTx('tx ' + TX_HASH), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
   });
 
   uiTest('balance query: invalid address, EVM address, or a transfer sends nothing; read failures are explained', async t => {

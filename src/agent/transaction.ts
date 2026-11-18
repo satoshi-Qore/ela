@@ -12,10 +12,15 @@ import { DIANA_NETWORK, invokeTool } from './registry.ts';
  * registry's `get_transaction` tool runs.
  *
  * A transaction hash has the same form as a private key (0x and 64 hex digits), which the safety
- * gate refuses as key material. `recognizeTransactionRequest` only accepts a sentence made of a
- * fixed transaction-lookup vocabulary around exactly one 0x-prefixed value; the gate then still runs
- * on the rest of the sentence (see `interpretCommand`). Anything else, including a bare 64-hex value
- * or one next to words like "key" or "anahtar", stays refused by the gate as before.
+ * gate refuses as key material. Its form cannot show that a value is not a private key, so:
+ *
+ * - `recognizeTransactionRequest` only accepts a sentence that names a transaction (işlem, hash,
+ *   tx, makbuz, transaction, receipt), is made only of a fixed lookup vocabulary, and holds exactly
+ *   one 0x-prefixed value. Anything else, including a bare 64-hex value or one next to words like
+ *   "key" or "anahtar", stays refused by the gate as before.
+ * - The gate and the other-network check still run on the rest of the sentence.
+ * - Even then the decision is `confirm`, not `run`: nothing is sent until the user explicitly
+ *   confirms that the value is a transaction hash (`confirmPending` in session.ts).
  */
 
 // Every 0x value in the command, valid hash or not.
@@ -73,7 +78,7 @@ export function decideTransaction(command: string): IntentDecision | undefined {
   if (risk.risk === 'blocked') return Object.freeze({ kind: 'refuse', reason: risk.category, source: 'safety_gate' });
   if (mentionsOtherNetwork(tx.rest)) return Object.freeze({ kind: 'clarify', reason: 'unsupported_network', source: 'input_check' });
   if (tx.kind === 'invalid_hash') return Object.freeze({ kind: 'clarify', reason: 'invalid_hash', source: 'input_check' });
-  return Object.freeze({ kind: 'run', query: 'transaction', intent: 'transaction', source: 'deterministic', hash: tx.hash });
+  return Object.freeze({ kind: 'confirm', query: 'transaction', source: 'deterministic', hash: tx.hash });
 }
 
 /** What the transaction tool returns. */

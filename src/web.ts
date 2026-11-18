@@ -16,7 +16,7 @@ import type { BalanceReading, ToolError, TransactionReading } from './agent/regi
 // text gets a generic one instead of a guess. Technical values (numbers, URLs, RPC method names,
 // error codes) are inserted unchanged.
 
-type QueryState = 'Ready' | 'Querying' | 'Success' | 'Partial' | 'Needs clarification' | 'Refused' | 'Unsupported' | 'Error';
+type QueryState = 'Ready' | 'Querying' | 'Success' | 'Partial' | 'Needs clarification' | 'Needs confirmation' | 'Refused' | 'Unsupported' | 'Error';
 type Lang = 'en' | 'tr';
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string): T => document.querySelector<T>(selector)!;
@@ -38,6 +38,9 @@ const planSource = $('#plan-source');
 const contextStatus = $('#context-status');
 const clearContext = $<HTMLButtonElement>('#clear-context');
 const networkStatus = $('#network-status');
+const txConfirm = $('#tx-confirm');
+const txConfirmYes = $<HTMLButtonElement>('#tx-confirm-yes');
+const txConfirmNo = $<HTMLButtonElement>('#tx-confirm-no');
 
 // --- Language ---------------------------------------------------------------------------------
 
@@ -152,6 +155,8 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-e
 
 clearContext.addEventListener('click', () => {
   session.clear();
+  // Clearing also drops a transaction lookup waiting for confirmation.
+  txConfirm.hidden = true;
   showContext();
   command.focus();
 });
@@ -292,6 +297,14 @@ function showResult(result: CommandResult): void {
       flow('done blocked idle idle idle refused');
       showStatus('Refused', 'refused.' + result.reason, 'refused.tail');
       return;
+    case 'confirm':
+      // The value may be a private key: it is not kept on screen, and nothing is sent until the
+      // user presses the confirm button.
+      command.value = '';
+      flow('done pass recognized idle idle clarify');
+      showStatus('Needs confirmation', () => F('msg.confirm.tx', { preview: result.preview }));
+      txConfirm.hidden = false;
+      return;
     case 'unsupported':
       flow('done pass unsupported idle idle unsupported');
       showStatus('Unsupported', 'msg.unsupported');
@@ -311,11 +324,11 @@ function showResult(result: CommandResult): void {
   }
 }
 
-form.addEventListener('submit', async event => {
-  event.preventDefault();
-  // One command at a time: a submit while a query runs is ignored.
+/** Runs one session call at a time; a submit or click while one runs is ignored. */
+async function perform(call: () => Promise<CommandResult>): Promise<void> {
   if (run.disabled) return;
-  run.disabled = true;
+  run.disabled = txConfirmYes.disabled = txConfirmNo.disabled = true;
+  txConfirm.hidden = true;
 
   plan.hidden = true;
   planSteps.replaceChildren();
@@ -324,13 +337,28 @@ form.addEventListener('submit', async event => {
   showStatus('Querying', 'msg.working');
 
   try {
-    showResult(await session.handleCommand(command.value));
+    showResult(await call());
   } catch {
     showStatus('Error', 'msg.failed');
   } finally {
-    run.disabled = false;
+    run.disabled = txConfirmYes.disabled = txConfirmNo.disabled = false;
     showContext();
   }
+}
+
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  void perform(() => session.handleCommand(command.value));
+});
+
+// The only way a waiting transaction hash is sent: the user's own click on the confirm button.
+txConfirmYes.addEventListener('click', () => void perform(() => session.confirmPending()));
+txConfirmNo.addEventListener('click', () => {
+  session.cancelPending();
+  txConfirm.hidden = true;
+  flow('idle idle idle idle idle idle');
+  showStatus('Ready', 'msg.confirm.cancelled');
+  command.focus();
 });
 
 put(networkStatus, 'net.unchecked');

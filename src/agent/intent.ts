@@ -75,7 +75,8 @@ export type ClarifyReason =
   | 'low_confidence'
   | 'ambiguous_intent'
   | 'invalid_address'
-  | 'invalid_hash';
+  | 'invalid_hash'
+  | 'nothing_to_confirm';
 
 export type DecisionSource = 'safety_gate' | 'input_check' | 'deterministic' | 'classifier';
 
@@ -102,8 +103,9 @@ export type IntentDecision =
       readonly basedOn?: undefined;
     }
   /**
-   * A transaction status read. Only the deterministic transaction rules produce it, with a hash of
-   * exactly 0x and 64 hex digits; a classifier has no label for it and can never supply one.
+   * A transaction status read. Only the session produces it, from a `confirm` decision the user
+   * explicitly confirmed (see `confirmPending` in session.ts); `interpretCommand` never returns it,
+   * and a classifier has no label for it.
    */
   | {
       readonly kind: 'run';
@@ -113,6 +115,12 @@ export type IntentDecision =
       readonly hash: string;
       readonly basedOn?: undefined;
     }
+  /**
+   * A recognized transaction-lookup sentence with a hash of exactly 0x and 64 hex digits. That is
+   * also the form of a private key, and nothing about the value tells them apart, so it sends
+   * nothing: the user must explicitly confirm that the value is a transaction hash first.
+   */
+  | { readonly kind: 'confirm'; readonly query: 'transaction'; readonly source: 'deterministic'; readonly hash: string }
   | { readonly kind: 'refuse'; readonly reason: RiskCategory; readonly source: 'safety_gate' }
   | { readonly kind: 'unsupported'; readonly source: 'classifier'; readonly confidence: number; readonly margin: number }
   | { readonly kind: 'clarify'; readonly reason: ClarifyReason; readonly source: DecisionSource };
@@ -413,7 +421,9 @@ export async function interpretCommand(
   if (normalize(command) === '') return clarify('empty_command', 'input_check');
   if (command.length > MAX_COMMAND_LENGTH) return clarify('command_too_long', 'input_check');
 
-  // A transaction hash has the form of a private key; see decideTransaction in transaction.ts.
+  // A transaction hash has the form of a private key; see decideTransaction in transaction.ts. A
+  // recognized lookup only yields refuse, clarify, or confirm here, never a run: no 64-hex value
+  // reaches the network without the user's explicit confirmation.
   const tx = /0x[0-9a-z]{8}/iu.test(command) ? (await loadTransaction()).decideTransaction(command) : undefined;
   if (tx) return tx;
 
