@@ -44,7 +44,9 @@
   // ?views=tumbler,nivo,drum shows several views side by side, one row per record, at 1:1 scale.
   const CONCEPTS = ['kademe', 'koherens', 'okta'];
   const views = (q.get('views') ?? view).split(',');
-  const renders = await Promise.all(views.map(v => import(CONCEPTS.includes(v) ? `/src/core/quantum/${v}.ts` : `/src/core/${v}.ts`).then(m => m.render)));
+  // A view written name@before renders from the folder given by ?before= (a local snapshot, for before/after shots).
+  const src = v => { const [n, tag] = v.split('@'); return tag ? `${q.get('before')}${n}.ts` : CONCEPTS.includes(n) ? `/src/core/quantum/${n}.ts` : `/src/core/${n}.ts`; };
+  const renders = await Promise.all(views.map(v => import(src(v)).then(m => m.render)));
   const grid = document.getElementById('grid');
   const width = mode === 'mobile' ? 300 : 800;
   grid.style.gridTemplateColumns = `repeat(${q.get('views') ? views.length : cols}, ${width}px)`;
