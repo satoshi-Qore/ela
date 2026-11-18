@@ -117,6 +117,7 @@ async function evaluate(expression) {
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
   const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, block: null, earliest: null, calls: [],
+    code: '0x6080604052', erc20: {},
     gasPrice: '0x1a3185c500', feeHistory: { oldestBlock: '0x9d0be2', baseFeePerGas: ['0x174876e800', '0x174876e800'], gasUsedRatio: [0] }, priorityFee: '0x2e90edd00' };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
@@ -133,6 +134,11 @@ const RPC_STUB = `(() => {
     if (body && body.method === 'eth_getTransactionReceipt' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.receipt));
     // New in 7C-30: the scripted block by number, and the node's oldest kept block for "earliest".
     if (body && body.method === 'eth_getBlockByNumber' && rpc.mode === 'ok') return Promise.resolve(reply(id, body.params[0] === 'earliest' ? rpc.earliest : rpc.block));
+    // New in 7C-32: contract code and the scripted ERC-20 calls (by selector; null reverts).
+    if (body && body.method === 'eth_getCode' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.code));
+    if (body && body.method === 'eth_call' && rpc.mode === 'ok') return Promise.resolve(rpc.erc20[body.params[0].data] === null
+      ? new Response(JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32000, message: 'execution reverted' } }), { headers: { 'content-type': 'application/json' } })
+      : reply(id, rpc.erc20[body.params[0].data] ?? '0x'));
     // New in 7C-31: the scripted fee reads; null answers "method not found", as a node without the method does.
     const fee = body && { eth_gasPrice: 'gasPrice', eth_feeHistory: 'feeHistory', eth_maxPriorityFeePerGas: 'priorityFee' }[body.method];
     if (fee && rpc.mode === 'ok') return Promise.resolve(rpc[fee] === null
@@ -325,7 +331,8 @@ const MSG = {
   // Changed in 7C-30: a block can be read by its number now.
   // Changed in 7C-31: the current gas price and fees are readable now ("What is the gas price?" was the
   // unsupported example in these tests; "What is the swap fee?" is still unsupported).
-  unsupported: 'ELA can check the Diana network, read its latest block or a block by number, show its current gas price and fees, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, your transaction history, and other data are not supported yet.',
+  // Changed in 7C-32: an ERC-20 token can be inspected by its contract address now.
+  unsupported: 'ELA can check the Diana network, read its latest block or a block by number, show its current gas price and fees, inspect an ERC-20 token by its contract address, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, your transaction history, and other data are not supported yet.',
 };
 const REFUSAL_TAIL = ' Nothing was sent. Ask for the latest block or a Diana network check instead.';
 const REFUSED = {
@@ -999,8 +1006,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['Refused', REFUSED.key_material, 'Reddedildi', 'ELA asla özel anahtar, tohum ifadesi, kurtarma ifadesi veya parola istemez ve işlemez. Bunları paylaşmayın. Komut alanı temizlendi.' + tail, 0],
       ['Refused', REFUSED.wallet_control, 'Reddedildi', 'ELA cüzdan bağlamaz, oluşturmaz veya yönetmez.' + tail, 0],
       ['Refused', REFUSED.state_change, 'Reddedildi', 'ELA sözleşme dağıtamaz, stake edemez, takas yapamaz, basım yapamaz veya zincir durumunu başka şekilde değiştiremez; yalnızca Diana test ağını okur.' + tail, 0],
-      // Changed in 7C-28, 7C-30, and 7C-31 (see MSG.unsupported).
-      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu veya numarasını verdiğiniz bir bloğu okuyabilir, güncel gas fiyatını ve ücretlerini gösterebilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
+      // Changed in 7C-28, 7C-30, 7C-31, and 7C-32 (see MSG.unsupported).
+      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu veya numarasını verdiğiniz bir bloğu okuyabilir, güncel gas fiyatını ve ücretlerini gösterebilir, sözleşme adresini verdiğiniz bir ERC-20 tokenini inceleyebilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
       ['Needs clarification', MSG.clarifyGeneric, 'Açıklama gerekli', "Diana test ağındaki son blok numarasını sorun, ELA'dan Diana ağını kontrol etmesini isteyin veya bir örnek komut kullanın.", 0],
       ['Needs clarification', MSG.clarifyEmpty, 'Açıklama gerekli', 'Bir komut yazın, örneğin "Diana ağını kontrol et." veya "Check Diana network."', 0],
       ['Needs clarification', MSG.clarifyNetwork, 'Açıklama gerekli', 'Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.', 0],
@@ -1709,7 +1716,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-29: also the transaction chunk, loaded only for a command with a long 0x value.
     // Changed in 7C-30: also the block chunk, loaded only for a command with a digit and a block word.
     // Changed in 7C-31: also the gas chunk, loaded only for a command with a fee word.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gas', 'gravur', 'index', 'karot', 'optik', 'panel', 'transaction'], scripts.join(', '));
+    // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gas', 'gravur', 'index', 'karot', 'optik', 'panel', 'token', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1746,8 +1754,18 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const gasChunk = scripts.find(name => name.startsWith('gas-'));
     assert.ok(sizes[gasChunk].gzip <= 2 * 1024, `${gasChunk} gzip ${sizes[gasChunk].gzip} bytes exceeds the 2 KiB budget`);
     for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', 'eth_sign']) assert.equal(readFileSync(join(env.outDir, 'assets', gasChunk), 'utf8').includes(marker), false, marker);
-    assert.ok(sizes[main].gzip <= 14.5 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.5 KiB budget`);
-    assert.ok(sizes[main].bytes <= 39 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 39 KiB budget`);
+    // Changed in 7C-32: was 14.5 KiB gzip and 39 KiB (main was 14,593 and 39,826 bytes, 255 and 110
+    // under). The token rules, the EIP-55 checksum (Keccak-256), the ABI decoding, and the reader are
+    // a lazy chunk. Main gains the registry entry and the eth_call scope check, which must stay in
+    // the registry because it is where every tool request is enforced (only name(), symbol(),
+    // decimals(), totalSupply(), to the one validated contract, at "latest"), plus the trigger, the
+    // dispatch, and the result branch: 353 bytes gzip and 1,008 bytes (measured; main is 14,946 and
+    // 40,834 bytes, over both old budgets).
+    const tokenChunk = scripts.find(name => name.startsWith('token-'));
+    assert.ok(sizes[tokenChunk].gzip <= 3 * 1024, `${tokenChunk} gzip ${sizes[tokenChunk].gzip} bytes exceeds the 3 KiB budget`);
+    for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', '0x095ea7b3', '0xa9059cbb', '0x23b872dd']) assert.equal(readFileSync(join(env.outDir, 'assets', tokenChunk), 'utf8').includes(marker), false, marker);
+    assert.ok(sizes[main].gzip <= 14.75 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.75 KiB budget`);
+    assert.ok(sizes[main].bytes <= 40 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 40 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
@@ -2003,6 +2021,70 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     expectView(t, await submit('blok 10275626 göster'), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
     await setMode('block_fails');
     expectView(t, await submit('blok 10275626 göster'), { state: 'Error', block: '—', rpc: ['eth_chainId', 'eth_getBlockByNumber'] }, 'rpc failure');
+  });
+
+  // New in 7C-32: one ERC-20 token by contract address.
+  const TOKEN = '0x67e4862c388a5ead666f5ac340fe9ef2fc1f8f68';
+  const QVEST = {
+    '0x06fdde03': '0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000008516f726556657374000000000000000000000000000000000000000000000000',
+    '0x95d89b41': '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000055156455354000000000000000000000000000000000000000000000000000000',
+    '0x313ce567': '0x0000000000000000000000000000000000000000000000000000000000000006',
+    '0x18160ddd': '0x000000000000000000000000000000000000000000000000000000e8d4a51000',
+  };
+  const TOKEN_RPC = ['eth_chainId', 'eth_getCode', 'eth_call', 'eth_call', 'eth_call', 'eth_call'];
+  const TOKEN_EN = 'ERC-20 token ' + TOKEN + ' read from Diana testnet via read-only eth_call (chain 9800 verified). Name: QoreVest. Symbol: QVEST. Decimals: 6. Total supply: 1000000 (1000000000000 in the smallest unit). No transaction was created, signed, or sent.';
+  const scriptToken = (calls, code = '0x6080604052') => evaluate(`(() => { window.__rpc.code = ${JSON.stringify(code)}; window.__rpc.erc20 = ${JSON.stringify(calls)}; })()`);
+
+  uiTest('token query (Turkish and English): name, symbol, decimals and total supply; only the four calls are sent; the context is unchanged', async t => {
+    await openPage();
+    await scriptToken(QVEST);
+    const found = await submit(TOKEN + ' tokenini incele');
+    expectView(t, found, { state: 'Success', block: '—', chain: 'qorechain-diana', evmChain: '9800', context: CONTEXT_NONE, planVisible: false, message: TOKEN_EN, rpc: TOKEN_RPC }, 'found');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_call' }, 'flow code');
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.equal(turkish, TOKEN + ' ERC-20 tokeni Diana test ağından salt okunur eth_call ile okundu (zincir 9800 doğrulandı). Ad: QoreVest. Sembol: QVEST. Ondalık: 6. Toplam arz: 1000000 (en küçük birimde 1000000000000). Hiçbir işlem oluşturulmadı, imzalanmadı veya gönderilmedi.');
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+
+    await submit('Son blok kaç?');
+    expectView(t, await submit('Inspect token 0x67E4862C388A5EAD666F5AC340FE9EF2FC1F8F68'), { state: 'Success', message: TOKEN_EN, context: CONTEXT_BLOCK }, 'english, upper case');
+    await submit('Son blok kaç?');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_blockNumber' }, 'after');
+  });
+
+  uiTest('token query: no contract, not a token, missing functions; invalid addresses, 64-hex values, and state changes send nothing; failures are explained', async t => {
+    await openPage();
+    await scriptToken(QVEST, '0x');
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Success', block: '—', rpc: ['eth_chainId', 'eth_getCode'],
+      message: 'There is no contract at ' + TOKEN + ' on Diana testnet (EVM JSON-RPC, chain 9800 verified), so it is not a token. Nothing else was read.' }, 'no contract');
+    await scriptToken({ ...QVEST, '0x18160ddd': null });
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Success', rpc: ['eth_chainId', 'eth_getCode', 'eth_call'],
+      message: 'The contract at ' + TOKEN + ' on Diana testnet (EVM JSON-RPC, chain 9800 verified) did not answer totalSupply(), so ELA does not read it as an ERC-20 token.' }, 'not a token');
+    await scriptToken({ ...QVEST, '0x06fdde03': null, '0x313ce567': null });
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Success', rpc: TOKEN_RPC,
+      message: 'ERC-20 token ' + TOKEN + ' read from Diana testnet via read-only eth_call (chain 9800 verified). Name: —. Symbol: QVEST. Decimals: —. Total supply: 1000000000000 (1000000000000 in the smallest unit). No transaction was created, signed, or sent. The contract did not answer name(), decimals(), so no value is shown for it.' }, 'missing');
+    await scriptToken({ ...QVEST, '0x06fdde03': '0x1234' });
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Error', message: 'Invalid token data: name.', rpc: ['eth_chainId', 'eth_getCode', 'eth_call', 'eth_call'] }, 'bad ABI');
+
+    for (const [command, state] of [
+      ['Inspect token 0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeD', 'Needs clarification'],
+      ['Inspect token 0x' + 'a'.repeat(39), 'Needs clarification'],
+      ['Inspect token 0x' + '4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318', 'Refused'],
+      ['Approve token ' + TOKEN, 'Refused'],
+      ['Transfer token ' + TOKEN + ' to Alice', 'Refused'],
+      ['Show balanceOf for token ' + TOKEN, 'Needs clarification'],
+      ['Inspect token ' + TOKEN + ' on Ethereum', 'Needs clarification'],
+    ]) {
+      expectView(t, await submit(command), { state, rpc: [] }, command);
+    }
+    const invalid = await submit('Inspect token 0x' + 'a'.repeat(39));
+    if (!PROBE) assert.equal(invalid.message, 'That is not a valid token contract address. Give one address of 0x and 40 hexadecimal digits, with a correct checksum if it uses capital letters, for example "Inspect token 0x…." Nothing was sent.');
+
+    await setMode('network_error');
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    await setMode('wrong_chain');
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+    await setMode('block_fails');
+    expectView(t, await submit('Show token ' + TOKEN), { state: 'Error', block: '—', rpc: ['eth_chainId', 'eth_getCode'] }, 'rpc failure');
   });
 
   // New in 7C-31: the current gas price and fees on Diana.

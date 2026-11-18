@@ -12,7 +12,7 @@ export type ContextKind = 'block_number' | 'network_check';
  * Every read-only query kind. A `balance` query needs an address, so it is never remembered as
  * context: follow-ups keep referring to the last block query or network check.
  */
-export type QueryKind = ContextKind | 'balance' | 'transaction' | 'block' | 'gas';
+export type QueryKind = ContextKind | 'balance' | 'transaction' | 'block' | 'gas' | 'token';
 
 /**
  * What ELA remembers about the last successful query. It deliberately stores no block height,
@@ -99,7 +99,9 @@ export type QueryRun =
   /** See `runBlockQuery` in block.ts. */
   | { readonly kind: 'block'; readonly blockNumber: number; readonly result: ToolResult }
   /** See `runGasQuery` in gas.ts. */
-  | { readonly kind: 'gas'; readonly result: ToolResult };
+  | { readonly kind: 'gas'; readonly result: ToolResult }
+  /** See `runTokenQuery` in token.ts. */
+  | { readonly kind: 'token'; readonly address: string; readonly result: ToolResult };
 
 /** Runs a query kind with fresh RPC data. Every call sends new requests; nothing is reused. */
 export async function runQuery(kind: ContextKind, options: ReadOptions = {}): Promise<QueryRun> {

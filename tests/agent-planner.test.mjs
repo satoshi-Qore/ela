@@ -230,7 +230,8 @@ test('registry finds the registered read-only Diana tool', () => {
   // Changed in 7C-29: and the read-only Diana transaction tool.
   // Changed in 7C-30: and the read-only Diana block-by-number tool.
   // Changed in 7C-31: and the read-only Diana gas price and fee tool.
-  assert.deepEqual(listTools().map(entry => entry.id), ['get_evm_block_number', 'get_balance', 'get_transaction', 'get_block', 'get_gas_fees']);
+  // Changed in 7C-32: and the read-only ERC-20 token tool.
+  assert.deepEqual(listTools().map(entry => entry.id), ['get_evm_block_number', 'get_balance', 'get_transaction', 'get_block', 'get_gas_fees', 'get_token']);
 });
 
 test('registry entries and the tool list are immutable', () => {

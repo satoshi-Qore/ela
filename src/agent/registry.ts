@@ -4,6 +4,7 @@ import type { ReadOptions } from '../qorechain/read-client.ts';
 import type { BalanceReading } from './balance.ts';
 import type { BlockReading } from './block.ts';
 import type { GasReading } from './gas.ts';
+import type { TokenReading } from './token.ts';
 import type { TransactionReading } from './transaction.ts';
 import type { RpcMethod } from './planner.ts';
 
@@ -31,6 +32,11 @@ export interface ToolDefinition<Data = unknown> {
   readonly readOnly: true;
   /** Every JSON-RPC method the tool may send. Requests outside this list are blocked at runtime. */
   readonly rpcMethods: readonly RpcMethod[];
+  /**
+   * The only `eth_call` data the tool may send: fixed function selectors without arguments, to the
+   * address in its `address` parameter. A tool without it can never send `eth_call`.
+   */
+  readonly callSelectors?: readonly string[];
   readonly params: ParamSpec;
   readonly run: (params: Readonly<Record<string, unknown>>, runtime: RuntimeOptions) => Promise<Data>;
 }
@@ -146,15 +152,34 @@ const getGasFeesTool = defineTool<GasReading>({
   run: async (_params, runtime) => (await loadGas()).readGas(runtime),
 });
 
+export type { TokenReading };
+
+/** The token rules and reader, loaded on demand (a separate chunk in the web build). */
+export const loadToken = () => import('./token.ts');
+
+const getTokenTool = defineTool<TokenReading>({
+  id: 'get_token',
+  description: 'Verify the Diana EVM chain ID (9800), then read ERC-20 token metadata.',
+  network: DIANA_NETWORK,
+  readOnly: true,
+  rpcMethods: ['eth_chainId', 'eth_getCode', 'eth_call'],
+  // name(), symbol(), decimals(), totalSupply(): no approve, transfer, transferFrom, or any argument.
+  callSelectors: Object.freeze(['0x06fdde03', '0x95d89b41', '0x313ce567', '0x18160ddd']),
+  params: { address: { type: 'string', required: true, pattern: /^0x[0-9a-f]{40}$/u } },
+  // The endpoint is fixed; the runtime supplies only fetch and timeoutMs, never a URL.
+  run: async (params, runtime) => (await loadToken()).readToken(params.address as string, runtime),
+});
+
 const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.freeze(Object.assign(Object.create(null), {
   [getEvmBlockNumberTool.id]: getEvmBlockNumberTool,
   [getBalanceTool.id]: getBalanceTool,
   [getTransactionTool.id]: getTransactionTool,
   [getBlockTool.id]: getBlockTool,
   [getGasFeesTool.id]: getGasFeesTool,
+  [getTokenTool.id]: getTokenTool,
 }));
 
-export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction' | 'get_block' | 'get_gas_fees';
+export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction' | 'get_block' | 'get_gas_fees' | 'get_token';
 
 /** Returns the registered tool, or `undefined` for any id that is not an own registry entry. */
 export function getTool(id: unknown): ToolDefinition | undefined {
@@ -193,29 +218,46 @@ export function validateParams(spec: ParamSpec, params: unknown): string | undef
   return undefined;
 }
 
-function rpcMethodOf(body: unknown): string | undefined {
+/** The one contract and the fixed selectors an `eth_call` may use. */
+export interface CallScope {
+  readonly to: string;
+  readonly selectors: readonly string[];
+}
+
+function parseRequest(body: unknown): Record<string, unknown> | undefined {
   if (typeof body !== 'string') return undefined;
   try {
     const parsed: unknown = JSON.parse(body);
-    return isRecord(parsed) && typeof parsed.method === 'string' ? parsed.method : undefined;
+    return isRecord(parsed) ? parsed : undefined;
   } catch {
     return undefined;
   }
 }
 
-/** Pure check: true only when `body` is a JSON-RPC request whose method is in `allowed`. */
-export function isAllowedRpcRequest(body: unknown, allowed: readonly string[]): boolean {
-  const method = rpcMethodOf(body);
-  return method !== undefined && allowed.includes(method);
+/**
+ * Pure check: true only when `body` is a JSON-RPC request whose method is in `allowed`. An
+ * `eth_call` must also match `scope` exactly: `[{ to, data }, "latest"]` with `to` the scope's
+ * contract and `data` one of its selectors, nothing else (no from, value, gas, arguments, or block
+ * overrides). Without a scope, `eth_call` is never allowed.
+ */
+export function isAllowedRpcRequest(body: unknown, allowed: readonly string[], scope?: CallScope): boolean {
+  const request = parseRequest(body);
+  const method = request?.method;
+  if (typeof method !== 'string' || !allowed.includes(method)) return false;
+  if (method !== 'eth_call') return true;
+  const params = request!.params;
+  if (!scope || !Array.isArray(params) || params.length !== 2 || params[1] !== 'latest' || !isRecord(params[0])) return false;
+  const { to, data } = params[0];
+  return Object.keys(params[0]).length === 2 && to === scope.to && typeof data === 'string' && scope.selectors.includes(data);
 }
 
 /**
- * Wraps `base` so that only requests for `allowed` RPC methods reach the network. Any other
- * request is rejected before `base` is called.
+ * Wraps `base` so that only requests for `allowed` RPC methods (and, for `eth_call`, only calls in
+ * `scope`) reach the network. Any other request is rejected before `base` is called.
  */
-export function guardFetch(base: typeof globalThis.fetch, allowed: readonly string[]): typeof globalThis.fetch {
+export function guardFetch(base: typeof globalThis.fetch, allowed: readonly string[], scope?: CallScope): typeof globalThis.fetch {
   const methods = Object.freeze([...allowed]);
-  return (input, init) => isAllowedRpcRequest(init?.body, methods)
+  return (input, init) => isAllowedRpcRequest(init?.body, methods, scope)
     ? base(input, init)
     : Promise.reject(new TypeError('Blocked a request outside the tool\'s read-only methods.'));
 }
@@ -246,7 +288,9 @@ export async function invokeTool(request: ToolRequest, runtime: RuntimeOptions =
   const invalid = validateParams(tool.params, request.params);
   if (invalid) return refuse('invalid_params', invalid);
 
-  const guardedFetch = guardFetch(runtime.fetch ?? globalThis.fetch, allowed);
+  // A tool with call selectors may call only the contract in its validated `address` parameter.
+  const scope = tool.callSelectors && { to: (request.params as Record<string, unknown>).address as string, selectors: tool.callSelectors };
+  const guardedFetch = guardFetch(runtime.fetch ?? globalThis.fetch, allowed, scope);
 
   try {
     const data = await tool.run(Object.freeze({ ...(request.params as Record<string, unknown> | undefined) }), {

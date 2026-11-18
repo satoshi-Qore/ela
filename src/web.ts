@@ -2,7 +2,7 @@ import './web.css';
 import { createSession } from './agent/session.ts';
 import type { CommandResult } from './agent/session.ts';
 import type { ExecutionResult, StepResult } from './agent/executor.ts';
-import type { BalanceReading, BlockReading, GasReading, ToolError, TransactionReading } from './agent/registry.ts';
+import type { BalanceReading, BlockReading, GasReading, TokenReading, ToolError, TransactionReading } from './agent/registry.ts';
 
 // Every command goes through one agent session: input checks and the safety gate first, then the
 // deterministic routes and the rule-based classifier, then only the registry's read-only tools
@@ -222,16 +222,19 @@ function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void 
   blockNumber.textContent = chainId.textContent = evmChainId.textContent = balanceQor.textContent = balanceUqor.textContent = '—';
 
   const kind = result.run.kind;
-  if (kind === 'block' || kind === 'gas') {
+  if (kind === 'block' || kind === 'gas' || kind === 'token') {
     readCode.textContent = readCode.dataset[kind]!;
     const read = result.run.result;
     if (read.ok) {
       // A block: number, hash, time, transaction count, and gas, as the block tool checked them, or
-      // why the node returned no block. Fees: the values the node returned, and only those.
-      const data = read.data as BlockReading | GasReading;
+      // why the node returned no block. Fees and tokens: the values the node returned, and only
+      // those; a token lists the functions its contract did not answer.
+      const data = read.data as (BlockReading | GasReading | TokenReading) & { blockNumber?: string; missing?: string };
+      // A token value the contract did not answer is shown as "—" (and listed by msg.token.missing).
+      const vars = { name: '—', symbol: '—', decimals: '—', ...data } as unknown as Vars;
       showData({ ...data, blockNumber: data.blockNumber ?? '—' });
       flow('done pass recognized ok ok success');
-      showStatus('Success', () => F('msg.' + kind + '.' + data.status, data as unknown as Vars));
+      showStatus('Success', () => F('msg.' + kind + '.' + data.status, vars), data.missing ? () => F('msg.token.missing', vars) : '');
     } else {
       flow('done pass recognized unknown unknown error');
       showStatus('Error', describeFailure(read.error));

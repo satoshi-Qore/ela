@@ -3,7 +3,7 @@ import { QORECHAIN_TESTNET } from '../qorechain/read-client.ts';
 
 /** Read-only JSON-RPC methods a plan step may depend on. */
 export type RpcMethod = 'eth_chainId' | 'eth_blockNumber' | 'eth_getBalance' | 'eth_getTransactionByHash' | 'eth_getTransactionReceipt' | 'eth_getBlockByNumber'
-  | 'eth_gasPrice' | 'eth_feeHistory' | 'eth_maxPriorityFeePerGas';
+  | 'eth_gasPrice' | 'eth_feeHistory' | 'eth_maxPriorityFeePerGas' | 'eth_getCode' | 'eth_call';
 
 export interface PlanStep {
   readonly id: 'verify_chain_id' | 'read_block_height';
