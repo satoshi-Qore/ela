@@ -116,7 +116,7 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
-  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, calls: [] };
+  const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, block: null, earliest: null, calls: [] };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
@@ -130,6 +130,8 @@ const RPC_STUB = `(() => {
     // New in 7C-29: the scripted transaction and receipt (null when unknown).
     if (body && body.method === 'eth_getTransactionByHash' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.tx));
     if (body && body.method === 'eth_getTransactionReceipt' && rpc.mode === 'ok') return Promise.resolve(reply(id, rpc.receipt));
+    // New in 7C-30: the scripted block by number, and the node's oldest kept block for "earliest".
+    if (body && body.method === 'eth_getBlockByNumber' && rpc.mode === 'ok') return Promise.resolve(reply(id, body.params[0] === 'earliest' ? rpc.earliest : rpc.block));
     switch (rpc.mode) {
       case 'network_error': return Promise.reject(new TypeError('Failed to fetch'));
       case 'http_500': return Promise.resolve(new Response('upstream detail', { status: 500 }));
@@ -314,7 +316,8 @@ const MSG = {
   // Changed in 7C-28: was "ELA can only check the Diana network and read its latest block. Balances,
   // fees, transactions, and other data are not supported yet." A qor1 address's balance is readable now.
   // Changed in the PR #27 review: transaction status lookups by hash are supported now.
-  unsupported: 'ELA can check the Diana network, read its latest block, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, fees, your transaction history, and other data are not supported yet.',
+  // Changed in 7C-30: a block can be read by its number now.
+  unsupported: 'ELA can check the Diana network, read its latest block or a block by number, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, fees, your transaction history, and other data are not supported yet.',
 };
 const REFUSAL_TAIL = ' Nothing was sent. Ask for the latest block or a Diana network check instead.';
 const REFUSED = {
@@ -986,8 +989,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['Refused', REFUSED.key_material, 'Reddedildi', 'ELA asla özel anahtar, tohum ifadesi, kurtarma ifadesi veya parola istemez ve işlemez. Bunları paylaşmayın. Komut alanı temizlendi.' + tail, 0],
       ['Refused', REFUSED.wallet_control, 'Reddedildi', 'ELA cüzdan bağlamaz, oluşturmaz veya yönetmez.' + tail, 0],
       ['Refused', REFUSED.state_change, 'Reddedildi', 'ELA sözleşme dağıtamaz, stake edemez, takas yapamaz, basım yapamaz veya zincir durumunu başka şekilde değiştiremez; yalnızca Diana test ağını okur.' + tail, 0],
-      // Changed in 7C-28 (see MSG.unsupported).
-      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu okuyabilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, ücretler, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
+      // Changed in 7C-28 and 7C-30 (see MSG.unsupported).
+      ['Unsupported', MSG.unsupported, 'Desteklenmiyor', 'ELA Diana ağını kontrol edebilir, son bloğunu veya numarasını verdiğiniz bir bloğu okuyabilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash\'i olduğunu onayladığınız değerle Diana\'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, ücretler, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.', 0],
       ['Needs clarification', MSG.clarifyGeneric, 'Açıklama gerekli', "Diana test ağındaki son blok numarasını sorun, ELA'dan Diana ağını kontrol etmesini isteyin veya bir örnek komut kullanın.", 0],
       ['Needs clarification', MSG.clarifyEmpty, 'Açıklama gerekli', 'Bir komut yazın, örneğin "Diana ağını kontrol et." veya "Check Diana network."', 0],
       ['Needs clarification', MSG.clarifyNetwork, 'Açıklama gerekli', 'Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.', 0],
@@ -1694,7 +1697,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // drawing helpers, and one chunk per Core view. The main budget below is unchanged.
     // Changed in 7C-28: also the balance chunk, loaded only for a command that mentions qor1.
     // Changed in 7C-29: also the transaction chunk, loaded only for a command with a long 0x value.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel', 'transaction'], scripts.join(', '));
+    // Changed in 7C-30: also the block chunk, loaded only for a command with a digit and a block word.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gravur', 'index', 'karot', 'optik', 'panel', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1718,8 +1722,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // the session keeps the waiting lookup and the page has the confirm and cancel handlers. Main
     // gains about 270 bytes gzip and 1,055 bytes (measured, after folding the confirm path into the
     // existing session handler); the rules stay in the lazy transaction chunk.
-    assert.ok(sizes[main].gzip <= 14 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14 KiB budget`);
-    assert.ok(sizes[main].bytes <= 38 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 38 KiB budget`);
+    // Changed in 7C-30: was 14 KiB gzip and 38 KiB (main was 14,277 and 38,520 bytes, 59 and 392
+    // under). The block rules and reader are a lazy chunk; main gains only the registry entry, the
+    // decision type and its dispatch, and the result branch (161 bytes gzip and 830 bytes, measured).
+    const blockChunk = scripts.find(name => name.startsWith('block-'));
+    assert.ok(sizes[blockChunk].gzip <= 2 * 1024, `${blockChunk} gzip ${sizes[blockChunk].gzip} bytes exceeds the 2 KiB budget`);
+    assert.ok(sizes[main].gzip <= 14.25 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.25 KiB budget`);
+    assert.ok(sizes[main].bytes <= 39 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 39 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
@@ -1908,6 +1917,73 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     expectView(t, await confirmTx('tx ' + TX_HASH), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
     await setMode('wrong_chain');
     expectView(t, await confirmTx('tx ' + TX_HASH), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+  });
+
+  // New in 7C-30: one Diana block by number.
+  const BLOCK_HASH = '0xee996a32a68eb1cd946db5dcf6f2d6bb42b969ccafea758e9312f8053155b0e6';
+  const scriptBlock = (number, txs = 1) => evaluate(`(() => {
+    window.__rpc.block = ${number === null ? 'null' : `{ number: '0x${number.toString(16)}', hash: '${BLOCK_HASH}', timestamp: '0x6afcbbab', gasUsed: '0x63275', gasLimit: '0xffffffff', transactions: ${JSON.stringify(Array.from({ length: txs }, (_, i) => '0x' + String(i + 1).padStart(64, '0')))} }`};
+    window.__rpc.earliest = { number: '0x86230f', hash: '0x${'fb'.repeat(32)}', timestamp: '0x6addca1c', gasUsed: '0x0', gasLimit: '0xffffffff', transactions: [] };
+  })()`);
+
+  uiTest('block query (Turkish and English): number, hash, time, transactions and gas; future and pruned blocks are explained; the context is unchanged', async t => {
+    await openPage();
+    await scriptBlock(10275626);
+    const found = await submit("Diana'da 10275626 numaralı bloğu göster");
+    expectView(t, found, {
+      state: 'Success', block: '10275626', chain: 'qorechain-diana', evmChain: '9800', context: CONTEXT_NONE, planVisible: false,
+      message: 'Block 10275626 read from Diana testnet via EVM JSON-RPC (chain 9800 verified). Hash: ' + BLOCK_HASH + '. Time: 2026-11-17 20:40:11 UTC. Transactions: 1. Gas used: 406133 of a 4294967295 gas limit.',
+      rpc: ['eth_chainId', 'eth_getBlockByNumber'],
+    }, 'found');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_getBlockByNumber' }, 'flow code');
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.equal(turkish, '10275626 numaralı blok Diana test ağından EVM JSON-RPC ile okundu (zincir 9800 doğrulandı). Hash: ' + BLOCK_HASH + '. Zaman: 2026-11-17 20:40:11 UTC. İşlem sayısı: 1. Kullanılan gas: 406133, gas limiti: 4294967295.');
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+
+    await submit('Son blok kaç?');
+    await scriptBlock(9000000, 3);
+    const english = await submit('Show block 9000000');
+    expectView(t, english, { state: 'Success', block: '9000000', context: CONTEXT_BLOCK }, 'english');
+    if (!PROBE) assert.match(english.message, /^Block 9000000 read from .* Transactions: 3\./);
+
+    await scriptBlock(null);
+    const future = await submit('Block 10291139 details');
+    expectView(t, future, { state: 'Success', block: '—', rpc: ['eth_chainId', 'eth_getBlockByNumber', 'eth_blockNumber'], context: CONTEXT_BLOCK }, 'future');
+    if (!PROBE) assert.equal(future.message, 'Block 10291139 does not exist on Diana testnet yet: the latest block is 9954992 (EVM JSON-RPC, chain 9800 verified).');
+    const pruned = await submit('blok 100 göster');
+    expectView(t, pruned, { state: 'Success', block: '—', rpc: ['eth_chainId', 'eth_getBlockByNumber', 'eth_blockNumber', 'eth_getBlockByNumber'] }, 'pruned');
+    if (!PROBE) assert.equal(pruned.message, 'Block 100 is not available: the Diana testnet EVM JSON-RPC node keeps blocks from 8790799 onward (chain 9800 verified).');
+    // The next latest-block query restores the method name in the flow.
+    await submit('Son blok kaç?');
+    expectView(t, await evaluate(TX_VIEW), { code: 'eth_blockNumber' }, 'after');
+  });
+
+  uiTest('block query: an invalid number, another network, or a transfer sends nothing; read failures are explained', async t => {
+    await openPage();
+    for (const [command, state] of [
+      ['Show block -5', 'Needs clarification'],
+      ['Blok 10.275.626 göster', 'Needs clarification'],
+      ['Block 007 details', 'Needs clarification'],
+      ['Show block 9007199254740992', 'Needs clarification'],
+      ['Show Ethereum block 100', 'Needs clarification'],
+      ['Mainnet block 100', 'Needs clarification'],
+      ['Send 5 QOR in block 100', 'Refused'],
+    ]) {
+      const observed = await submit(command);
+      expectView(t, observed, { state, rpc: [] }, command);
+    }
+    const invalid = await submit('Show block 1.5');
+    if (!PROBE) assert.equal(invalid.message, 'That is not a valid block number. Give one whole block number in digits, without a sign, decimals, separators, or leading zeros, for example "Show block 10275626." Nothing was sent.');
+    const turkish = await evaluate(`(() => { document.querySelector('button[data-lang=tr]').click(); return document.getElementById('query-message').textContent; })()`);
+    if (!PROBE) assert.match(turkish, /^Bu geçerli bir blok numarası değil\. .* Hiçbir şey gönderilmedi\.$/);
+    await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+
+    await setMode('network_error');
+    expectView(t, await submit('blok 10275626 göster'), { state: 'Error', message: MSG.networkError, rpc: ['eth_chainId'] }, 'offline');
+    await setMode('wrong_chain');
+    expectView(t, await submit('blok 10275626 göster'), { state: 'Error', message: 'EVM JSON-RPC did not report the Diana testnet chain ID (9800).', rpc: ['eth_chainId'] }, 'wrong chain');
+    await setMode('block_fails');
+    expectView(t, await submit('blok 10275626 göster'), { state: 'Error', block: '—', rpc: ['eth_chainId', 'eth_getBlockByNumber'] }, 'rpc failure');
   });
 
   uiTest('balance query: invalid address, EVM address, or a transfer sends nothing; read failures are explained', async t => {

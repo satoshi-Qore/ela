@@ -2,7 +2,7 @@ import './web.css';
 import { createSession } from './agent/session.ts';
 import type { CommandResult } from './agent/session.ts';
 import type { ExecutionResult, StepResult } from './agent/executor.ts';
-import type { BalanceReading, ToolError, TransactionReading } from './agent/registry.ts';
+import type { BalanceReading, BlockReading, ToolError, TransactionReading } from './agent/registry.ts';
 
 // Every command goes through one agent session: input checks and the safety gate first, then the
 // deterministic routes and the rule-based classifier, then only the registry's read-only tools
@@ -220,6 +220,23 @@ function showAnswer(result: Extract<CommandResult, { kind: 'answered' }>): void 
   const note = basedOn ? 'note.' + basedOn : '';
   // A query ran: its own data replaces the readout (and "—" stays where it returned none).
   blockNumber.textContent = chainId.textContent = evmChainId.textContent = balanceQor.textContent = balanceUqor.textContent = '—';
+
+  if (result.run.kind === 'block') {
+    readCode.textContent = readCode.dataset.block!;
+    const read = result.run.result;
+    if (read.ok) {
+      // Number, hash, time, transaction count, and gas, as the block tool checked them; or why the
+      // node returned no block.
+      const data = read.data as BlockReading;
+      showData({ ...data, blockNumber: data.blockNumber ?? '—' });
+      flow('done pass recognized ok ok success');
+      showStatus('Success', () => F('msg.block.' + data.status, data as unknown as Vars));
+    } else {
+      flow('done pass recognized unknown unknown error');
+      showStatus('Error', describeFailure(read.error));
+    }
+    return;
+  }
 
   if (result.run.kind === 'transaction') {
     readCode.textContent = readCode.dataset.tx!;

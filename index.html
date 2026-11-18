@@ -31,7 +31,7 @@
     "msg.ready": "Waiting for a command.",
     "msg.working": "Working on your command…",
     "msg.blockOk": "Latest block received from Diana testnet via EVM JSON-RPC.",
-    "msg.unsupported": "ELA can check the Diana network, read its latest block, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, fees, your transaction history, and other data are not supported yet.",
+    "msg.unsupported": "ELA can check the Diana network, read its latest block or a block by number, read the QOR balance of a qor1 address you give it, and look up the status of a Diana transaction by its hash after you confirm it is a transaction hash. Your own balance, fees, your transaction history, and other data are not supported yet.",
     "msg.confirm.tx": "Nothing has been sent yet. A transaction hash and a private key look the same (0x and 64 hexadecimal digits), so ELA cannot tell which {preview} is. Confirm only if it is a public transaction hash: ELA will then send it once to the Diana testnet EVM JSON-RPC to read its status. If it is a private key, do not confirm; cancel it. The command field was cleared.",
     "msg.confirm.cancelled": "Cancelled. Nothing was sent.",
     "msg.balanceOk": "Balance of {address} read from Diana testnet via EVM JSON-RPC (chain 9800 verified): {amountQor} QOR, {amountUqor} uqor.",
@@ -43,6 +43,10 @@
     "msg.tx.from": " From {from} to {to}, value {valueQor} QOR, nonce {nonce}.",
     "msg.tx.create": " From {from} (contract creation), value {valueQor} QOR, nonce {nonce}.",
     "msg.tx.gas": " Gas used: {gasUsed}.",
+    "msg.block.found": "Block {blockNumber} read from Diana testnet via EVM JSON-RPC (chain 9800 verified). Hash: {hash}. Time: {time}. Transactions: {transactionCount}. Gas used: {gasUsed} of a {gasLimit} gas limit.",
+    "msg.block.future": "Block {requested} does not exist on Diana testnet yet: the latest block is {latest} (EVM JSON-RPC, chain 9800 verified).",
+    "msg.block.pruned": "Block {requested} is not available: the Diana testnet EVM JSON-RPC node keeps blocks from {earliest} onward (chain 9800 verified).",
+    "msg.block.not_found": "The Diana testnet EVM JSON-RPC (chain 9800 verified) returned no block {requested}.",
     "msg.failed": "The command failed unexpectedly. Nothing was changed.",
     "fail.network": "The browser could not read the testnet EVM JSON-RPC. Check your connection. The endpoint may restrict cross-origin requests (CORS).",
     "fail.unexpected": "The query failed unexpectedly.",
@@ -56,7 +60,8 @@
     "clarify.empty_command": "Type a command, for example \"Check Diana network.\" or \"Diana ağını kontrol et.\"",
     "clarify.command_too_long": "That command is too long. Keep it under 500 characters.",
     "clarify.unsupported_network": "This interface only reads Diana testnet. Other networks, such as mainnet, are not supported.",
-    "clarify.unsupported_parameters": "ELA takes only one native qor1 account address, for a balance query, or one transaction hash, for a transaction status query. It does not take EVM or module addresses, other hashes, or amounts. Ask for the latest block, a Diana network check, or the balance of one qor1 address.",
+    "clarify.unsupported_parameters": "ELA takes only one native qor1 account address, for a balance query, one transaction hash, for a transaction status query, or one block number, for a block query. It does not take EVM or module addresses, other hashes, or amounts. Ask for the latest block, a Diana network check, or the balance of one qor1 address.",
+    "clarify.invalid_block_number": "That is not a valid block number. Give one whole block number in digits, without a sign, decimals, separators, or leading zeros, for example \"Show block 10275626.\" Nothing was sent.",
     "clarify.invalid_hash": "That is not a valid transaction hash. Give one hash of 0x and exactly 64 hexadecimal digits, for example \"What is the status of transaction 0x…?\" Nothing was sent.",
     "clarify.nothing_to_confirm": "There is no transaction lookup waiting for confirmation. Nothing was sent.",
     "clarify.invalid_address": "That is not a valid QoreChain address. Give one native qor1… address with a valid checksum, for example \"What is the balance of qor1…?\" Nothing was sent.",
@@ -174,7 +179,7 @@
     "msg.ready": "Komut bekleniyor.",
     "msg.working": "Komutunuz işleniyor…",
     "msg.blockOk": "Son blok, Diana test ağından EVM JSON-RPC ile alındı.",
-    "msg.unsupported": "ELA Diana ağını kontrol edebilir, son bloğunu okuyabilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash'i olduğunu onayladığınız değerle Diana'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, ücretler, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.",
+    "msg.unsupported": "ELA Diana ağını kontrol edebilir, son bloğunu veya numarasını verdiğiniz bir bloğu okuyabilir, verdiğiniz bir qor1 adresinin QOR bakiyesini okuyabilir ve bir işlem hash'i olduğunu onayladığınız değerle Diana'daki işlemin durumunu sorgulayabilir. Kendi bakiyeniz, ücretler, işlem geçmişiniz ve diğer veriler henüz desteklenmiyor.",
     "msg.confirm.tx": "Henüz hiçbir şey gönderilmedi. İşlem hash'i ile özel anahtar aynı görünür (0x ve 64 onaltılık basamak); ELA {preview} değerinin hangisi olduğunu ayırt edemez. Yalnızca herkese açık bir işlem hash'iyse onaylayın: ELA onu durumunu okumak için bir kez Diana test ağı EVM JSON-RPC'sine gönderir. Özel anahtarsa onaylamayın, iptal edin. Komut alanı temizlendi.",
     "msg.confirm.cancelled": "İptal edildi. Hiçbir şey gönderilmedi.",
     "msg.balanceOk": "{address} adresinin bakiyesi Diana test ağından EVM JSON-RPC ile okundu (zincir 9800 doğrulandı): {amountQor} QOR, {amountUqor} uqor.",
@@ -186,6 +191,10 @@
     "msg.tx.from": " Gönderen {from}, alıcı {to}, değer {valueQor} QOR, nonce {nonce}.",
     "msg.tx.create": " Gönderen {from} (sözleşme oluşturma), değer {valueQor} QOR, nonce {nonce}.",
     "msg.tx.gas": " Kullanılan gas: {gasUsed}.",
+    "msg.block.found": "{blockNumber} numaralı blok Diana test ağından EVM JSON-RPC ile okundu (zincir 9800 doğrulandı). Hash: {hash}. Zaman: {time}. İşlem sayısı: {transactionCount}. Kullanılan gas: {gasUsed}, gas limiti: {gasLimit}.",
+    "msg.block.future": "{requested} numaralı blok Diana test ağında henüz yok: son blok {latest} (EVM JSON-RPC, zincir 9800 doğrulandı).",
+    "msg.block.pruned": "{requested} numaralı blok kullanılamıyor: Diana test ağı EVM JSON-RPC düğümü {earliest} numaralı bloktan sonrasını saklıyor (zincir 9800 doğrulandı).",
+    "msg.block.not_found": "Diana test ağı EVM JSON-RPC'si (zincir 9800 doğrulandı) {requested} numaralı bloğu döndürmedi.",
     "msg.failed": "Komut beklenmedik biçimde başarısız oldu. Hiçbir şey değiştirilmedi.",
     "fail.network": "Tarayıcı test ağının EVM JSON-RPC uç noktasını okuyamadı. Bağlantınızı kontrol edin. Uç nokta, kaynaklar arası istekleri (CORS) kısıtlıyor olabilir.",
     "fail.unexpected": "Sorgu beklenmedik biçimde başarısız oldu.",
@@ -199,8 +208,9 @@
     "clarify.empty_command": "Bir komut yazın, örneğin \"Diana ağını kontrol et.\" veya \"Check Diana network.\"",
     "clarify.command_too_long": "Komut çok uzun. 500 karakterin altında tutun.",
     "clarify.unsupported_network": "Bu arayüz yalnızca Diana test ağını okur. Ana ağ gibi diğer ağlar desteklenmiyor.",
-    "clarify.unsupported_parameters": "ELA yalnızca bakiye sorgusu için tek bir yerel qor1 hesap adresi veya işlem durumu sorgusu için tek bir işlem hash'i alır. EVM veya modül adresi, başka hash ya da tutar almaz. Son bloğu, Diana ağı kontrolünü veya tek bir qor1 adresinin bakiyesini sorun.",
+    "clarify.unsupported_parameters": "ELA yalnızca bakiye sorgusu için tek bir yerel qor1 hesap adresi işlem durumu sorgusu için tek bir işlem hash'i veya blok sorgusu için tek bir blok numarası alır. EVM veya modül adresi, başka hash ya da tutar almaz. Son bloğu, Diana ağı kontrolünü veya tek bir qor1 adresinin bakiyesini sorun.",
     "clarify.nothing_to_confirm": "Onay bekleyen bir işlem sorgusu yok. Hiçbir şey gönderilmedi.",
+    "clarify.invalid_block_number": "Bu geçerli bir blok numarası değil. İşaret, ondalık, ayraç veya baştaki sıfır olmadan, rakamlarla tek bir tam blok numarası verin, örneğin \"10275626 numaralı bloğu göster.\" Hiçbir şey gönderilmedi.",
     "clarify.invalid_hash": "Bu geçerli bir işlem hash'i değil. 0x ve tam 64 onaltılık basamaktan oluşan tek bir hash verin, örneğin \"0x… işleminin durumu nedir?\" Hiçbir şey gönderilmedi.",
     "clarify.invalid_address": "Bu geçerli bir QoreChain adresi değil. Sağlama toplamı geçerli tek bir yerel qor1… adresi verin, örneğin \"qor1… adresinin bakiyesini göster.\" Hiçbir şey gönderilmedi.",
     "clarify.no_context": "Bu sayfa oturumunda devam edilecek başarılı bir sorgu yok. Önce Diana test ağındaki son blok numarasını sorun veya Diana ağını kontrol ettirin.",
@@ -570,7 +580,7 @@
             <li data-state="idle"><span class="flow-n">02</span><span class="flow-name" data-i18n="flow.gate">Safety gate</span><span class="flow-state">not run</span></li>
             <li data-state="idle"><span class="flow-n">03</span><span class="flow-name" data-i18n="flow.intent">Intent &amp; scope</span><span class="flow-state">not run</span></li>
             <li data-state="idle"><span class="flow-n">04</span><span class="flow-name" data-i18n="flow.chain">Network check</span><code class="flow-code">eth_chainId</code><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code" data-balance="eth_getBalance" data-tx="eth_getTransactionByHash">eth_blockNumber</code><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code" data-balance="eth_getBalance" data-tx="eth_getTransactionByHash" data-block="eth_getBlockByNumber">eth_blockNumber</code><span class="flow-state">not run</span></li>
             <li data-state="idle"><span class="flow-n">06</span><span class="flow-name" data-i18n="flow.result">Result</span><span class="flow-state">not run</span></li>
           </ol>
 
