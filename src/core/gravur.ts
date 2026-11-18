@@ -8,7 +8,7 @@
 // upper left, with an edge highlight, a shadowed inner edge, and its own engraving (knurl, guilloche,
 // lathe lines) instead of ten jittering strands. The rings sit on one machined face with a bezel; the
 // centre is a domed boss with a faceted gem for a real success, the state mark otherwise.
-import { c, dash, el, grid, header, RAN, stopIndex, stroke, svg, symbol, txt } from './draw.ts';
+import { c, dash, el, grid, kit, header, RAN, stopIndex, stroke, svg, symbol, txt } from './draw.ts';
 import type { CoreRecord, Render, Status, Text } from './draw.ts';
 
 const PALETTE: Readonly<Record<string, readonly [string, string]>> = {
@@ -39,21 +39,26 @@ function band(s: Element, id: string, cx: number, cy: number, r0: number, i: num
   const full = end >= 1;
   const shape = full ? edge(1) + 'Z' + edge(-1, true) + 'Z' : edge(1) + edge(-1, true).replace('M', 'L') + 'Z';
   const dsh = dashes ? 'stroke-dasharray:' + dashes : '';
-  el('path', { d: shape, 'fill-rule': 'evenodd', style: `fill:${lit(s, id + kind, [[0, c1, 0.5], [0.5, c2, 0.24], [1, c2, 0.08]])};stroke:none` }, s);
+  // Raised relief: a cast shadow down-right, a lit lip up-left, machined metal, then the state's tint.
+  const body = (transform: string, style: string): void => { el('path', { d: shape, transform, 'fill-rule': 'evenodd', style }, s); };
+  body('translate(1.5 2.2)', 'fill:var(--mat-shadow);opacity:var(--mat-shadow-o)');
+  body('translate(-0.7 -0.9)', 'fill:var(--mat-edge);opacity:0.45');
+  body('', `fill:url(#${id}md)`);
+  body('', `fill:${lit(s, id + kind, [[0, c1, 0.3], [1, c2, 0.62]])}`);
   // Engraving: a different cut per ring.
   let d = '';
   const strands = (count: number, k: number): void => { for (let q = 0; q < count; q++) for (let j = 0; j <= n * 2; j++) { const a = (j / (n * 2)) * end * TAU; d += (j ? 'L' : 'M') + pt(a, r0 + 0.72 * hw(a) * Math.sin(k * a + (q * TAU) / count)); } };
   const lathe = (fs: readonly number[]): void => { for (const f of fs) d += edge(f); };
   const knurl = (slant: number): void => { for (let j = 0; j < 120 * end; j++) { const a = (j / 120) * TAU; d += 'M' + pt(a, r0 - 0.9 * hw(a)) + 'L' + pt(a + slant, r0 + 0.9 * hw(a)); } };
   [() => knurl(0), () => strands(2, 40), () => lathe([-0.5, 0, 0.5]), () => strands(3, 52), () => knurl(0.028), () => { strands(2, 64); lathe([0]); }][i]();
-  el('path', { d, style: `fill:none;stroke:${c1};stroke-width:${0.5 * Math.max(scale, 0.8)};opacity:0.62;${dsh}` }, s);
+  el('path', { d, style: `fill:none;stroke:var(--mat-lo);stroke-width:${0.55 * Math.max(scale, 0.8)};opacity:0.6;${dsh}` }, s);
   // Machined edges: crisp outer edge, shadowed inner edge, and a highlight where the light falls.
   el('path', { d: edge(1), style: `fill:none;stroke:${c1};stroke-width:0.8;opacity:0.9;${dsh}` }, s);
   el('path', { d: edge(-1), style: `fill:none;stroke:var(--shade-edge);stroke-width:0.9;opacity:0.5;${dsh}` }, s);
   if (full) el('circle', { cx, cy, r: r0 + amp * 0.8, pathLength: 100, style: 'fill:none;stroke:var(--shade-hi);stroke-width:0.9;opacity:0.45;stroke-dasharray:18 82;stroke-dashoffset:-52' }, s);
 }
 function grooves(s: Element, cx: number, cy: number, r0: number, scale: number): void {
-  for (const r of [r0 - 10.5 * scale, r0 + 10.5 * scale]) el('circle', { cx, cy, r, style: 'fill:none;stroke:var(--core-line);stroke-width:0.7' }, s);
+  for (const r of [r0 - 10.5 * scale, r0 + 10.5 * scale]) el('circle', { cx, cy, r, style: 'fill:none;stroke:var(--mat-lo);stroke-width:0.8;opacity:0.55' }, s);
 }
 function guide(s: Element, cx: number, cy: number, r0: number, st: Status): void {
   el('circle', { cx, cy, r: r0, style: `fill:none;${stroke(st, 0.8)}` }, s);
@@ -81,16 +86,19 @@ function emblem(s: Element, x: number, y: number, st: Status, r: number): void {
   el('path', { d: `M${x - r * 0.5} ${y - r * 0.5} L${x} ${y}`, style: 'stroke:var(--core-well);stroke-width:0.6;opacity:0.5' }, s);
 }
 
-function seal(s: Element, id: string, r: CoreRecord, cx: number, cy: number, radii: readonly number[], scale: number, text: boolean, outer?: number): number {
-  const face = radii[5] + 13 * scale;
-  // One machined face under all six rings, with a bezel lit from the upper left.
-  el('circle', { cx, cy, r: face, style: `fill:${lit(s, id + 'face', [[0, 'var(--core-surface)', 0.55], [1, 'var(--core-well)', 0.1]], true)};stroke:var(--metal-1);stroke-width:1.2;opacity:0.9` }, s);
-  el('circle', { cx, cy, r: face - 3.5, style: 'fill:none;stroke:var(--core-line-2);stroke-width:0.6' }, s);
-  el('circle', { cx, cy, r: face - 0.6, pathLength: 100, style: 'fill:none;stroke:var(--shade-hi);stroke-width:1;opacity:0.5;stroke-dasharray:20 80;stroke-dashoffset:-51' }, s);
-  if (outer) for (let i = 0; i < 180; i++) {
-    const a = (i / 180) * TAU, long = i % 15 === 0, r2 = outer + (long ? 7 : 3.5);
-    el('line', { x1: cx + outer * Math.sin(a), y1: cy - outer * Math.cos(a), x2: cx + r2 * Math.sin(a), y2: cy - r2 * Math.cos(a), style: `stroke:var(${long ? '--core-ink-4' : '--core-line-2'});stroke-width:0.8` }, s);
-  }
+function seal(s: Element, id: string, r: CoreRecord, cx: number, cy: number, radii: readonly number[], scale: number, text: boolean): number {
+  const face = radii[5] + 13 * scale, bz = 10 * scale, u = (n: string): string => `url(#${id}${n})`;
+  const pt = (a: number, q: number): string => (cx + q * Math.sin(a)).toFixed(1) + ' ' + (cy - q * Math.cos(a)).toFixed(1);
+  const ring = (q: number, style: string, d?: string, o?: number): void => { el('circle', { cx, cy, r: q, pathLength: d ? 100 : undefined, style: style + (d ? `;stroke-dasharray:${d};stroke-dashoffset:${o}` : '') }, s); };
+  // The seal body: a knurled bezel with engraved scale marks around a recessed face, casting a shadow.
+  el('circle', { cx, cy, r: face + bz, filter: u('sh'), style: `fill:${u('md')}` }, s);
+  let k = '';
+  for (let i = 0; i < 240; i++) { const a = (i / 240) * TAU; k += 'M' + pt(a, face + bz) + 'L' + pt(a, face + (i % 10 ? bz * 0.62 : bz * 0.2)); }
+  el('path', { d: k, style: 'fill:none;stroke:var(--mat-lo);stroke-width:0.7;opacity:0.7' }, s);
+  ring(face + bz - 0.6, 'fill:none;stroke:var(--mat-edge);stroke-width:1;opacity:0.7', '22 78', -52);
+  ring(face, `fill:${lit(s, id + 'face', [[0, 'var(--core-surface)', 0.95], [1, 'var(--core-well)', 1]], true)};stroke:var(--mat-lo);stroke-width:1.2`);
+  ring(face - 2.5, 'fill:none;stroke:var(--mat-shadow);stroke-width:5;opacity:0.4', '30 70', -45);
+  ring(face - 0.8, 'fill:none;stroke:var(--mat-edge);stroke-width:0.8;opacity:0.5', '30 70', -98);
   r.stages.forEach((st, i) => {
     const r0 = radii[i];
     // Engraved bands sit in a cut groove; a stage that never ran keeps only its guide line.
@@ -105,10 +113,12 @@ function seal(s: Element, id: string, r: CoreRecord, cx: number, cy: number, rad
       el('circle', { cx, cy, r: r0, style: `fill:none;${stroke(st.status, 1.1 * scale)}` }, s);
     } else guide(s, cx, cy, r0, st.status);
   });
+  // The result window: a metal ring around a recessed, glazed well.
   const disc = radii[0] - 18 * scale;
-  el('circle', { cx, cy, r: disc, style: `fill:${lit(s, id + 'boss', [[0, 'var(--core-surface)', 1], [0.75, 'var(--core-well)', 1], [1, 'var(--core-well)', 1]], true)};stroke:var(--metal-1);stroke-width:1` }, s);
-  el('circle', { cx, cy, r: disc - 4, style: 'fill:none;stroke:var(--core-line);stroke-width:0.6' }, s);
-  el('circle', { cx, cy, r: disc - 0.8, pathLength: 100, style: 'fill:none;stroke:var(--shade-hi);stroke-width:0.8;opacity:0.45;stroke-dasharray:18 82;stroke-dashoffset:-52' }, s);
+  ring(disc + 3.5 * scale, `fill:${u('md')};filter:${u('ss')}`);
+  ring(disc, `fill:${lit(s, id + 'win', [[0, 'var(--core-well)', 1], [1, 'var(--core-surface)', 1]], true)};stroke:var(--mat-lo);stroke-width:1`);
+  ring(disc - 2, 'fill:none;stroke:var(--mat-shadow);stroke-width:4;opacity:0.45', '30 70', -45);
+  ring(disc - 4, 'fill:none;stroke:var(--core-line);stroke-width:0.6');
   const a = -Math.PI / 4;
   radii.forEach((rr, i) => tag(s, cx + rr * Math.cos(a), cy + rr * Math.sin(a), r.stages[i].n, r.stages[i].status, text));
   return disc;
@@ -122,7 +132,8 @@ export const render: Render = (host, r, t) => {
   const s = svg(host, 800, 540, false, t('view.gravur') + ' · ' + r.title);
   grid(s, 800, 540, 'gg'); header(s, t('core.g.title'));
   const cx = 276, cy = 286, result = r.stages[5].status;
-  seal(s, 'gd', r, cx, cy, [74, 104, 134, 164, 194, 224], 1, true, 240);
+  kit(s, 'gd');
+  seal(s, 'gd', r, cx, cy, [74, 104, 134, 164, 194, 224], 1, true);
   emblem(s, cx, cy - 24, result, 10);
   txt(s, cx, cy + 9, r.title, { size: 18, color: result === 'waiting' ? 'var(--core-ink-3)' : c(result), font: 'text', anchor: 'middle' });
   txt(s, cx, cy + 27, sub(r, t), { size: 11, color: 'var(--core-ink-3)', anchor: 'middle' });
@@ -138,6 +149,7 @@ export const render: Render = (host, r, t) => {
 
   const m = svg(host, 300, 300, true, '');
   grid(m, 300, 300, 'ggm', 20);
+  kit(m, 'gm');
   seal(m, 'gm', r, 150, 150, [46, 64, 82, 100, 118, 136], 0.58, false);
   emblem(m, 150, 150, result, 12);
 };

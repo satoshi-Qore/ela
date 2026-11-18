@@ -114,6 +114,35 @@ export function radial(defs: Element, id: string, stops: readonly (readonly [num
   for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
 }
 
+// 7C-33 material kit, shared by the three views (one light from the upper left; --mat-* per theme).
+// After kit(s, id): url(#id+'mh') metal lit across x (upright bodies), 'mv' metal lit from above
+// (lying bodies), 'md' metal lit diagonally, 'gl' sapphire glass, 'sp' key light, filter 'sh' a cast
+// shadow and 'ss' a small one.
+type Stops = readonly (readonly [number, string, number?])[];
+const H = 'var(--mat-hi)', M = 'var(--mat-mid)', LO = 'var(--mat-lo)';
+export function kit(s: Element, id: string): Element {
+  const d = el('defs', {}, s);
+  const lin = (n: string, stops: Stops, x2: number, y2: number): void => {
+    const g = el('linearGradient', { id: id + n, x1: 0, y1: 0, x2, y2 }, d);
+    for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
+  };
+  lin('mh', [[0, LO], [0.14, M], [0.33, H], [0.47, M], [0.8, LO], [0.93, M], [1, LO]], 1, 0);
+  lin('mv', [[0, H], [0.3, M], [0.75, LO], [1, M]], 0, 1);
+  lin('md', [[0, H], [0.45, M], [1, LO]], 1, 1);
+  lin('gl', [[0, 'var(--glass-edge)', 0.6], [0.35, 'var(--glass-1)', 0.22], [1, 'var(--glass-2)', 0.14]], 1, 1);
+  radial(d, id + 'sp', [[0, 'var(--mat-spot)', 0.2], [1, 'var(--mat-spot)', 0]], 0.4, 0.35);
+  for (const [n, dy, b] of [['sh', 6, 5], ['ss', 1.6, 1.2]] as const) {
+    const f = el('filter', { id: id + n, x: '-20%', y: '-20%', width: '150%', height: '160%' }, d);
+    el('feDropShadow', { dx: dy / 2, dy, stdDeviation: b, style: 'flood-color:var(--mat-shadow);flood-opacity:var(--mat-shadow-o)' }, f);
+  }
+  return d;
+}
+/** Shape shorthands for the views. */
+export const R = (p: Element, x: number, y: number, w: number, h: number, style: string, rx?: number): SVGElement => el('rect', { x, y, width: w, height: h, rx, style }, p);
+export const E = (p: Element, cx: number, cy: number, rx: number, ry: number, style: string): SVGElement => el('ellipse', { cx, cy, rx, ry, style }, p);
+export const P = (p: Element, d: string, style: string): SVGElement => el('path', { d, style }, p);
+export const G = (p: Element, attrs: Readonly<Record<string, string | number | undefined>> = {}): SVGElement => el('g', attrs, p);
+
 export function header(s: Element, title: string): void {
   txt(s, 28, 34, title, { size: 11, color: 'var(--core-ink-3)', spacing: 1.5 });
 }

@@ -988,3 +988,20 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   .prep-list ul { padding-inline-start: min(1.1rem, 14px); }
   .pqc-result { padding: min(0.9rem, 10px); }
 }
+
+/* === 7C-33: ELA Core materials ======================================================================
+   One industrial material set for the three Core views: machined metal (highlight, mid, low, edge),
+   one cast-shadow colour and strength, and the soft key light behind each instrument. Blue and
+   neutral only; a real stop keeps its red from the status tokens. */
+:root {
+  --mat-hi: #c3d6f2; --mat-mid: #4f6790; --mat-lo: #0c1730; --mat-edge: #e4efff;
+  --mat-shadow: #00030a; --mat-shadow-o: 0.7; --mat-spot: #2d63b8;
+}
+:root[data-theme="dark"] {
+  --mat-hi: #e4e7ec; --mat-mid: #6a707a; --mat-lo: #131518; --mat-edge: #ffffff;
+  --mat-shadow: #000000; --mat-shadow-o: 0.75; --mat-spot: #59626f;
+}
+:root[data-theme="light"] {
+  --mat-hi: #ffffff; --mat-mid: #b3bbc7; --mat-lo: #6b7484; --mat-edge: #ffffff;
+  --mat-shadow: #1a2333; --mat-shadow-o: 0.28; --mat-spot: #ffffff;
+}
