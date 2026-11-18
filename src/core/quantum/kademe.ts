@@ -1,25 +1,56 @@
 // Concept Q1 — KADEME, the Energy Ladder (prototype; nothing in the interface imports it).
-// The quantum energy-level diagram built as one machined titanium monolith: six levels are six steps
-// rising left to right along an engraved energy axis. Each step's top face carries a recessed
-// sapphire level cell; its front edge carries the state inlay. A sapphire excitation filament joins
-// the cells of steps that really succeeded, and only those. ok: a sealed cell with a raised crystal;
-// running: a half-lit cell and the only moving inlay; waiting: an empty recess; blocked: a red
-// barrier blade on the step edge (the climb stops there); failed: a fractured cell; skipped: a
-// titanium cover plate; unknown: a frosted cell. The capstone on the top level shows the result: the
-// faceted gem only on a real success, the state mark otherwise.
-import { c, E, el, G, grid, header, kit, OUT, P, R, RAN, stroke, svg, symbol, txt } from '../draw.ts';
+// The quantum energy-level diagram built as an architecture: six separately machined titanium level
+// modules rise left to right on a plinth, along an engraved energy axis. Each module has a chamfered
+// nosing, a polished vertical edge, a recessed front panel engraved with its level index, and a round
+// sapphire lens seated in a bezel on its top face (drawn in the top plane's perspective). A sapphire
+// light guide joins the lenses of levels that really succeeded, and only those. ok: a seated lens with
+// the success inlay on its bezel; running: a half-lit lens and the only moving ring; waiting: an empty
+// bezel; blocked: a red-edged shutter blade on the module edge (the climb stops there); failed: a
+// fractured lens; skipped: a titanium cap; unknown: a frosted lens. The crown fixture on the top level
+// shows the result: the faceted gem only on a real success, the state mark otherwise.
+import { c, E, el, G, grid, header, OUT, P, R, RAN, stroke, svg, symbol, txt } from '../draw.ts';
 import type { CoreRecord, Render, Status } from '../draw.ts';
 import { ink, QL, qkit } from './optics.ts';
 
-const X0 = 74, W = 84, S = 44, GROUND = 452, DX = 58, DY = -34, BASE = 22;
+const X0 = 74, W = 84, S = 44, GROUND = 452, DX = 58, DY = -34, BASE = 22, GAP = 3;
 const top = (i: number): number => GROUND - BASE - (i + 1) * S;
 const pt = (x: number, y: number): string => `${x.toFixed(1)} ${y.toFixed(1)}`;
+/** A circle in a module's top plane (u along x, v along depth), as a closed path. */
+const disc = (x: number, y: number, w: number, r: number, cu = 0.5, cv = 0.5): string => {
+  let d = '';
+  for (let k = 0; k <= 24; k++) {
+    const a = (k / 24) * Math.PI * 2, u = cu + r * Math.cos(a), v = cv + r * Math.sin(a);
+    d += (k ? 'L' : 'M') + pt(x + u * w + v * DX, y + v * DY);
+  }
+  return d + 'Z';
+};
+const onTop = (x: number, y: number, w: number, u: number, v: number): [number, number] => [x + u * w + v * DX, y + v * DY];
 
-/** The faceted gem (ELA's mark) lit from the upper left, for a real success only. */
 function gem(s: Element, x: number, y: number, r: number): void {
   const v = [[0, -r], [r, 0], [0, r], [-r, 0]], col = 'var(--s-result)';
   [0.72, 0.3, 0.5, 0.95].forEach((o, k) => { const [p, q] = [v[k], v[(k + 1) % 4]]; P(s, `M${x} ${y} L${x + p[0]} ${y + p[1]} L${x + q[0]} ${y + q[1]} Z`, `fill:${col};opacity:${o}`); });
   P(s, `M${x} ${y - r} L${x + r} ${y} L${x} ${y + r} L${x - r} ${y} Z`, `fill:none;stroke:${col};stroke-width:1`);
+}
+
+/** A machined module: side face (turned away), top face (lit), front face (lit from above), with a
+ *  polished chamfer on the nosing and on the front-right vertical edge, and a recessed front panel. */
+function module(p: Element, u: (n: string) => string, x: number, y: number, w: number, bottom: number, level: number): void {
+  const k = 0.1;
+  P(p, `M${pt(x + w, y)} l${DX} ${DY} V${bottom + DY} l${-DX} ${-DY} Z`, `fill:${u('Ts')};${QL}`);
+  P(p, `M${pt(x, y)} h${w} l${DX} ${DY} h${-w} Z`, `fill:${u('Tt')};${QL}`);
+  R(p, x, y, w, bottom - y, `fill:${u('Tf')};${QL}`);
+  // Chamfers: a bright strip along the nosing, a lit strip down the front-right edge.
+  P(p, `M${pt(x, y)} h${w} l${DX * k} ${DY * k} h${-w} Z`, 'fill:#fff;opacity:0.75');
+  P(p, `M${pt(x + w, y)} l${DX * k} ${DY * k} V${bottom + DY * k} l${-DX * k} ${-DY * k} Z`, `fill:${u('Tf')};opacity:0.9`);
+  // A short level plate recessed under the nosing (shadow on its upper inner edge, light on its lower),
+  // engraved with the level index as dots; the rest of the face stays smooth, brushed titanium.
+  const px = x + 8, py = y + 14, pw = w - 16, ph = 14;
+  if (level >= 0) {
+    R(p, px, py, pw, ph, `fill:${u('Ts')};opacity:0.3`, 2);
+    P(p, `M${px} ${py + ph} V${py} H${px + pw}`, 'fill:none;stroke:var(--q-line);stroke-width:1.4;opacity:0.7');
+    P(p, `M${px} ${py + ph} H${px + pw} V${py}`, 'fill:none;stroke:#fff;stroke-width:0.8;opacity:0.6');
+    for (let j = 0; j <= level; j++) E(p, px + 8 + j * 7, py + ph / 2, 1.6, 1.6, 'fill:var(--q-line);opacity:0.7');
+  }
 }
 
 function ladder(s: Element, id: string, r: CoreRecord): void {
@@ -28,82 +59,55 @@ function ladder(s: Element, id: string, r: CoreRecord): void {
   // Energy axis: an engraved scale on the left with one tick per level.
   P(s, `M42 ${GROUND - BASE} V${top(5) - 10}`, 'stroke:var(--core-ink-4);stroke-width:0.8');
   for (let i = 0; i < 6; i++) P(s, `M36 ${top(i)} h12`, 'stroke:var(--core-ink-4);stroke-width:0.8');
-  // Base slab under the monolith.
+  // Plinth: a heavy chamfered base on four feet.
   const b = G(s, { filter: u('sh') });
-  P(b, `M${X0 - 24} ${GROUND} h${6 * W + 48} l${DX} ${DY} h${-(6 * W + 48)} Z`, `fill:${u('Tt')};${QL}`);
-  R(b, X0 - 24, GROUND, 6 * W + 48, 14, `fill:${u('Tf')};${QL}`);
-  P(s, `M${X0 - 22} ${GROUND + 0.8} h${6 * W + 44}`, 'stroke:#fff;stroke-width:1.1;opacity:0.9');
+  for (const fx of [X0 - 16, X0 + 6 * W - 4]) R(b, fx, GROUND + 14, 20, 8, `fill:${u('Ts')};${QL}`, 1);
+  module(b, u, X0 - 24, GROUND - 2, 6 * W + 48, GROUND + 14, -1);
 
-  // The monolith, left to right, so each taller step covers the right face of the one before it.
   const reachedOk = (i: number): boolean => st(i) === 'ok' && r.stages.slice(0, i).every(x => x.status === 'ok');
   const m = G(s, { filter: u('sh') });
-  for (let i = 0; i < 6; i++) {
-    const x = X0 + i * W, y = top(i), x1 = x + W;
-    // Side face turned from the light (deep), top face catching it (silver), front face lit from above.
-    P(m, `M${pt(x1, y)} l${DX} ${DY} V${GROUND + DY} l${-DX} ${-DY} Z`, `fill:${u('Ts')};${QL}`);
-    P(m, `M${pt(x, y)} h${W} l${DX} ${DY} h${-W} Z`, `fill:${u('Tt')};${QL}`);
-    R(m, x, y, W, GROUND - y, `fill:${u('Tf')};${QL}`);
-  }
-  // Contact shadows where each riser meets the step below, and the machined seams on the front plane.
-  for (let i = 0; i < 5; i++) {
-    const x1 = X0 + (i + 1) * W, y = top(i);
-    P(s, `M${pt(x1, y)} l${DX} ${DY}`, 'stroke:var(--q-line);stroke-width:3;opacity:0.65');
-    P(s, `M${pt(x1 + 2, y - 1)} l${DX - 4} ${DY + 2}`, 'stroke:var(--mat-shadow);stroke-width:6;opacity:0.18');
-  }
-  // A violet bounce on the far vertical edge of the last side face (reflected light only).
-  P(s, `M${X0 + 6 * W + DX - 1.2} ${top(5) + DY + 2} V${GROUND + DY - 2}`, 'stroke:var(--q-vio);stroke-width:1.4;opacity:0.75');
-  for (let i = 0; i < 6; i++) {
-    const x = X0 + i * W, y = top(i), s0 = st(i);
-    // Front-face detail: a machined index groove; the nosing (front-top edge) has a polished chamfer.
-    P(s, `M${x + 8} ${y + 16} h${W - 16}`, 'stroke:var(--q-line);stroke-width:1.2;opacity:0.7');
-    P(s, `M${x + 8} ${y + 17.2} h${W - 16}`, 'stroke:var(--mat-spec);stroke-width:0.6;opacity:0.4');
-    P(s, `M${x + 1} ${y + 1} h${W - 2}`, 'stroke:#fff;stroke-width:1.3;opacity:0.95');
-    P(s, `M${x + 1} ${y + 6} h${W - 2}`, `fill:none;${stroke(s0, 1.6)}`);
-    // The level cell: a recessed sapphire window inset in the top face.
-    const k = 0.2, cx0 = x + W * k + DX * k, cy0 = y + DY * k, cw = W * (1 - 2 * k), cd = 1 - 2 * k;
-    const cell = `M${pt(cx0, cy0)} h${cw} l${DX * cd} ${DY * cd} h${-cw} Z`;
-    const cc = [cx0 + cw / 2 + (DX * cd) / 2, cy0 + (DY * cd) / 2];
-    P(s, cell, 'fill:var(--q-line);opacity:0.88');
-    P(s, `M${pt(cx0, cy0)} l${DX * cd} ${DY * cd}`, 'stroke:var(--mat-shadow);stroke-width:2;opacity:0.5');
-    P(s, `M${pt(cx0 + 1, cy0 - 1)} h${cw - 2}`, 'stroke:var(--mat-spec);stroke-width:0.7;opacity:0.6');
-    if (s0 === 'skipped') { P(s, cell, `fill:${u('Tt')};${QL}`); P(s, cell, 'fill:var(--seal-overlay);opacity:0.4'); continue; }
-    // Deep sapphire in the cell (dark core, vivid face, one narrow specular band); an empty recess while waiting.
-    // Only a stage that succeeded (or is running) has a vivid cell; blocked, failed and unknown keep the dark core.
-    if (s0 !== 'waiting') {
-      P(s, cell, `fill:${u('Sk')}`);
-      if (s0 === 'ok' || s0 === 'running') P(s, cell, `fill:${u('Sa')};opacity:${s0 === 'running' ? 0.45 : 0.9}`);
-      P(s, cell, `fill:${u('Sw')};stroke:var(--q-sap-hi);stroke-width:0.7;stroke-opacity:0.6`);
-    }
-    if (s0 === 'ok') {
-      // The level crystal: a small raised prism seated in the cell.
-      const [qx, qy] = cc;
-      P(s, `M${qx - 9} ${qy + 3} L${qx} ${qy - 12} L${qx + 9} ${qy + 3} L${qx} ${qy + 7} Z`, 'fill:var(--mat-shadow);opacity:0.35;transform:translate(2px,2px)');
-      P(s, `M${qx - 9} ${qy + 3} L${qx} ${qy - 12} L${qx} ${qy + 7} Z`, 'fill:#fff;opacity:0.92');
-      P(s, `M${qx} ${qy - 12} L${qx + 9} ${qy + 3} L${qx} ${qy + 7} Z`, 'fill:var(--q-sap-hi)');
-      P(s, `M${qx - 9} ${qy + 3} L${qx} ${qy - 12} L${qx + 9} ${qy + 3} L${qx} ${qy + 7} Z`, `fill:none;stroke:${c('ok')};stroke-width:0.9`);
-    }
-    if (s0 === 'running') el('line', { x1: x + 4, y1: y + 6, x2: x + W - 4, y2: y + 6, class: 'core-moving', style: `stroke:${c('running')};stroke-width:1.8;stroke-dasharray:6 4` }, s);
-    if (s0 === 'failed') P(s, `M${cc[0] - 16} ${cc[1] - 4} l8 5 l6 -6 l7 7 l9 -3`, `fill:none;${stroke('failed', 1.4)}`);
-    if (s0 === 'unknown') { P(s, cell, 'fill:var(--seal-overlay)'); symbol(s, cc[0], cc[1], 'unknown', 6); }
-    if (s0 === 'blocked' && i < 5) {
-      // Barrier blade: a machined plate standing on the step edge, red-edged.
-      P(s, `M${x + 6} ${y} V${y - 30} l${W - 12} 0 V${y} Z`, `fill:${u('md')};stroke:${c('blocked')};stroke-width:2.2;stroke-linejoin:round`);
-      P(s, `M${x + 9} ${y - 27.5} h${W - 18}`, 'stroke:var(--mat-spec);stroke-width:0.8;opacity:0.8');
-    }
-  }
-  // Excitation filament: cell to cell, only across steps that really succeeded in order.
-  let d = '';
-  for (let i = 0; i < 6 && reachedOk(i); i++) {
-    const x = X0 + i * W + W / 2 + DX / 2, y = top(i) + DY / 2;
-    d += (d ? 'L' : 'M') + pt(x, y);
-  }
-  if (d.includes('L')) { P(s, d, 'fill:none;stroke:var(--q-line);stroke-width:3.6;opacity:0.55;stroke-linejoin:round'); P(s, d, `fill:none;stroke:${c('ok')};stroke-width:1.6;stroke-linejoin:round`); }
+  for (let i = 0; i < 6; i++) module(m, u, X0 + i * W + GAP / 2, top(i), W - GAP, GROUND - 2, i);
+  // Contact shadow where each module stands on the plinth.
+  P(s, `M${X0} ${GROUND - 2.5} h${6 * W}`, 'stroke:var(--q-line);stroke-width:2;opacity:0.6');
+  P(s, `M${X0 + 6 * W + DX - 1.4} ${top(5) + DY + 3} V${GROUND - 2 + DY}`, 'stroke:var(--q-vio);stroke-width:1.4;opacity:0.8');
 
-  // Capstone on the top level: the result.
-  const cx = X0 + 5 * W + W / 2 + DX / 2, cy = top(5) + DY / 2 - 30, res = st(5);
+  for (let i = 0; i < 6; i++) {
+    const x = X0 + i * W + GAP / 2, w = W - GAP, y = top(i), s0 = st(i);
+    P(s, `M${x + 1} ${y + 7} h${w - 2}`, `fill:none;${stroke(s0, 1.6)}`);
+    // The lens: a bezel ring cut into the top face, a seat, and the sapphire itself.
+    const [lx, ly] = onTop(x, y, w, 0.5, 0.52);
+    P(s, disc(x, y, w, 0.3, 0.5, 0.52), `fill:${u('Tt')};${QL}`);
+    P(s, disc(x, y, w, 0.24, 0.5, 0.52), 'fill:var(--q-line);opacity:0.9');
+    if (s0 === 'skipped') { P(s, disc(x, y, w, 0.23, 0.5, 0.52), `fill:${u('Tf')};${QL}`); continue; }
+    if (s0 !== 'waiting') {
+      // Only a stage that succeeded (or is running) has vivid glass; blocked, failed and unknown keep the dark core.
+      P(s, disc(x, y, w, 0.21, 0.5, 0.52), `fill:${u('Sk')}`);
+      if (s0 === 'ok' || s0 === 'running') P(s, disc(x, y, w, 0.21, 0.5, 0.52), `fill:${u('Sa')};opacity:${s0 === 'running' ? 0.5 : 0.95}`);
+      E(s, lx - 5, ly - 2, 5, 2.2, `fill:#fff;opacity:${s0 === 'ok' ? 0.9 : 0.45}`);
+      P(s, disc(x, y, w, 0.21, 0.5, 0.52), 'fill:none;stroke:var(--q-sap-hi);stroke-width:0.7;opacity:0.7');
+    }
+    if (s0 === 'ok') P(s, disc(x, y, w, 0.27, 0.5, 0.52), `fill:none;stroke:${c('ok')};stroke-width:1.6`);
+    if (s0 === 'running') el('path', { d: disc(x, y, w, 0.27, 0.5, 0.52), class: 'core-moving', style: `fill:none;stroke:${c('running')};stroke-width:1.6;stroke-dasharray:6 4` }, s);
+    if (s0 === 'failed') P(s, `M${lx - 14} ${ly - 3} l7 5 l5 -6 l6 6 l8 -3`, `fill:none;${stroke('failed', 1.4)}`);
+    if (s0 === 'unknown') { P(s, disc(x, y, w, 0.21, 0.5, 0.52), 'fill:var(--seal-overlay)'); symbol(s, lx, ly, 'unknown', 6); }
+    if (s0 === 'blocked' && i < 5) {
+      // Shutter blade: a machined plate standing on the module edge, red-edged, with its pivot screw.
+      P(s, `M${x + 6} ${y} V${y - 30} l${w - 12} 0 V${y} Z`, `fill:${u('Tf')};stroke:${c('blocked')};stroke-width:2.2;stroke-linejoin:round`);
+      P(s, `M${x + 9} ${y - 27.5} h${w - 18}`, 'stroke:#fff;stroke-width:0.9;opacity:0.85');
+      E(s, x + 14, y - 15, 2.6, 2.6, `fill:${u('Tt')};${QL}`);
+    }
+  }
+  // Sapphire light guide: lens to lens, only across levels that really succeeded in order.
+  let d = '';
+  for (let i = 0; i < 6 && reachedOk(i); i++) { const [lx, ly] = onTop(X0 + i * W + GAP / 2, top(i), W - GAP, 0.5, 0.52); d += (d ? 'L' : 'M') + pt(lx, ly); }
+  if (d.includes('L')) { P(s, d, 'fill:none;stroke:var(--q-line);stroke-width:4;opacity:0.55;stroke-linejoin:round'); P(s, d, `fill:none;stroke:${c('ok')};stroke-width:1.8;stroke-linejoin:round`); }
+
+  // Crown fixture on the top level: a turned column holding the result window.
+  const [cx, cy0] = onTop(X0 + 5 * W + GAP / 2, top(5), W - GAP, 0.5, 0.52), cy = cy0 - 34, res = st(5);
   const cap = G(s, { filter: u('ss') });
-  P(cap, `M${cx - 22} ${cy + 22} L${cx - 14} ${cy + 6} H${cx + 14} L${cx + 22} ${cy + 22} Z`, `fill:${u('Tf')};${QL}`);
-  E(cap, cx, cy - 6, 16, 16, `fill:${u('Tt')};${QL}`);
+  R(cap, cx - 7, cy + 10, 14, cy0 - cy - 12, `fill:${u('Tr')};${QL}`);
+  E(cap, cx, cy0 - 2, 12, 4.5, `fill:${u('Tf')};${QL}`);
+  E(cap, cx, cy - 6, 17, 17, `fill:${u('Tt')};${QL}`);
   E(s, cx, cy - 6, 12, 12, `fill:${u('Sk')};${QL}`);
   E(s, cx, cy - 6, 12, 12, `fill:${u('Sw')}`);
   if (res === 'ok') gem(s, cx, cy - 6, 10);
@@ -123,6 +127,6 @@ export const render: Render = (host, r, t) => {
     txt(s, lx + 14, ly + 18, t('core.s.' + st.status), { size: 11, color: ink(st.status) });
   });
   const m = svg(host, 300, 252, true, '');
-  m.setAttribute('viewBox', '30 90 680 420');
+  m.setAttribute('viewBox', '30 70 680 440');
   qkit(m, 'q1m'); ladder(m, 'q1m', r);
 };

@@ -30,38 +30,66 @@ function crystal(s: Element, id: string, r: CoreRecord): void {
   const end = stop >= 0 ? stop : running >= 0 ? running : reach === 4 && st(5) === 'ok' ? 5 : reach;
   const sealed = r.stages.every(x => x.status === 'ok');
   R(s, 0, 0, 800, 540, `fill:${u('Bg')}`);
-  // The C-yoke in precision titanium: plinth, a turned column on the left, an arm over the top, two collets.
-  const y = G(s, { filter: u('sh') });
-  R(y, 40, 500, 400, 22, `fill:${u('Tf')};${QL}`, 6);
-  R(y, 52, 40, 20, 482, `fill:${u('Tr')};${QL}`, 4);
-  R(y, 52, 40, 262, 20, `fill:${u('Tf')};${QL}`, 4);
-  P(s, 'M56 40.8 H310 M46 500.8 H436', 'stroke:#fff;stroke-width:1.2;opacity:0.9');
-  P(s, 'M60 59.4 H310 M46 521 H436', 'stroke:var(--q-line);stroke-width:1.2;opacity:0.6');
-  const col = G(s, { filter: u('ss') });
-  R(col, T[0] - 9, 58, 18, T[1] - 58 + 4, `fill:${u('Tr')};${QL}`, 2);
-  R(col, B[0] - 9, B[1] - 4, 18, 500 - B[1] + 4, `fill:${u('Tr')};${QL}`, 2);
-  R(col, T[0] - 13, 72, 26, 10, `fill:${u('Tf')};${QL}`, 2);
-  R(col, B[0] - 13, 488, 26, 10, `fill:${u('Tf')};${QL}`, 2);
-
-  // The crystal in deep royal sapphire. Back facets form its dark core; front facets are translucent,
-  // each turned differently to the key light (upper left lit, lower right deepest); the upper-left
-  // facet carries one narrow specular band, the upper-right the violet interference sheen.
-  const cr = G(s, { filter: u('sh') });
-  for (const [a, b] of [[T, L], [T, RT], [B, L], [B, RT]] as const) P(cr, tri(a, K, b), `fill:${u('Sk')}`);
-  for (const v of [T, B, L, RT]) P(cr, `M${K[0]} ${K[1]} L${v[0]} ${v[1]}`, 'stroke:var(--q-sap-hi);stroke-width:0.8;opacity:0.4');
-  const faces: [V, V, V, string, number][] = [[T, L, F, 'Sa', 0.84], [T, F, RT, 'Sd', 0.86], [B, L, F, 'Sd', 0.8], [B, F, RT, 'Sk', 0.9]];
-  faces.forEach(([a, b, d, g, o], k) => {
-    P(cr, tri(a, b, d), `fill:${u(g)};opacity:${o}`);
-    if (k === 0) P(cr, tri(a, b, d), `fill:${u('Sw')}`);
-    if (k === 1) P(cr, tri(a, b, d), `fill:${u('Sv')}`);
-    if (sealed && k < 2) P(cr, tri(a, b, d), 'fill:var(--s-result);opacity:0.12');
-  });
-  // Edges: a dark seat line under a crisp cyan-white edge; the edge facing the key light is specular.
-  for (const [a, b] of [[T, L], [T, RT], [B, L], [B, RT], [T, F], [B, F], [L, F], [F, RT]] as const) {
-    P(s, `M${a[0]} ${a[1]} L${b[0]} ${b[1]}`, 'stroke:var(--q-line);stroke-width:2.4;opacity:0.5');
-    P(s, `M${a[0]} ${a[1]} L${b[0]} ${b[1]}`, 'stroke:var(--q-sap-hi);stroke-width:0.9;opacity:0.6');
+  // The mount: a precision gantry. A plinth, two turned pillars with collars, a bridge beam carrying
+  // the crown collet, two short girdle clamps; the frame stays outside the crystal's silhouette.
+  const g = G(s, { filter: u('sh') });
+  P(g, 'M40 500 h486 l14 -8 h-486 Z', `fill:${u('Tt')};${QL}`);
+  R(g, 40, 500, 486, 20, `fill:${u('Tf')};${QL}`, 3);
+  for (const x of [58, 508]) {
+    R(g, x, 64, 20, 436, `fill:${u('Tr')};${QL}`, 3);
+    for (const y of [70, 262, 484]) R(g, x - 4, y, 28, 12, `fill:${u('Tf')};${QL}`, 3);
   }
-  P(s, `M${RT[0] - 4} ${RT[1] + 5} L${B[0] + 4} ${B[1] - 8}`, 'stroke:var(--q-vio);stroke-width:1.3;opacity:0.85;stroke-linecap:round');
+  P(g, 'M50 50 h486 l10 -6 h-486 Z', `fill:${u('Tt')};${QL}`);
+  R(g, 50, 50, 486, 20, `fill:${u('Tf')};${QL}`, 4);
+  P(s, 'M44 500.8 H520 M54 50.8 H532', 'stroke:#fff;stroke-width:1.2;opacity:0.9');
+  P(s, 'M77 84 V480 M527 84 V480', 'stroke:var(--q-vio);stroke-width:1.2;opacity:0.7');
+  // Girdle clamps: an arm from each pillar to a jaw at the 02 and 04 ferrules.
+  for (const [x0, x1] of [[78, L[0] - 16], [RT[0] + 16, 508]]) {
+    R(g, x0, L[1] - 4, x1 - x0, 8, `fill:${u('Tf')};${QL}`, 2);
+    R(g, x0 < 200 ? x1 - 8 : x0, L[1] - 9, 8, 18, `fill:${u('Tt')};${QL}`, 2);
+  }
+  const col = G(s, { filter: u('ss') });
+  R(col, T[0] - 9, 70, 18, T[1] - 70 + 4, `fill:${u('Tr')};${QL}`, 2);
+  R(col, B[0] - 9, B[1] - 4, 18, 492 - B[1] + 4, `fill:${u('Tr')};${QL}`, 2);
+  R(col, T[0] - 13, 76, 26, 8, `fill:${u('Tf')};${QL}`, 2);
+  R(col, B[0] - 13, 480, 26, 10, `fill:${u('Tf')};${QL}`, 2);
+
+  // The crystal. Each facet's light runs, in real coordinates, from where the key light (upper left)
+  // strikes it; front facets are partly translucent, so the back facets, back edges and a dark inner
+  // core read through the glass. A violet reflection rises from the lower edge of the facet turned
+  // down (light bounced from below), never as a stripe across the glass.
+  const defs = s.querySelector('defs')!;
+  const lg = (n: string, a1: V, a2: V, stops: readonly (readonly [number, string, number])[]): string => {
+    const gr = el('linearGradient', { id: id + n, gradientUnits: 'userSpaceOnUse', x1: a1[0], y1: a1[1], x2: a2[0], y2: a2[1] }, defs);
+    for (const [o, c2, al] of stops) el('stop', { offset: o, style: `stop-color:${c2};stop-opacity:${al}` }, gr);
+    return u(n);
+  };
+  const sh = 'var(--q-sap-hi)', sp = 'var(--q-sap)', sd = 'var(--q-sap-deep)', sc = 'var(--q-sap-core)', vi = 'var(--q-vio)';
+  const cr = G(s, { filter: u('sh') });
+  // Back facets (seen through the front): deep, faintly lit by internal reflection.
+  for (const [a2, b2] of [[T, L], [T, RT], [B, L], [B, RT]] as const) P(cr, tri(a2, K, b2), `fill:${lg('bk' + a2[1] + b2[0], K, a2, [[0, sd, 1], [1, sc, 1]])}`);
+  for (const v2 of [T, B, L, RT]) P(cr, `M${K[0]} ${K[1]} L${v2[0]} ${v2[1]}`, 'stroke:var(--q-sap-hi);stroke-width:0.8;opacity:0.35');
+  // The dark inner volume.
+  const core = [T, L, B, RT].map(([x, y]) => `${(292 + (x - 292) * 0.5).toFixed(1)} ${(281 + (y - 281) * 0.5).toFixed(1)}`);
+  P(cr, `M${core.join(' L')} Z`, `fill:${sc};opacity:0.55`);
+  // Front facets.
+  P(cr, tri(T, L, F), `fill:${lg('f1', [200, 170], F, [[0, sh, 0.92], [0.45, sp, 0.78], [1, sd, 0.72]])}`);
+  P(cr, tri(T, F, RT), `fill:${lg('f2', T, RT, [[0, sp, 0.78], [0.6, sd, 0.8], [1, sc, 0.85]])}`);
+  P(cr, tri(B, L, F), `fill:${lg('f3', L, B, [[0, sd, 0.74], [1, sc, 0.88]])}`);
+  P(cr, tri(B, F, RT), `fill:${lg('f4', [380, 400], [330, 330], [[0, vi, 0.55], [0.35, sc, 0.82], [1, sc, 0.9]])}`);
+  if (sealed) for (const f2 of [tri(T, L, F), tri(T, F, RT)]) P(cr, f2, 'fill:var(--s-result);opacity:0.1');
+  // Edges: front edges crisp (a dark seat under a cyan-white line), inner facet boundaries finer.
+  for (const [a2, b2] of [[T, L], [T, RT], [B, L], [B, RT]] as const) {
+    P(s, `M${a2[0]} ${a2[1]} L${b2[0]} ${b2[1]}`, 'stroke:var(--q-line);stroke-width:2.6;opacity:0.5');
+    P(s, `M${a2[0]} ${a2[1]} L${b2[0]} ${b2[1]}`, 'stroke:var(--q-sap-hi);stroke-width:1;opacity:0.75');
+  }
+  for (const [a2, b2] of [[T, F], [B, F], [L, F], [F, RT]] as const) P(s, `M${a2[0]} ${a2[1]} L${b2[0]} ${b2[1]}`, 'stroke:var(--q-sap-hi);stroke-width:0.8;opacity:0.55');
+  // Specular highlights: short, sharp, on the edges that face the key light, near their vertices.
+  const spec = (a2: V, b2: V, t0: number, t1: number, w: number): void => {
+    const p0 = [a2[0] + (b2[0] - a2[0]) * t0, a2[1] + (b2[1] - a2[1]) * t0], p1 = [a2[0] + (b2[0] - a2[0]) * t1, a2[1] + (b2[1] - a2[1]) * t1];
+    P(s, `M${p0[0]} ${p0[1]} L${p1[0]} ${p1[1]}`, `stroke:#fff;stroke-width:${w};opacity:0.95;stroke-linecap:round`);
+  };
+  spec(T, L, 0.08, 0.34, 1.6); spec(L, F, 0.1, 0.24, 1.2); spec(T, F, 0.1, 0.22, 1);
 
   // The path along the edges, lit only as far as execution really went (over the facets and edges, so it stays legible).
   const edge = (k: number): void => {
@@ -97,8 +125,8 @@ function crystal(s: Element, id: string, r: CoreRecord): void {
   });
 
   // The crown collet's window: the seal. The gem only on a real success; the state mark otherwise.
-  const res = st(5), wx = T[0], wy = 50;
-  E(G(s, { filter: u('ss') }), wx, wy, 17, 17, `fill:${u('Tt')};${QL}`);
+  const res = st(5), wx = T[0], wy = 60;
+  E(G(s, { filter: u('ss') }), wx, wy, 18, 18, `fill:${u('Tt')};${QL}`);
   E(s, wx, wy, 12, 12, `fill:${u('Sk')};${QL}`);
   E(s, wx, wy, 12, 12, `fill:${u('Sw')}`);
   if (res === 'ok') gem(s, wx, wy, 8);
@@ -121,7 +149,7 @@ export const render: Render = (host, r, t) => {
     symbol(s, LX + 30, y + 12, st.status, 5);
     txt(s, LX + 42, y + 16, t('core.s.' + st.status), { size: 12, color: ink(st.status) });
   });
-  const m = svg(host, 300, 333, true, '');
-  m.setAttribute('viewBox', '36 26 480 532');
+  const m = svg(host, 300, 312, true, '');
+  m.setAttribute('viewBox', '30 30 520 520');
   qkit(m, 'q3m'); crystal(m, 'q3m', r);
 };
