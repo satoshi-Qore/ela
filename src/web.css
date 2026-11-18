@@ -527,7 +527,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 /* The badge mark differs too: a barrier bar for a refusal, a cross for an error. */
 .state[data-state="refused"]::before { width: 0.6rem; height: 0.16rem; border-radius: 0.05rem; }
 .state[data-state="error"]::before { width: auto; height: auto; border-radius: 0; background: none; content: "×"; font-weight: 700; line-height: 1; }
-.state[data-state="needs clarification"] { background: var(--warn-bg); color: var(--warn-fg); }
+.state:is([data-state="needs clarification"], [data-state="needs confirmation"]) { background: var(--warn-bg); color: var(--warn-fg); }
 .state[data-state="unsupported"] { background: var(--warn-bg); color: var(--warn-fg); }
 .state[data-state="partial"] { background: var(--warn-bg); color: var(--warn-fg); }
 

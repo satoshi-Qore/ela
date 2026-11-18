@@ -12,7 +12,7 @@ export type ContextKind = 'block_number' | 'network_check';
  * Every read-only query kind. A `balance` query needs an address, so it is never remembered as
  * context: follow-ups keep referring to the last block query or network check.
  */
-export type QueryKind = ContextKind | 'balance';
+export type QueryKind = ContextKind | 'balance' | 'transaction';
 
 /**
  * What ELA remembers about the last successful query. It deliberately stores no block height,
@@ -93,7 +93,9 @@ export type QueryRun =
   | { readonly kind: 'block_number'; readonly result: ToolResult }
   | { readonly kind: 'network_check'; readonly result: ExecutionResult }
   /** See `runBalanceQuery` in balance.ts. */
-  | { readonly kind: 'balance'; readonly address: string; readonly result: ToolResult };
+  | { readonly kind: 'balance'; readonly address: string; readonly result: ToolResult }
+  /** See `runTransactionQuery` in transaction.ts. */
+  | { readonly kind: 'transaction'; readonly hash: string; readonly result: ToolResult };
 
 /** Runs a query kind with fresh RPC data. Every call sends new requests; nothing is reused. */
 export async function runQuery(kind: ContextKind, options: ReadOptions = {}): Promise<QueryRun> {
@@ -107,6 +109,6 @@ export async function runQuery(kind: ContextKind, options: ReadOptions = {}): Pr
 
 /** Maps a query run to the outcome used for context recording. */
 export function outcomeOf(run: QueryRun): 'success' | 'partial' | 'failed' {
-  if (run.kind === 'block_number' || run.kind === 'balance') return run.result.ok ? 'success' : 'failed';
+  if (run.kind !== 'network_check') return run.result.ok ? 'success' : 'failed';
   return run.result.status;
 }

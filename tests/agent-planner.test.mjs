@@ -227,7 +227,8 @@ test('registry finds the registered read-only Diana tool', () => {
   assert.equal(typeof tool.description, 'string');
   assert.equal(typeof tool.run, 'function');
   // Changed in 7C-28: the read-only Diana balance tool is registered next to it.
-  assert.deepEqual(listTools().map(entry => entry.id), ['get_evm_block_number', 'get_balance']);
+  // Changed in 7C-29: and the read-only Diana transaction tool.
+  assert.deepEqual(listTools().map(entry => entry.id), ['get_evm_block_number', 'get_balance', 'get_transaction']);
 });
 
 test('registry entries and the tool list are immutable', () => {

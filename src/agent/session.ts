@@ -21,6 +21,11 @@ import { ruleClassifier } from './lexicon.ts';
  * for a balance query only `eth_chainId` and `eth_getBalance`, all on the Diana EVM endpoint of
  * Diana testnet. A balance query never changes the context. Nothing is stored outside this session
  * object.
+ *
+ * A transaction lookup is the one query that waits: its hash has the form of a private key, so
+ * `handleCommand` returns `confirm` and sends nothing. Only `confirmPending`, the user's explicit
+ * confirmation, reads it (eth_chainId, eth_getTransactionByHash, eth_getTransactionReceipt); any
+ * new command, `cancelPending`, or `clear` drops it.
  */
 
 export interface SessionOptions {
@@ -44,8 +49,15 @@ export type CommandResult =
     }
   /** The safety gate refused the command before any classifier call or request. */
   | { readonly kind: 'refused'; readonly reason: RiskCategory; readonly decision: IntentDecision; readonly context: ConversationContext | undefined }
-  /** A read question ELA does not support (fees, balances, transactions, ...). Nothing was sent. */
+  /** A read question ELA does not support (fees, your own balance or history, ...). Nothing was sent. */
   | { readonly kind: 'unsupported'; readonly decision: IntentDecision; readonly context: ConversationContext | undefined }
+  /**
+   * A transaction lookup waits for the user to confirm that the value is a transaction hash and not
+   * a private key (both are 0x and 64 hex digits). Nothing was sent. `preview` shows only the first
+   * and last four hex digits; the full value is kept in this session until `confirmPending`,
+   * `cancelPending`, or the next command, whichever comes first.
+   */
+  | { readonly kind: 'confirm'; readonly query: 'transaction'; readonly preview: string; readonly context: ConversationContext | undefined }
   /** ELA needs a clearer command. Nothing was sent. */
   | { readonly kind: 'clarify'; readonly reason: ClarifyReason; readonly decision: IntentDecision; readonly context: ConversationContext | undefined }
   /** An unexpected failure (for example invalid thresholds). Nothing is recorded in the context. */
@@ -56,9 +68,20 @@ export interface AgentSession {
   readonly context: ConversationContext | undefined;
   /** Handles one command. Never throws; every outcome is a frozen `CommandResult`. */
   handleCommand(command: unknown): Promise<CommandResult>;
-  /** Forgets the context. */
+  /** The masked transaction hash waiting for confirmation, or `undefined`. */
+  readonly pending: string | undefined;
+  /**
+   * The user's explicit confirmation of the waiting transaction lookup: only now is the hash read.
+   * The confirmation is used once. Without a waiting lookup nothing is sent (`nothing_to_confirm`).
+   */
+  confirmPending(): Promise<CommandResult>;
+  /** Drops the waiting transaction lookup without sending anything. */
+  cancelPending(): void;
+  /** Forgets the context (and any waiting lookup). */
   clear(): void;
 }
+
+const NOTHING_TO_CONFIRM: IntentDecision = Object.freeze({ kind: 'clarify', reason: 'nothing_to_confirm', source: 'input_check' });
 
 /** Creates an in-memory agent session with its own conversation context. */
 export function createSession(options: SessionOptions = {}): AgentSession {
@@ -70,8 +93,15 @@ export function createSession(options: SessionOptions = {}): AgentSession {
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
   };
 
-  async function handle(command: unknown): Promise<CommandResult> {
-    const decision = await interpretCommand(command, conversation.current, interpretOptions);
+  // The one transaction lookup waiting for the user's confirmation. Never stored anywhere else.
+  let pending: { readonly hash: string; readonly preview: string } | undefined;
+
+  async function handle(decide: () => Promise<IntentDecision>): Promise<CommandResult> {
+    const decision = await decide();
+    if (decision.kind === 'confirm') {
+      pending = { hash: decision.hash, preview: decision.hash.slice(0, 6) + '…' + decision.hash.slice(-4) };
+      return { kind: 'confirm', query: decision.query, preview: pending.preview, context: conversation.current };
+    }
     if (decision.kind === 'refuse') return { kind: 'refused', reason: decision.reason, decision, context: conversation.current };
     if (decision.kind === 'unsupported') return { kind: 'unsupported', decision, context: conversation.current };
     if (decision.kind === 'clarify') return { kind: 'clarify', reason: decision.reason, decision, context: conversation.current };
@@ -83,18 +113,38 @@ export function createSession(options: SessionOptions = {}): AgentSession {
     return { kind: 'answered', query: decision.query, outcome, run, decision, context: conversation.current };
   }
 
+  async function guarded(decide: () => Promise<IntentDecision>): Promise<CommandResult> {
+    try {
+      return Object.freeze(await handle(decide));
+    } catch {
+      return Object.freeze({ kind: 'error', message: 'The command failed unexpectedly.', context: conversation.current });
+    }
+  }
+
   return Object.freeze({
     get context() {
       return conversation.current;
     },
-    async handleCommand(command: unknown): Promise<CommandResult> {
-      try {
-        return Object.freeze(await handle(command));
-      } catch {
-        return Object.freeze({ kind: 'error', message: 'The command failed unexpectedly.', context: conversation.current });
-      }
+    handleCommand(command: unknown): Promise<CommandResult> {
+      // A confirmation applies only to the lookup right before it: any new command drops it.
+      pending = undefined;
+      return guarded(() => interpretCommand(command, conversation.current, interpretOptions));
+    },
+    get pending() {
+      return pending?.preview;
+    },
+    confirmPending(): Promise<CommandResult> {
+      const hash = pending?.hash;
+      pending = undefined;
+      return guarded(async () => hash
+        ? Object.freeze({ kind: 'run', query: 'transaction', intent: 'transaction', source: 'deterministic', hash })
+        : NOTHING_TO_CONFIRM);
+    },
+    cancelPending() {
+      pending = undefined;
     },
     clear() {
+      pending = undefined;
       conversation.clear();
     },
   });
