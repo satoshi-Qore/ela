@@ -1143,7 +1143,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         if (command) await submit(command);
         const rpc = await evaluate(`window.__rpc.calls.length`);
         const views = {};
-        for (const view of ['karot', 'optik', 'gravur']) {
+        // Changed in 7C-36: the three views are Karot, Koherens and Okta (Optik and Gravür are no longer offered).
+        for (const view of ['karot', 'koherens', 'okta']) {
           await clickAt(`#view-switch [data-view="${view}"]`);
           views[view] = await core(view);
         }
@@ -1164,20 +1165,23 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       unsupported: 'ok ok blocked skipped skipped blocked',
     };
     for (const [label, statuses] of Object.entries(expected)) {
-      for (const view of ['karot', 'optik', 'gravur']) assert.equal(seen[label].views[view].statuses, statuses, `${label} · ${view}`);
+      for (const view of ['karot', 'koherens', 'okta']) assert.equal(seen[label].views[view].statuses, statuses, `${label} · ${view}`);
       assert.equal(seen[label].rpcAfter, seen[label].rpc, `${label}: switching views sends nothing`);
     }
     // Values come only from the real query: the success read shows its block height, a refusal shows none.
     assert.match(seen.success.views.karot.text, /eth_blockNumber → 9954992/);
     assert.match(seen.success.views.karot.text, /eth_chainId → 9800/);
     assert.doesNotMatch(seen.refused.views.karot.text, /9954992|→/);
-    assert.match(seen.refused.views.optik.text, /Safety gate · signal stopped here/);
-    assert.match(seen.refused.views.optik.text, /no signal/);
-    assert.match(seen.success.views.optik.text, /signal arrived/);
-    assert.match(seen.refused.views.gravur.text, /stopped at 02/);
+    // Changed in 7C-36: the signal-path facts are drawn by Koherens, the stop by Okta (they were Optik and Gravür).
+    assert.match(seen.refused.views.koherens.text, /Safety gate · signal stopped here/);
+    assert.match(seen.refused.views.koherens.text, /no signal/);
+    assert.doesNotMatch(seen.refused.views.koherens.text, /signal arrived/);
+    assert.match(seen.success.views.koherens.text, /signal arrived/);
+    assert.match(seen.refused.views.okta.text, /stopped at 02/);
+    assert.match(seen.success.views.okta.text, /6 \/ 6 stages/);
     assert.match(seen.refused.views.karot.text, /Not opened · 3 layers sealed/);
     // The same meaning in HTML, for every view.
-    for (const view of ['karot', 'optik', 'gravur']) {
+    for (const view of ['karot', 'koherens', 'okta']) {
       assert.equal(seen.ready.views[view].caption, 'No command has run yet. All six stages are waiting.');
       assert.equal(seen.refused.views[view].caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.');
       assert.equal(seen.success.views[view].caption, 'All six stages ran and succeeded.');
@@ -1198,7 +1202,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         await clickAt(`#theme-switch [data-theme="${theme}"]`);
         const afterTheme = await core();
         seen.push(['theme ' + theme, afterTheme.renders]);
-        for (const view of ['karot', 'optik', 'gravur']) {
+        for (const view of ['karot', 'koherens', 'okta']) {
           await clickAt(`#view-switch [data-view="${view}"]`);
           const shown = await core(view);
           const bg = await evaluate(`getComputedStyle(document.documentElement).backgroundColor`);
@@ -1210,7 +1214,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     } finally {
       await resetCore();
     }
-    const requests = networkLog.slice(start).map(url => new URL(url)).filter(url => !url.pathname.startsWith('/ela/assets/') || !/^\/ela\/assets\/(karot|optik|gravur)-[\w-]+\.js$/.test(url.pathname));
+    const requests = networkLog.slice(start).map(url => new URL(url)).filter(url => !url.pathname.startsWith('/ela/assets/') || !/^\/ela\/assets\/(karot|koherens|okta|quantum)-[\w-]+\.js$/.test(url.pathname));
     if (PROBE) { t.diagnostic(JSON.stringify({ seen, before, after, requests: requests.map(String) })); return; }
     assert.deepEqual(after, before, 'the session result, context, flow, and RPC count are untouched');
     assert.deepEqual(requests.map(String), [], 'only Core view chunks were fetched');
@@ -1218,7 +1222,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     for (const row of seen.filter(r => r.length === 7)) {
       const [theme, view, shownTheme, checked, statuses, label, bg] = row;
       assert.deepEqual([shownTheme, checked, statuses], [theme, `${theme},${view}`, 'ok ok ok ok ok ok'], `${theme} × ${view}`);
-      assert.match(label, { karot: /^Core sample · /, optik: /^Optical bench · /, gravur: /^Engraving · / }[view], `${theme} × ${view}`);
+      assert.match(label, { karot: /^Core sample · /, koherens: /^Coherence chip · /, okta: /^Seal crystal · / }[view], `${theme} × ${view}`);
       backgrounds[theme] = bg;
     }
     assert.deepEqual(backgrounds, { light: 'rgb(238, 241, 245)', dark: 'rgb(11, 12, 14)', blue: 'rgb(8, 15, 32)' });
@@ -1237,15 +1241,15 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       seen.theme = await evaluate(`[document.documentElement.dataset.theme, document.activeElement.dataset.theme, document.activeElement.getAttribute('aria-checked'), document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#theme-switch button')].map(b => b.tabIndex).join(',')]`);
       await evaluate(`document.querySelector('#view-switch [aria-checked="true"]').focus()`);
       await pressKey('ArrowLeft', 37);
-      seen.view = await core('gravur');
+      seen.view = await core('okta');
       seen.viewFocus = await evaluate(`[document.activeElement.dataset.view, document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#view-switch button')].map(b => b.tabIndex).join(',')]`);
     } finally {
       await resetCore();
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     assert.deepEqual(seen.theme, ['light', 'light', 'true', true, '0,-1,-1'], 'Blue → (wraps) White');
-    assert.equal(seen.view.view, 'gravur', 'Karot → (wraps) Engraving');
-    assert.deepEqual(seen.viewFocus, ['gravur', true, '-1,-1,0']);
+    assert.equal(seen.view.view, 'okta', 'Karot → (wraps) Seal crystal');
+    assert.deepEqual(seen.viewFocus, ['okta', true, '-1,-1,0']);
   });
 
   uiTest('theme and view are remembered on reload; the stored theme applies before the Core loads', async t => {
@@ -1253,11 +1257,11 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     try {
       await openPage();
       await clickAt('#theme-switch [data-theme="dark"]');
-      await clickAt('#view-switch [data-view="optik"]');
-      await core('optik');
+      await clickAt('#view-switch [data-view="koherens"]');
+      await core('koherens');
       await env.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `document.addEventListener('DOMContentLoaded', () => { window.__themeAtParse = document.documentElement.dataset.theme ?? 'blue'; });` }).then(r => { seen.id = r.identifier; });
       await openPage();
-      seen.after = await core('optik');
+      seen.after = await core('koherens');
       seen.atParse = await evaluate(`window.__themeAtParse`);
     } finally {
       if (seen.id) await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: seen.id });
@@ -1266,7 +1270,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     await openPage();
     seen.fresh = await core('karot');
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
-    assert.deepEqual([seen.after.theme, seen.after.view, seen.after.checked.join(','), seen.atParse], ['dark', 'optik', 'dark,optik', 'dark']);
+    assert.deepEqual([seen.after.theme, seen.after.view, seen.after.checked.join(','), seen.atParse], ['dark', 'koherens', 'dark,koherens', 'dark']);
     assert.deepEqual([seen.fresh.theme, seen.fresh.view, seen.fresh.checked.join(',')], ['blue', 'karot', 'blue,karot'], 'defaults: Blue and Karot');
   });
 
@@ -1280,8 +1284,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
       await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`);
       seen.tr = await core('karot');
-      await clickAt('#view-switch [data-view="gravur"]');
-      seen.trGravur = await core('gravur');
+      await clickAt('#view-switch [data-view="okta"]');
+      seen.trOkta = await core('okta');
+      await clickAt('#view-switch [data-view="koherens"]');
+      seen.trKoherens = await core('koherens');
       seen.legend = await evaluate(`[...document.querySelectorAll('.core-legend li')].map(li => li.textContent.trim())`);
       seen.rpc = [rpc, await evaluate(`window.__rpc.calls.length`)];
     } finally {
@@ -1293,21 +1299,26 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.match(seen.tr.text, /NUMUNE KESİTİ/);
     assert.match(seen.tr.text, /Güvenlik kapısı/);
     assert.match(seen.tr.text, /Açılmadı · 3 katman mühürlü/);
-    assert.match(seen.trGravur.text, /02'de durdu/);
+    assert.match(seen.trOkta.text, /02'de durdu/);
+    assert.match(seen.trOkta.text, /MÜHÜR KRİSTALİ/);
+    assert.match(seen.trKoherens.text, /KOHERENS ÇİPİ/);
+    assert.match(seen.trKoherens.text, /Güvenlik kapısı · sinyal burada durdu/);
+    assert.match(seen.trKoherens.text, /SONUÇ/);
     assert.equal(seen.tr.statuses, seen.en.statuses);
     assert.deepEqual(seen.legend, ['Bekliyor', 'Çalışıyor', 'Başarılı', 'Engellendi', 'Başarısız', 'Atlandı', 'Bilinmiyor']);
     assert.equal(seen.rpc[1], seen.rpc[0], 'the language switch sends nothing');
   });
 
-  uiTest('a running query animates the optical beam only when reduced motion is not requested', async t => {
+  // Changed in 7C-36: the moving segment is Koherens' waveguide (it was the Optik beam).
+  uiTest('a running query animates the coherence chip waveguide only when reduced motion is not requested', async t => {
     const seen = {};
     await openPage();
     try {
       for (const reduce of [false, true]) {
         await env.page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }] });
-        await evaluate(`localStorage.setItem('ela-view', 'optik')`);
+        await evaluate(`localStorage.setItem('ela-view', 'koherens')`);
         await openPage('slow');
-        await core('optik');
+        await core('koherens');
         seen[reduce ? 'reduce' : 'motion'] = await evaluate(`(async () => {
           document.getElementById('command').value = 'Diana ağını kontrol et.';
           document.getElementById('command-form').requestSubmit();
@@ -1363,7 +1374,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       for (const [width, scale] of [[1440, 1], [390, 1], [320, 1], [320, 2]]) {
         await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
         await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
-        for (const theme of ['light', 'dark', 'blue']) for (const view of ['karot', 'optik', 'gravur']) {
+        for (const theme of ['light', 'dark', 'blue']) for (const view of ['karot', 'koherens', 'okta']) {
           await evaluate(`(() => { localStorage.setItem('ela-theme', ${JSON.stringify(theme)}); localStorage.setItem('ela-view', ${JSON.stringify(view)}); })()`);
           await openPage();
           await submit('Send 10 QOR.');
@@ -1717,9 +1728,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-30: also the block chunk, loaded only for a command with a digit and a block word.
     // Changed in 7C-31: also the gas chunk, loaded only for a command with a fee word.
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gas', 'gravur', 'index', 'karot', 'optik', 'panel', 'token', 'transaction'], scripts.join(', '));
+    // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gas', 'index', 'karot', 'koherens', 'okta', 'panel', 'quantum', 'token', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
-    for (const name of scripts.filter(n => /^(core|draw|karot|optik|gravur)-/.test(n))) {
+    for (const name of scripts.filter(n => /^(core|draw|karot|koherens|okta|quantum)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
       const code = readFileSync(join(env.outDir, 'assets', name), 'utf8');
       for (const marker of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'handleCommand', 'verifyMlDsa87', 'f96bc953da4e941be8354a22']) assert.equal(code.includes(marker), false, name + ': ' + marker);

@@ -1011,3 +1011,27 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   --mat-hi: #fbfcfd; --mat-mid: #9ba4b2; --mat-lo: #4d5664; --mat-edge: #ffffff; --mat-spec: #ffffff;
   --mat-line: #2b3341; --mat-line-o: 0.75; --mat-shadow: #141c2a; --mat-shadow-o: 0.4; --mat-spot: #b9c8de; --mat-violet: #6a2ee0;
 }
+
+/* === 7C-36: KOHERENS and OKTA materials ============================================================
+   Tokens of the two quantum Core views (src/core/quantum.ts): titanium (hi → deep), graphite, and
+   sapphire from a cyan edge (--q-sap-hi) through vivid blue to a near-black royal core
+   (--q-sap-core); --q-vio is reflected light only, never a state. Blue, neutral, and violet only, so
+   red still appears only at a real stop. */
+:root {
+  --q-ti-hi: #eef2f8; --q-ti: #a2aec1; --q-ti-mid: #5c6982; --q-ti-lo: #172033; --q-ti-deep: #070b15;
+  --q-gr-hi: #8a94a6; --q-gr: #353e50; --q-gr-lo: #10151f;
+  --q-sap-hi: #8bd8ff; --q-sap: #2b7af2; --q-sap-deep: #0c3aa4; --q-sap-core: #041656;
+  --q-vio: #b07cff; --q-line: #02050c; --q-spot: #2f66c4; --q-bg-lo: #02060f;
+}
+:root[data-theme="dark"] {
+  --q-ti-hi: #f2f4f7; --q-ti: #a5abb5; --q-ti-mid: #5d636d; --q-ti-lo: #1f2227; --q-ti-deep: #0a0b0e;
+  --q-gr-hi: #8e949e; --q-gr: #3a3f47; --q-gr-lo: #141619;
+  --q-sap-hi: #86d2ff; --q-sap: #347ff5; --q-sap-deep: #103ca0; --q-sap-core: #05164f;
+  --q-vio: #bb96ff; --q-line: #000; --q-spot: #4f5866; --q-bg-lo: #030304;
+}
+:root[data-theme="light"] {
+  --q-ti-hi: #fff; --q-ti: #c5ccd7; --q-ti-mid: #77829a; --q-ti-lo: #343c4b; --q-ti-deep: #1d232e;
+  --q-gr-hi: #9aa3b2; --q-gr: #465063; --q-gr-lo: #232a36;
+  --q-sap-hi: #68c6ff; --q-sap: #1c62de; --q-sap-deep: #0a2f8c; --q-sap-core: #051852;
+  --q-vio: #7633ee; --q-line: #18202c; --q-spot: #fff; --q-bg-lo: #cfd7e4;
+}
