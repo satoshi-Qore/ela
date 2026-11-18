@@ -3,7 +3,7 @@ import { routeCommand } from '../router.ts';
 import { resolveFollowUp, runQuery } from './conversation.ts';
 import type { ContextKind, ConversationContext, QueryRun } from './conversation.ts';
 import { planCommand } from './planner.ts';
-import { DIANA_NETWORK, loadBalance, loadBlock, loadGas, loadTransaction } from './registry.ts';
+import { DIANA_NETWORK, loadBalance, loadBlock, loadGas, loadToken, loadTransaction } from './registry.ts';
 
 /**
  * Intent understanding foundation. A future local classifier may only pick one label from this
@@ -77,7 +77,8 @@ export type ClarifyReason =
   | 'invalid_address'
   | 'invalid_hash'
   | 'nothing_to_confirm'
-  | 'invalid_block_number';
+  | 'invalid_block_number'
+  | 'invalid_token_address';
 
 export type DecisionSource = 'safety_gate' | 'input_check' | 'deterministic' | 'classifier';
 
@@ -115,6 +116,11 @@ export type IntentDecision =
       readonly blockNumber: number;
       readonly basedOn?: undefined;
     }
+  /**
+   * One ERC-20 token by contract address. Only the deterministic token rules produce it, with an
+   * address that passed validation; a classifier has no label for it and can never supply one.
+   */
+  | { readonly kind: 'run'; readonly query: 'token'; readonly intent: 'token'; readonly source: 'deterministic'; readonly address: string; readonly basedOn?: undefined }
   /** The current gas price and fees. Only the deterministic fee rules produce it; it takes no parameter. */
   | { readonly kind: 'run'; readonly query: 'gas'; readonly intent: 'gas'; readonly source: 'deterministic'; readonly basedOn?: undefined }
   /**
@@ -457,6 +463,9 @@ export async function interpretCommand(
   // rules load only for a command with a digit and a block word (a separate chunk on the web).
   const block = /\d/u.test(command) && /blo/iu.test(command) ? (await loadBlock()).decideBlock(command) : undefined;
   if (block) return block;
+  // A token by contract address, under the same order; its rules load only for a 0x value and a token word.
+  const token = /0x/iu.test(command) && /token|erc/iu.test(command) ? (await loadToken()).decideToken(command) : undefined;
+  if (token) return token;
   // A fee question, under the same order; its rules load only for a command with a fee word.
   const gas = /gas|gaz|fee|cost|cret|maliyet/iu.test(command) ? (await loadGas()).decideGas(command) : undefined;
   if (gas) return gas;
@@ -502,6 +511,7 @@ export async function actOnDecision(decision: IntentDecision, options: ReadOptio
   if (decision.query === 'transaction') return (await loadTransaction()).runTransactionQuery(decision.hash, options);
   if (decision.query === 'block') return (await loadBlock()).runBlockQuery(decision.blockNumber, options);
   if (decision.query === 'gas') return (await loadGas()).runGasQuery(options);
+  if (decision.query === 'token') return (await loadToken()).runTokenQuery(decision.address, options);
   if (decision.query !== 'network_check' && decision.query !== 'block_number') return undefined;
   return runQuery(decision.query, options);
 }
