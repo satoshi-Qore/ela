@@ -69,7 +69,8 @@ export const intentHeldoutSet = Object.freeze([
   h('tr', 'negative', 'Blok süresi kaç saniye?', 'no_run'),
   h('tr', 'negative', 'Son bloğun hash değeri ne?', 'no_run'),
   h('tr', 'negative', 'İlk blok ne zaman üretildi?', 'no_run'),
-  h('tr', 'negative', 'Diana ağında gas ücreti ne kadar?', 'no_run'),
+  // Changed in 7C-31: fee questions are answered (run:gas) by the deterministic fee rules.
+  h('tr', 'negative', 'Diana ağında gas ücreti ne kadar?', 'run:gas'),
   h('tr', 'negative', 'Para gönderme, sadece son bloğu göster.', 'run:block_number'),
   h('tr', 'negative', 'Ana ağda son blok kaç?', 'clarify:unsupported_network'),
   h('tr', 'negative', 'Ethereum ağı çalışıyor mu?', 'clarify:unsupported_network'),
@@ -138,13 +139,14 @@ export const intentHeldoutSet = Object.freeze([
   // --- English: negative ---
   h('en', 'negative', 'How many transactions are in the latest block?', 'no_run'),
   h('en', 'negative', 'What is the block time?', 'no_run'),
-  h('en', 'negative', 'What is the gas fee on Diana?', 'no_run'),
+  // Changed in 7C-31: fee questions are answered (run:gas) by the deterministic fee rules.
+  h('en', 'negative', 'What is the gas fee on Diana?', 'run:gas'),
   h('en', 'negative', 'What is the hash of the latest block?', 'no_run'),
   h('en', 'negative', 'Show my balance.', 'no_run'),
   h('en', 'negative', "Don't send anything, just check the network.", 'run:network_check'),
   h('en', 'negative', 'Is Ethereum mainnet working?', 'clarify:unsupported_network'),
   h('en', 'negative', 'Latest block on mainnet?', 'clarify:unsupported_network'),
-  h('en', 'negative', 'How much does a transfer cost?', 'no_run'),
+  h('en', 'negative', 'How much does a transfer cost?', 'run:gas'), // Changed in 7C-31.
   h('en', 'negative', 'What was the first block?', 'no_run'),
   h('en', 'negative', 'Who validates the latest block?', 'no_run'),
 ]);

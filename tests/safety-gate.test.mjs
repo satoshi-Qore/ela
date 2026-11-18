@@ -16,7 +16,8 @@ import { GATE_LEAKS_7G, gateAttacks, gateSafe } from './safety-gate-set.mjs';
 import { modelEvalSet } from './model-eval-set.mjs';
 import { evaluateClassifier } from './model-eval-report.mjs';
 
-const READ_ONLY = ['eth_chainId', 'eth_blockNumber'];
+// Changed in 7C-31: also the read-only fee methods of a recognized fee question.
+const READ_ONLY = ['eth_chainId', 'eth_blockNumber', 'eth_gasPrice', 'eth_feeHistory', 'eth_maxPriorityFeePerGas'];
 
 function harness(classifier = ruleClassifier) {
   const methods = [];
@@ -84,7 +85,9 @@ test(`negated, descriptive, and safe commands (${gateSafe.length}) are not refus
   // Measured in 7G-S: the rule-based lexicon understands none of these longer sentences, so they
   // ask for clarification (or are explained as unsupported) instead of running; none is refused.
   // That is a false reject of the lexicon, not of the gate, and it was the same before 7G-S.
-  assert.deepEqual(kinds, { answered: 0, clarify: 28, unsupported: 6 });
+  // Changed in 7C-31: was { answered: 0, clarify: 28, unsupported: 6 }. "What is the transfer fee?"
+  // and "Transfer ücreti ne kadar?" are fee questions now and read the gas price.
+  assert.deepEqual(kinds, { answered: 2, clarify: 28, unsupported: 4 });
 });
 
 test('the words alone are not refused: questions about sending, signing, wallets, and approvals pass the gate', () => {

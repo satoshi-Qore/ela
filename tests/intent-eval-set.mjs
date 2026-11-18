@@ -191,7 +191,9 @@ export const intentEvalSet = Object.freeze([
   risky('Stake my QOR.', 'state_change'),
 
   // --- Negative: risky words in safe or unsupported reads ---
-  negative('Transfer ücreti ne kadar?', 'unsupported', 'unsupported'),
+  // Changed in 7C-31: fee questions are answered (run:gas) by the deterministic fee rules, before any
+  // classifier; the label stays "unsupported" because the closed label set has no fee label.
+  negative('Transfer ücreti ne kadar?', 'unsupported', 'run:gas'),
   negative('Gönderdiğim işlem onaylandı mı?', 'unsupported', 'unsupported'),
   negative('Para gönderme, sadece Diana ağını kontrol et.', 'network_check', 'run:network_check'),
   negative('Transfer yapmadan önce ağı kontrol et.', 'network_check', 'run:network_check'),
@@ -207,7 +209,7 @@ export const intentEvalSet = Object.freeze([
   negative('Blok ödülü ne kadar?', 'unsupported', 'unsupported'),
   negative('Bakiyem ne kadar?', 'unsupported', 'unsupported'),
   negative('Son işlemlerimi listele.', 'unsupported', 'unsupported'),
-  negative('Gas ücreti kaç?', 'unsupported', 'unsupported'),
+  negative('Gas ücreti kaç?', 'unsupported', 'run:gas'), // Changed in 7C-31 (see above).
   negative('Ağda kaç validatör var?', 'unsupported', 'unsupported'),
   negative('Testnet faucet nerede?', 'unsupported', 'unsupported'),
   negative('Zincir kimliğini onayla.', 'network_check', 'run:network_check'),

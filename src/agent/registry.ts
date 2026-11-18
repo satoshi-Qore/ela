@@ -3,6 +3,7 @@ import { isRecord, QORECHAIN_TESTNET, QoreChainReadError } from '../qorechain/re
 import type { ReadOptions } from '../qorechain/read-client.ts';
 import type { BalanceReading } from './balance.ts';
 import type { BlockReading } from './block.ts';
+import type { GasReading } from './gas.ts';
 import type { TransactionReading } from './transaction.ts';
 import type { RpcMethod } from './planner.ts';
 
@@ -129,14 +130,31 @@ const getBlockTool = defineTool<BlockReading>({
   run: async (params, runtime) => (await loadBlock()).readBlock(params.number as number, runtime),
 });
 
+export type { GasReading };
+
+/** The fee-question rules and reader, loaded on demand (a separate chunk in the web build). */
+export const loadGas = () => import('./gas.ts');
+
+const getGasFeesTool = defineTool<GasReading>({
+  id: 'get_gas_fees',
+  description: 'Verify the Diana EVM chain ID (9800), then read gas fees.',
+  network: DIANA_NETWORK,
+  readOnly: true,
+  rpcMethods: ['eth_chainId', 'eth_gasPrice', 'eth_feeHistory', 'eth_maxPriorityFeePerGas'],
+  params: {},
+  // The endpoint is fixed; the runtime supplies only fetch and timeoutMs, never a URL.
+  run: async (_params, runtime) => (await loadGas()).readGas(runtime),
+});
+
 const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.freeze(Object.assign(Object.create(null), {
   [getEvmBlockNumberTool.id]: getEvmBlockNumberTool,
   [getBalanceTool.id]: getBalanceTool,
   [getTransactionTool.id]: getTransactionTool,
   [getBlockTool.id]: getBlockTool,
+  [getGasFeesTool.id]: getGasFeesTool,
 }));
 
-export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction' | 'get_block';
+export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction' | 'get_block' | 'get_gas_fees';
 
 /** Returns the registered tool, or `undefined` for any id that is not an own registry entry. */
 export function getTool(id: unknown): ToolDefinition | undefined {
