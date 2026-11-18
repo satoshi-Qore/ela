@@ -60,7 +60,7 @@ function station(s: Element, id: string, x: number, y: number, rot: string, st: 
     if (k) {
       // Glass: coating tint, one narrow specular streak, and its edge thickness as a second rim.
       E(g, 0, 0, 7.5, 47, `fill:${k === 1 ? 'var(--glass-2);fill-opacity:0.42' : u('gl')}`);
-      E(g, 1.4, 0, 6.6, 46, 'fill:none;stroke:var(--glass-1);stroke-width:0.8;opacity:0.45');
+      E(g, 1.4, 0, 6.6, 46, 'fill:none;stroke:var(--mat-violet);stroke-width:0.9;opacity:0.7');
       E(g, 0, 0, 7.5, 47, 'fill:none;stroke:var(--glass-edge);stroke-width:0.6;opacity:0.6');
     } else E(g, 0, 0, 2.6, 10, `fill:${u('gl')};stroke:var(--mat-line);stroke-width:0.8`);
     if (k === 2) P(g, 'M-3.2 -36 Q-5.6 -6 -3.2 24', 'fill:none;stroke:var(--glass-edge);stroke-width:0.9;opacity:0.85');

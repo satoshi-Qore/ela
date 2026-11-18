@@ -105,7 +105,7 @@ function seal(s: Element, id: string, r: CoreRecord, cx: number, cy: number, rad
   el('use', { href: `#${id}k`, transform: `rotate(-0.45 ${cx} ${cy})`, style: 'fill:none;stroke:var(--mat-spec);stroke-width:0.6;opacity:0.45' }, s);
   el('use', { href: `#${id}k`, style: 'fill:none;stroke:var(--mat-line);stroke-width:0.7;opacity:0.75' }, s);
   ring(face + bz - 0.6, 'fill:none;stroke:var(--mat-spec);stroke-width:1.1;opacity:0.85', '22 78', -52);
-  ring(face + 1.2, 'fill:none;stroke:var(--mat-spec);stroke-width:1.1;opacity:0.6', '22 78', -2);
+  ring(face + 1.2, 'fill:none;stroke:var(--mat-violet);stroke-width:1.2;opacity:0.85', '22 78', -2);
   ring(face, `fill:${lit(s, id + 'face', [[0, 'var(--core-surface)', 0.95], [1, 'var(--core-well)', 1]], true)};stroke:var(--mat-lo);stroke-width:1.2`);
   // Recess shadows are feathered (three nested arcs), so they fade instead of ending on a hard cut.
   const shade = (q: number, w: number): void => { for (let j = 0; j < 3; j++) ring(q, `fill:none;stroke:var(--mat-shadow);stroke-width:${w};opacity:0.15`, `${34 - j * 10} ${66 + j * 10}`, -(43 + j * 5)); };
