@@ -108,6 +108,12 @@ export function linear(defs: Element, id: string, stops: readonly (readonly [num
   for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
 }
 
+/** Radial gradient over the shape's own box (soft cast shadows, domed faces). */
+export function radial(defs: Element, id: string, stops: readonly (readonly [number, string, number?])[], fx = 0.5, fy = 0.5): void {
+  const g = el('radialGradient', { id, fx, fy }, defs);
+  for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
+}
+
 export function header(s: Element, title: string): void {
   txt(s, 28, 34, title, { size: 11, color: 'var(--core-ink-3)', spacing: 1.5 });
 }
