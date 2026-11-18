@@ -988,3 +988,26 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   .prep-list ul { padding-inline-start: min(1.1rem, 14px); }
   .pqc-result { padding: min(0.9rem, 10px); }
 }
+
+/* === 7C-33: ELA Core materials ======================================================================
+   One industrial material set for the three Core views, lit from the upper left: machined metal
+   (hi, mid, lo), a polished edge (--mat-spec), a crisp contact outline (--mat-line at --mat-line-o),
+   one cast-shadow colour and strength, and the key light behind each instrument. Metal is kept
+   desaturated so the state colours (--s-*) stay the only saturated blue; a real stop keeps its red.
+   Quantum Blue: blue steel. Titanium Dark: graphite and steel. Precision Light: chrome with firm
+   contact lines and shadows, so parts separate from a light background.
+   --mat-violet is a sharp violet used only as reflected light: the sheen of an optical coating on
+   glass, a narrow bounce on the far edge of a cylinder, a lens edge, the inner chamfer of a bezel.
+   It never marks a state. */
+:root {
+  --mat-hi: #cfd8e6; --mat-mid: #5d6b84; --mat-lo: #111a2b; --mat-edge: #e9eff8; --mat-spec: #ffffff;
+  --mat-line: #02050c; --mat-line-o: 0.7; --mat-shadow: #000208; --mat-shadow-o: 0.72; --mat-spot: #2d63b8; --mat-violet: #9b6bff;
+}
+:root[data-theme="dark"] {
+  --mat-hi: #e3e6ea; --mat-mid: #6f7680; --mat-lo: #1a1d21; --mat-edge: #f4f6f8; --mat-spec: #ffffff;
+  --mat-line: #000000; --mat-line-o: 0.85; --mat-shadow: #000000; --mat-shadow-o: 0.8; --mat-spot: #5b6470; --mat-violet: #a98bff;
+}
+:root[data-theme="light"] {
+  --mat-hi: #fbfcfd; --mat-mid: #9ba4b2; --mat-lo: #4d5664; --mat-edge: #ffffff; --mat-spec: #ffffff;
+  --mat-line: #2b3341; --mat-line-o: 0.75; --mat-shadow: #141c2a; --mat-shadow-o: 0.4; --mat-spot: #b9c8de; --mat-violet: #6a2ee0;
+}

@@ -108,6 +108,52 @@ export function linear(defs: Element, id: string, stops: readonly (readonly [num
   for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
 }
 
+/** Radial gradient over the shape's own box (soft cast shadows, domed faces). */
+export function radial(defs: Element, id: string, stops: readonly (readonly [number, string, number?])[], fx = 0.5, fy = 0.5): void {
+  const g = el('radialGradient', { id, fx, fy }, defs);
+  for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
+}
+
+// 7C-33 material kit, shared by the three views. One key light from the upper left; --mat-* per theme.
+// After kit(s, id), each gradient fits a shape, not every part gets the same one:
+//   'mh' an upright cylinder: sharp specular line left of centre, terminator, a violet bounce far right;
+//   'mv' a lying body: polished top chamfer, then the face darkening downward, a lit lower lip;
+//   'md' a flat machined face (brushed, lit diagonally);
+//   'gl' sapphire glass: clear body, one narrow specular streak, and the coating's violet sheen beside it;
+//   'sp' the key light behind an instrument; filters 'sh' (cast shadow) and 'ss' (contact shadow).
+type Stops = readonly (readonly [number, string, number?])[];
+const H = 'var(--mat-hi)', M = 'var(--mat-mid)', LO = 'var(--mat-lo)', SP = 'var(--mat-spec)', GE = 'var(--glass-edge)', V = 'var(--mat-violet)';
+export function kit(s: Element, id: string): Element {
+  const d = el('defs', {}, s);
+  const lin = (n: string, stops: Stops, x2: number, y2: number): void => {
+    const g = el('linearGradient', { id: id + n, x1: 0, y1: 0, x2, y2 }, d);
+    for (const [offset, color, opacity = 1] of stops) el('stop', { offset, style: `stop-color:${color};stop-opacity:${opacity}` }, g);
+  };
+  lin('mh', [[0, LO], [0.06, M], [0.17, H], [0.215, SP], [0.26, H], [0.44, M], [0.7, LO], [0.87, LO], [0.935, V, 0.7], [0.97, M, 0.6], [1, LO]], 1, 0);
+  lin('mv', [[0, SP], [0.1, H], [0.38, M], [0.8, LO], [0.92, M], [1, LO]], 0, 1);
+  lin('md', [[0, H], [0.35, M], [0.42, H, 0.9], [0.5, M], [1, LO]], 1, 1);
+  lin('gl', [[0, 'var(--glass-1)', 0.16], [0.2, GE, 0.06], [0.25, GE, 0.8], [0.29, GE, 0.06], [0.33, V, 0.42], [0.38, V, 0.04], [0.65, 'var(--glass-1)', 0.2], [1, 'var(--glass-2)', 0.34]], 1, 1);
+  radial(d, id + 'sp', [[0, 'var(--mat-spot)', 0.22], [1, 'var(--mat-spot)', 0]], 0.4, 0.35);
+  for (const [n, dy, b] of [['sh', 6, 4], ['ss', 1.6, 1]] as const) {
+    const f = el('filter', { id: id + n, x: '-15%', y: '-15%', width: '135%', height: '140%' }, d);
+    el('feDropShadow', { dx: dy / 2, dy, stdDeviation: b, style: 'flood-color:var(--mat-shadow);flood-opacity:var(--mat-shadow-o)' }, f);
+  }
+  return d;
+}
+/** The crisp contact outline of a machined part (strong in Precision Light, quiet in the dark themes). */
+export const OUT = 'stroke:var(--mat-line);stroke-opacity:var(--mat-line-o);stroke-width:0.8';
+/** Light or shadow on one arc of an ellipse only (a chamfer facing the key light, or a recess wall
+ *  turned from it): `from` and `len` are in percent of the outline, which starts at 3 o'clock and
+ *  runs clockwise (25 = 6 o'clock, 50 = 9, 75 = 12). */
+export function rim(p: Element, cx: number, cy: number, rx: number, ry: number, color: string, w: number, from: number, len: number, o = 1): SVGElement {
+  return el('ellipse', { cx, cy, rx, ry, pathLength: 100, style: `fill:none;stroke:${color};stroke-width:${w};opacity:${o};stroke-dasharray:${len} ${100 - len};stroke-dashoffset:${-from}` }, p);
+}
+/** Shape shorthands for the views. */
+export const R = (p: Element, x: number, y: number, w: number, h: number, style: string, rx?: number): SVGElement => el('rect', { x, y, width: w, height: h, rx, style }, p);
+export const E = (p: Element, cx: number, cy: number, rx: number, ry: number, style: string): SVGElement => el('ellipse', { cx, cy, rx, ry, style }, p);
+export const P = (p: Element, d: string, style: string): SVGElement => el('path', { d, style }, p);
+export const G = (p: Element, attrs: Readonly<Record<string, string | number | undefined>> = {}): SVGElement => el('g', attrs, p);
+
 export function header(s: Element, title: string): void {
   txt(s, 28, 34, title, { size: 11, color: 'var(--core-ink-3)', spacing: 1.5 });
 }
