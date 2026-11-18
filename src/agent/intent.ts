@@ -3,7 +3,7 @@ import { routeCommand } from '../router.ts';
 import { resolveFollowUp, runQuery } from './conversation.ts';
 import type { ContextKind, ConversationContext, QueryRun } from './conversation.ts';
 import { planCommand } from './planner.ts';
-import { DIANA_NETWORK, loadBalance, loadTransaction } from './registry.ts';
+import { DIANA_NETWORK, loadBalance, loadBlock, loadTransaction } from './registry.ts';
 
 /**
  * Intent understanding foundation. A future local classifier may only pick one label from this
@@ -76,7 +76,8 @@ export type ClarifyReason =
   | 'ambiguous_intent'
   | 'invalid_address'
   | 'invalid_hash'
-  | 'nothing_to_confirm';
+  | 'nothing_to_confirm'
+  | 'invalid_block_number';
 
 export type DecisionSource = 'safety_gate' | 'input_check' | 'deterministic' | 'classifier';
 
@@ -100,6 +101,18 @@ export type IntentDecision =
       readonly intent: 'balance';
       readonly source: 'deterministic';
       readonly address: string;
+      readonly basedOn?: undefined;
+    }
+  /**
+   * One block by number. Only the deterministic block rules produce it, with a number that passed
+   * validation; a classifier has no label for it and can never supply one.
+   */
+  | {
+      readonly kind: 'run';
+      readonly query: 'block';
+      readonly intent: 'block';
+      readonly source: 'deterministic';
+      readonly blockNumber: number;
       readonly basedOn?: undefined;
     }
   /**
@@ -438,6 +451,10 @@ export async function interpretCommand(
   if (balance.kind === 'balance') {
     return Object.freeze({ kind: 'run', query: 'balance', intent: 'balance', source: 'deterministic', address: balance.address });
   }
+  // A block by number: after the gate and the network check, which ran on the whole command. Its
+  // rules load only for a command with a digit and a block word (a separate chunk on the web).
+  const block = /\d/u.test(command) && /blo/iu.test(command) ? (await loadBlock()).decideBlock(command) : undefined;
+  if (block) return block;
   if (parameterPattern.test(normalize(command))) return clarify('unsupported_parameters', 'input_check');
 
   if (planCommand(command).kind === 'plan') {
@@ -478,6 +495,7 @@ export async function actOnDecision(decision: IntentDecision, options: ReadOptio
   if (decision.kind !== 'run') return undefined;
   if (decision.query === 'balance') return (await loadBalance()).runBalanceQuery(decision.address, options);
   if (decision.query === 'transaction') return (await loadTransaction()).runTransactionQuery(decision.hash, options);
+  if (decision.query === 'block') return (await loadBlock()).runBlockQuery(decision.blockNumber, options);
   if (decision.query !== 'network_check' && decision.query !== 'block_number') return undefined;
   return runQuery(decision.query, options);
 }

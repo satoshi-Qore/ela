@@ -2,6 +2,7 @@ import { getEvmBlockNumber } from '../qorechain/get-evm-block-number.ts';
 import { isRecord, QORECHAIN_TESTNET, QoreChainReadError } from '../qorechain/read-client.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
 import type { BalanceReading } from './balance.ts';
+import type { BlockReading } from './block.ts';
 import type { TransactionReading } from './transaction.ts';
 import type { RpcMethod } from './planner.ts';
 
@@ -112,13 +113,30 @@ const getTransactionTool = defineTool<TransactionReading>({
   run: async (params, runtime) => (await loadTransaction()).readTransaction(params.hash as string, runtime),
 });
 
+export type { BlockReading };
+
+/** The block-by-number rules and reader, loaded on demand (a separate chunk in the web build). */
+export const loadBlock = () => import('./block.ts');
+
+const getBlockTool = defineTool<BlockReading>({
+  id: 'get_block',
+  description: 'Verify the Diana EVM chain ID (9800), then read one block by number.',
+  network: DIANA_NETWORK,
+  readOnly: true,
+  rpcMethods: ['eth_chainId', 'eth_getBlockByNumber', 'eth_blockNumber'],
+  params: { number: { type: 'integer', required: true, min: 0, max: Number.MAX_SAFE_INTEGER } },
+  // The endpoint is fixed; the runtime supplies only fetch and timeoutMs, never a URL.
+  run: async (params, runtime) => (await loadBlock()).readBlock(params.number as number, runtime),
+});
+
 const TOOLS: Readonly<Record<string, ToolDefinition>> = Object.freeze(Object.assign(Object.create(null), {
   [getEvmBlockNumberTool.id]: getEvmBlockNumberTool,
   [getBalanceTool.id]: getBalanceTool,
   [getTransactionTool.id]: getTransactionTool,
+  [getBlockTool.id]: getBlockTool,
 }));
 
-export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction';
+export type ToolId = 'get_evm_block_number' | 'get_balance' | 'get_transaction' | 'get_block';
 
 /** Returns the registered tool, or `undefined` for any id that is not an own registry entry. */
 export function getTool(id: unknown): ToolDefinition | undefined {
