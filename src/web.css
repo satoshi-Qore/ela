@@ -1040,9 +1040,12 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
    the concept's own rules, unchanged apart from class names (.optics → .ot, .core-art → .ot-art,
    .axis → .ot-axis, .optics-caption → .ot-caption, .core[data-mode] → .ot[data-mode]). The trace keeps
    the concept's dark panel in every theme, as it was drawn: the panel gradient sits under the
-   original radial light. It has no animation. The concept clipped the trace with overflow:hidden;
-   contain:paint clips it the same way without making the box report its cropped art as overflow. */
-.core-viz .ot{isolation:isolate;position:relative;height:350px;contain:paint;background-color:#0a0e1b;background-image:radial-gradient(ellipse at 53% 53%,#242454 0,#11162d 39%,transparent 72%),linear-gradient(145deg,#14192a,#0a0e1b 62%)}
+   original radial light. It has no animation. The drawing sits in .ot-stage at the concept's fixed
+   heights, with the caption over it as in the concept. The concept clipped the trace with
+   overflow:hidden; contain:paint clips it the same way without making the box report its cropped art
+   as overflow. */
+.core-viz .ot{isolation:isolate;position:relative;container-type:inline-size;background-color:#0a0e1b}
+.ot-stage{position:relative;height:350px;contain:paint;background-image:radial-gradient(ellipse at 53% 53%,#242454 0,#11162d 39%,transparent 72%),linear-gradient(145deg,#14192a,#0a0e1b 62%)}
 .core-viz .ot-art{display:block;width:100%;height:100%;object-fit:contain;position:relative}
 .ot-axis{position:absolute;inset:17px 22px;border:1px solid #54628130;mask-image:linear-gradient(90deg,#000,transparent 17%,transparent 83%,#000);background:repeating-linear-gradient(0deg,transparent 0 32px,#6c81b219 33px 34px),repeating-linear-gradient(90deg,transparent 0 42px,#6c81b219 43px 44px)}
 .ot-axis-b{inset:50% 22px auto;border:0;border-top:1px solid #58698650}
@@ -1056,5 +1059,9 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 .ot-art .nodes circle[data-state="neutral"]{fill:#6d768c;opacity:.46}
 .ot-art .nodes circle[data-state="failed"]{fill:#ff93ad;r:5}
 .ot[data-mode="capture"] .signal,.ot[data-mode="refusal"] .signal,.ot[data-mode="idle"] .signal{opacity:.18}
-@media(max-width:760px){.core-viz .ot{height:198px}.core-viz .ot-art{height:100%;transform:scale(1.09) translateY(-4%)}.ot-axis{inset:10px 14px}.ot-axis-b{inset:49% 14px auto}.ot-caption{left:15px;bottom:7px;font-size:.64rem}}
-@media(max-width:350px){.core-viz .ot{height:173px}}
+@media(max-width:760px){.ot-stage{height:198px}.core-viz .ot-art{height:100%;transform:scale(1.09) translateY(-4%)}.ot-axis{inset:10px 14px}.ot-axis-b{inset:49% 14px auto}.ot-caption{left:15px;bottom:7px;font-size:.64rem}}
+@media(max-width:350px){.ot-stage{height:173px}}
+/* Not in the concept: where the caption is wider than the space over the art (large text on a narrow
+   screen; 12em of the trace's own font size), it follows the drawing instead of covering it. The
+   drawing, its height and its light are unchanged. */
+@container (max-width:12em){.ot-caption{position:static;display:block;padding:6px 15px 9px}}

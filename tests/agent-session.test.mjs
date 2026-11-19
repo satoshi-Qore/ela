@@ -431,12 +431,9 @@ test('the web interface runs every command through the session and has no path a
   // Like the panel, the Core has no command path: it only reads what web.ts rendered (checked below).
   assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts']);
   // Changed in 7C-36: also the Koherens and Okta views and their shared materials (quantum.ts).
-  // Changed in 7C-37: also the restored original Core visual (trace.ts). Its idle caption is the
-  // original's text literal 'Awaiting a session'; that one literal is not a reference to the agent
-  // session, so it alone is set aside before the names are checked.
+  // Changed in 7C-37: also the restored original Core visual (trace.ts).
   for (const file of ['src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
-    let source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-    if (file === 'src/core/trace.ts') source = source.replace("'Awaiting a session'", "''");
+    const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     for (const name of ['session', 'handleCommand', 'interpretCommand', 'runQuery', 'invokeTool', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'sign(', 'keygen', 'secretKey', 'privateKey']) {
       assert.equal(source.includes(name), false, file + ': ' + name);
     }

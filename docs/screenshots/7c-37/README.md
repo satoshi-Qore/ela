@@ -38,4 +38,8 @@ Variants:
 
 No request left the dev servers during the run.
 
-The trace keeps the concept's dark panel in every theme, as it was drawn. At 320 px with 200% text the caption wraps over the art, as it does in the concept (`original-concept-320-text200.png`).
+The trace keeps the concept's dark panel in every theme, as it was drawn.
+
+At normal text the caption sits over the art as in the concept. In the concept, at 320 px with 200% text, the caption wrapped over the drawing (`original-concept-320-text200.png`). Here, where it would not fit on one line, it sits below the drawing instead. The drawing is unchanged and keeps its height.
+
+The concept's idle caption read "Awaiting a session". It comes from the interface catalog as "Awaiting a command" (TR "Komut bekleniyor"), because the safety tests keep any mention of the agent session out of `index.html` and the Core sources.

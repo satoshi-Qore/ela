@@ -1176,7 +1176,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.match(shown.label, /^ELA Core · /, label);
       assert.equal(seen[label].rpcAfter, seen[label].rpc, label + ': drawing the Core sends nothing');
     }
-    assert.equal(seen.ready.shown.art, 'Awaiting a session');
+    assert.equal(seen.ready.shown.art, 'Awaiting a command');
     assert.equal(seen.success.shown.art, 'Read-only execution trace');
     assert.equal(seen.refused.shown.art, 'Read-only execution trace');
     // The same meaning in HTML, unchanged.
@@ -1282,7 +1282,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       await resetCore();
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
-    assert.deepEqual([seen.idleEn.art, seen.idleTr.art], ['Awaiting a session', 'Oturum bekleniyor']);
+    assert.deepEqual([seen.idleEn.art, seen.idleTr.art], ['Awaiting a command', 'Komut bekleniyor']);
     assert.deepEqual([seen.en.art, seen.tr.art], ['Read-only execution trace', 'Salt okunur yürütme izi']);
     assert.match(seen.tr.label, /^ELA Core · Reddedildi/);
     assert.equal(seen.tr.caption, "02 Güvenlik kapısı aşamasında durdu (Engellendi). 03, 04, 05 çalışmadı. Sonuç: Engellendi.");
@@ -1322,6 +1322,53 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.deepEqual(seen[key], ['ok running running running running running', 'idle', 'done neutral neutral neutral neutral neutral', 0], key);
     }
   });
+
+  // New in 7C-37: the original trace draws its caption over the art, as the concept did. Where that
+  // caption would not fit on one line (large text on a narrow screen) it sits below the drawing, which
+  // keeps its fixed height. It never touches a drawn plate or node, and nothing overflows.
+  uiTest('the Core caption never covers the original art: 320 and 390 px, 100% to 200% text, both languages', async t => {
+    const PLACE = `(() => {
+      const ot = document.querySelector('#core-viz .ot'), stage = ot.querySelector('.ot-stage'), cap = ot.querySelector('.ot-caption');
+      const R = e => e.getBoundingClientRect();
+      const c = R(cap), o = R(ot), st = R(stage);
+      const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+      const vis = b => ({ left: Math.max(b.left, st.left), right: Math.min(b.right, st.right), top: Math.max(b.top, st.top), bottom: Math.min(b.bottom, st.bottom) });
+      const over = getComputedStyle(cap).position === 'absolute';
+      return {
+        place: over ? 'over' : 'below',
+        ok: ![...ot.querySelectorAll('[data-plate], [data-node]')].some(e => hit(c, vis(R(e))))
+          && c.left >= o.left - 0.5 && c.right <= o.right + 0.5 && c.top >= o.top - 0.5 && c.bottom <= o.bottom + 0.5
+          && cap.scrollWidth <= cap.clientWidth + 1 && document.documentElement.scrollWidth === document.documentElement.clientWidth
+          && (over ? c.height < parseFloat(getComputedStyle(cap).fontSize) * 2 : c.top >= st.bottom - 0.5),
+      };
+    })()`;
+    const seen = {};
+    await openPage();
+    try {
+      for (const [width, scale] of [[320, 1], [320, 1.5], [320, 2], [390, 1], [390, 2]]) for (const lang of ['en', 'tr']) for (const command of [null, 'Send 10 QOR.']) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: true });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: Math.round(16 * scale), fixed: Math.round(13 * scale) } });
+        await openPage();
+        if (lang === 'tr') { await evaluate(`document.querySelector('button[data-lang=tr]').click()`); await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`); }
+        if (command) await submit(command);
+        await core('trace');
+        seen[`${width}px ${scale * 100}% ${lang} ${command ? 'refused' : 'ready'}`] = await evaluate(PLACE);
+      }
+    } finally {
+      await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    for (const [label, result] of Object.entries(seen)) {
+      assert.equal(result.ok, true, label);
+      // As in the concept at normal text; below the drawing at 200% text on a phone. In between it
+      // is wherever it fits (checked by ok above).
+      if (label.includes(' 100% ')) assert.equal(result.place, 'over', label);
+      if (label.includes(' 200% ')) assert.equal(result.place, 'below', label);
+    }
+  }, { timeout: 300_000 });
 
   // Changed in 7C-37: every theme with the original Core (it was every theme × view).
   uiTest('every theme at 1440, 390 and 320 px, and at 320 px with 200% text: no overflow, clipping, overlap, or low contrast', async t => {
