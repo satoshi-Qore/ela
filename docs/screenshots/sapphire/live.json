@@ -1,0 +1,27 @@
+{
+  "state": "Success",
+  "stateKey": "success",
+  "message": "Diana testnet EVM JSON-RPC answered: chain ID 9800 verified, latest block 10389746. This confirms that one public EVM JSON-RPC endpoint answered; it is not a full network health check.",
+  "block": "10389746",
+  "chain": "qorechain-diana",
+  "evmChain": "9800",
+  "planVisible": true,
+  "planTarget": "Target: Diana testnet · EVM chain 9800",
+  "steps": [
+    [
+      "succeeded",
+      "eth_chainId"
+    ],
+    [
+      "succeeded",
+      "eth_blockNumber"
+    ]
+  ],
+  "context": "Context: last successful Diana network check · Diana testnet",
+  "clearEnabled": true,
+  "runEnabled": true,
+  "rpc": [
+    "eth_chainId",
+    "eth_blockNumber"
+  ]
+}

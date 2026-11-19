@@ -370,9 +370,32 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     return fn(t);
   });
 
+  // Sapphire redesign: all seven states must be distinguishable in the semantic map.
+  uiTest('semantic Core preserves all seven states without requests or fake success', async () => {
+    await openPage();
+    for (const [source, expected] of [['idle','waiting'],['wait','running'],['done','ok'],['stopped','blocked'],['failed','failed'],['skipped','skipped'],['unknown','unknown']]) {
+      const actual = await evaluate(`(async () => {
+        document.querySelectorAll('#flow > li').forEach(li => li.dataset.state = '${source}');
+        const started = Date.now();
+        while (document.querySelector('#core-viz').dataset.pending || document.querySelector('#core-viz').dataset.statuses !== Array(6).fill('${expected}').join(' ')) {
+          if (Date.now() - started > 5000) throw new Error('Core state did not settle');
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        return { states: [...document.querySelectorAll('.stage-card')].map(e => e.dataset.status),
+          symbols: [...document.querySelectorAll('.stage-status-symbol')].map(e => e.textContent),
+          rpc: window.__rpc.calls.length };
+      })()`);
+      assert.deepEqual(actual.states, Array(6).fill(expected));
+      assert.equal(actual.rpc, 0);
+      assert.equal(actual.symbols.includes('✓'), expected === 'ok');
+    }
+  });
+
   uiTest('initial page state', async t => {
     await openPage();
     expectView(t, await view(), { state: 'Ready', stateKey: 'ready', message: MSG.ready, block: '—', planVisible: false, context: CONTEXT_NONE, clearEnabled: false, runEnabled: true, rpc: [] });
+    // The former .context-bar display:flex accidentally exposed hidden confirmation buttons.
+    assert.deepEqual(await evaluate(`({ hidden: document.getElementById('tx-confirm').hidden, display: getComputedStyle(document.getElementById('tx-confirm')).display })`), { hidden: true, display: 'none' });
     if (!PROBE) t.diagnostic(`chrome start: ${env.startMs} ms`);
   });
 
@@ -497,7 +520,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
           const box = element.getBoundingClientRect();
           return box.width > 0 && (box.right > width + 0.5 || box.left < -0.5);
         }).map(element => element.tagName + '.' + element.className);
-        return { width, scrollWidth: document.documentElement.scrollWidth, outside, run: Math.round(document.getElementById('run').getBoundingClientRect().width) };
+        return { width, scrollWidth: document.documentElement.scrollWidth, outside, run: Math.round(document.getElementById('run').getBoundingClientRect().width), field: Math.round(document.getElementById('command').getBoundingClientRect().width) };
       })()`);
       if (PROBE) { t.diagnostic(JSON.stringify({ desktop, narrow })); return; }
       assert.deepEqual(desktop.tokens, ['#080f20', '#102547', '#1d4680', '#2889e8', '#a6dcff', '#f0f7ff']);
@@ -519,7 +542,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.equal(narrow.width, 320);
       assert.equal(narrow.scrollWidth, 320);
       assert.deepEqual(narrow.outside, []);
-      assert.ok(narrow.run > 250, 'Run query spans the narrow card: ' + narrow.run);
+      assert.ok(Math.abs(narrow.run - narrow.field) <= 1, 'Run query spans the full command width');
     } finally {
       await env.page.send('Emulation.clearDeviceMetricsOverride');
     }
@@ -1146,7 +1169,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
   const TONE = { ok: 'done', blocked: 'failed', failed: 'failed', waiting: 'neutral', running: 'neutral', skipped: 'neutral', unknown: 'neutral' };
   const tones = statuses => statuses.split(' ').map(status => TONE[status]).join(' ');
 
-  uiTest('ELA Core shows the real session result in its original session trace', async t => {
+  uiTest('ELA Core shows the real session result in its semantic execution map', async t => {
     const seen = {};
     for (const [label, command, mode] of [
       ['ready'], ['refused', 'Send 10 QOR.'], ['success', 'Diana ağını kontrol et.'], ['partial', 'Diana ağını kontrol et.', 'block_fails'],
@@ -1186,11 +1209,11 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.equal(seen.partial.shown.caption, 'Stopped at 05 Data read (Failed). Result: Failed.');
   }, { timeout: 180_000 });
 
-  uiTest('the three themes by click: the same record and the same original trace, nothing redrawn, nothing sent', async t => {
+  uiTest('the three themes by click: the same execution map and record, nothing redrawn, nothing sent', async t => {
     const seen = [];
     let before, after, start, first;
     // The original trace keeps its own colours in every theme: the fill of a plate face and a node.
-    const ART = `JSON.stringify([getComputedStyle(document.querySelector('#core-viz .ot')).backgroundColor, getComputedStyle(document.querySelector('#core-viz [data-node="0"]')).fill, document.querySelector('#core-viz [data-plate="0"] polygon:nth-child(2)').getAttribute('stroke')])`;
+    const ART = `JSON.stringify([getComputedStyle(document.querySelector('#core-viz .stage-card')).color, getComputedStyle(document.querySelector('#core-viz [data-node="0"]')).color, document.querySelectorAll('#core-viz .stage-card').length])`;
     try {
       await openPage();
       await submit('Diana ağını kontrol et.');
@@ -1215,7 +1238,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     for (const [theme, shownTheme, checked, statuses, mode, renders, bg, art] of seen) {
       assert.deepEqual([shownTheme, checked, statuses, mode], [theme, theme, 'ok ok ok ok ok ok', 'replay'], theme);
       assert.equal(renders, first.renders, theme + ': a theme switch is CSS only and never redraws the Core');
-      assert.equal(art, '["rgb(10, 14, 27)","rgb(221, 237, 255)","#7ea5d8"]', theme + ': the original colours');
+      assert.equal(JSON.parse(art)[2], 6, theme + ': all six semantic stages remain');
       backgrounds[theme] = bg;
     }
     assert.deepEqual(backgrounds, { light: 'rgb(238, 241, 245)', dark: 'rgb(11, 12, 14)', blue: 'rgb(8, 15, 32)' });
@@ -1294,7 +1317,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
   // Changed in 7C-37: the original session trace is static, as it was drawn; a running query dims it
   // (the original's idle scene) and shows the running stages as not done. Nothing in the Core animates,
   // with or without reduced motion (it was the Koherens waveguide before).
-  uiTest('a running query: the original trace is static and shows the running stages as not done', async t => {
+  uiTest('a running query: the map is static and running stages never show success', async t => {
     const seen = {};
     await openPage();
     try {
@@ -1326,7 +1349,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
   // New in 7C-37: the original trace draws its caption over the art, as the concept did. Where that
   // caption would not fit on one line (large text on a narrow screen) it sits below the drawing, which
   // keeps its fixed height. It never touches a drawn plate or node, and nothing overflows.
-  uiTest('the Core caption never covers the original art: 320 and 390 px, 100% to 200% text, both languages', async t => {
+  uiTest('the Core caption stays below the semantic map: 320 and 390 px, 100% to 200% text, both languages', async t => {
     const PLACE = `(() => {
       const ot = document.querySelector('#core-viz .ot'), stage = ot.querySelector('.ot-stage'), cap = ot.querySelector('.ot-caption');
       const R = e => e.getBoundingClientRect();
@@ -1365,7 +1388,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.equal(result.ok, true, label);
       // As in the concept at normal text; below the drawing at 200% text on a phone. In between it
       // is wherever it fits (checked by ok above).
-      if (label.includes(' 100% ')) assert.equal(result.place, 'over', label);
+      if (label.includes(' 100% ')) assert.equal(result.place, 'below', label);
       if (label.includes(' 200% ')) assert.equal(result.place, 'below', label);
     }
   }, { timeout: 300_000 });
@@ -1511,7 +1534,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
           getComputedStyle(document.querySelector('.core-legend [data-status="blocked"]')).getPropertyValue('--c').trim() ? getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] .ln')).backgroundColor : null,
         ],
         // Changed in 7C-37: the original Core marks a stopped stage with its own failed node colour.
-        coreFailed: [...document.querySelectorAll('#core-viz [data-node][data-state="failed"]')].map(e => e.dataset.node + ' ' + getComputedStyle(e).fill).join(', ') || null,
+        coreFailed: [...document.querySelectorAll('#core-viz [data-node][data-state="failed"]')].map(e => e.dataset.node + ' ' + getComputedStyle(e).color).join(', ') || null,
       };
     })()`;
     const seen = {};
@@ -1552,8 +1575,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       // Inside the Core: the legend uses the theme red. Changed in 7C-37: the restored original trace
       // marks each stopped stage with its own failed node, in the original colour in every theme.
       assert.deepEqual(refused.core, [RED[theme], RED[theme], RED[theme]], theme + ' Core legend refusal marks');
-      assert.equal(refused.coreFailed, '1 rgb(255, 147, 173), 5 rgb(255, 147, 173)', theme + ' Core refusal: gate and result');
-      assert.equal(error.coreFailed, '3 rgb(255, 147, 173), 5 rgb(255, 147, 173)', theme + ' Core failure: network check and result');
+      assert.equal(refused.coreFailed, '1 ' + RED[theme] + ', 5 ' + RED[theme], theme + ' Core refusal: gate and result');
+      assert.equal(error.coreFailed, '3 ' + RED[theme] + ', 5 ' + RED[theme], theme + ' Core failure: network check and result');
     }
   }, { timeout: 180_000 });
 
