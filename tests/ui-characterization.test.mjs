@@ -476,9 +476,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     while (stops < 12 && await evaluate(`document.activeElement.id`) !== 'command') { await tab(); stops++; }
     // Changed in 7C-27: the theme selector (top bar) and the Core view selector (before the command
     // panel) are radio groups with one Tab stop each, so two stops were added: 7 before, 9 now.
+    // Changed in 7C-37: the Core view selector is gone (the Core shows only its original visual): 8.
     if (!PROBE) {
       assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
-      assert.equal(stops, 9, 'two language buttons, the theme group, four module links, and the Core view group come first');
+      assert.equal(stops, 8, 'two language buttons, the theme group, and four module links come first');
     }
     await tab();
     desktop.focus = await evaluate(`(() => {
@@ -1114,9 +1115,15 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     return {
       view: host.dataset.view, statuses: host.dataset.statuses, outcome: host.dataset.outcome, renders: Number(host.dataset.renders),
       theme: document.documentElement.dataset.theme ?? 'blue',
-      checked: [...document.querySelectorAll('#theme-switch [aria-checked="true"], #view-switch [aria-checked="true"]')].map(b => b.dataset.theme ?? b.dataset.view),
-      text: host.querySelector('svg.core-d').textContent,
-      label: host.querySelector('svg.core-d').getAttribute('aria-label'),
+      checked: [...document.querySelectorAll('#theme-switch [aria-checked="true"]')].map(b => b.dataset.theme),
+      // Changed in 7C-37: the Core is the original session trace: one SVG in .ot, its scene mode, and
+      // the tone of each of its six plates and nodes.
+      label: host.querySelector('svg').getAttribute('aria-label'),
+      mode: host.querySelector('.ot')?.dataset.mode,
+      plates: [0, 1, 2, 3, 4, 5].map(i => host.querySelector('[data-plate="' + i + '"]')?.dataset.state).join(' '),
+      nodes: [0, 1, 2, 3, 4, 5].map(i => host.querySelector('[data-node="' + i + '"]')?.dataset.state).join(' '),
+      art: host.querySelector('.ot-caption')?.textContent,
+      switcher: !!document.getElementById('view-switch'),
       caption: document.getElementById('core-caption').textContent,
     };
   })()`);
@@ -1131,201 +1138,178 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     command: document.getElementById('command').value,
   }))()`;
 
-  uiTest('ELA Core shows the real session result the same way in all three views', async t => {
+  // Changed in 7C-37: the Core shows only its original visual, the session trace of the first ELA
+  // design concept (src/core/trace.ts). It replaces the three views (Karot, Koherens, Okta) and the
+  // view selector. The record, the HTML caption, and "nothing runs, nothing is sent" are unchanged;
+  // the view-specific SVG labels are replaced by the original's own state attributes: each plate and
+  // node is "done", "failed" or "neutral", and the whole trace has one of the original's modes.
+  const TONE = { ok: 'done', blocked: 'failed', failed: 'failed', waiting: 'neutral', running: 'neutral', skipped: 'neutral', unknown: 'neutral' };
+  const tones = statuses => statuses.split(' ').map(status => TONE[status]).join(' ');
+
+  uiTest('ELA Core shows the real session result in its original session trace', async t => {
     const seen = {};
-    try {
-      for (const [label, command, mode] of [
-        ['ready'], ['refused', 'Send 10 QOR.'], ['success', 'Diana ağını kontrol et.'], ['partial', 'Diana ağını kontrol et.', 'block_fails'],
-        ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'], ['blockError', "What's the latest block?", 'http_500'],
-        ['spaces', '   '], ['unsupported', 'What is the swap fee?'],
-      ]) {
-        await openPage(mode ?? 'ok');
-        if (command) await submit(command);
-        const rpc = await evaluate(`window.__rpc.calls.length`);
-        const views = {};
-        // Changed in 7C-36: the three views are Karot, Koherens and Okta (Optik and Gravür are no longer offered).
-        for (const view of ['karot', 'koherens', 'okta']) {
-          await clickAt(`#view-switch [data-view="${view}"]`);
-          views[view] = await core(view);
-        }
-        seen[label] = { views, rpcAfter: await evaluate(`window.__rpc.calls.length`), rpc };
-      }
-    } finally {
-      await resetCore();
+    for (const [label, command, mode] of [
+      ['ready'], ['refused', 'Send 10 QOR.'], ['success', 'Diana ağını kontrol et.'], ['partial', 'Diana ağını kontrol et.', 'block_fails'],
+      ['wrongChain', 'Diana ağını kontrol et.', 'wrong_chain'], ['blockError', "What's the latest block?", 'http_500'],
+      ['spaces', '   '], ['unsupported', 'What is the swap fee?'],
+    ]) {
+      await openPage(mode ?? 'ok');
+      if (command) await submit(command);
+      const rpc = await evaluate(`window.__rpc.calls.length`);
+      seen[label] = { shown: await core('trace'), rpc, rpcAfter: await evaluate(`window.__rpc.calls.length`) };
     }
-    if (PROBE) { t.diagnostic(JSON.stringify(Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, v.views.karot.statuses])))); return; }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     const expected = {
-      ready: 'waiting waiting waiting waiting waiting waiting',
-      refused: 'ok blocked skipped skipped skipped blocked',
-      success: 'ok ok ok ok ok ok',
-      partial: 'ok ok ok ok failed failed',
-      wrongChain: 'ok ok ok failed skipped failed',
-      blockError: 'ok ok ok unknown unknown failed',
-      spaces: 'blocked skipped skipped skipped skipped blocked',
-      unsupported: 'ok ok blocked skipped skipped blocked',
+      ready: ['waiting waiting waiting waiting waiting waiting', 'idle'],
+      refused: ['ok blocked skipped skipped skipped blocked', 'refusal'],
+      success: ['ok ok ok ok ok ok', 'replay'],
+      partial: ['ok ok ok ok failed failed', 'capture'],
+      wrongChain: ['ok ok ok failed skipped failed', 'capture'],
+      blockError: ['ok ok ok unknown unknown failed', 'capture'],
+      spaces: ['blocked skipped skipped skipped skipped blocked', 'refusal'],
+      unsupported: ['ok ok blocked skipped skipped blocked', 'refusal'],
     };
-    for (const [label, statuses] of Object.entries(expected)) {
-      for (const view of ['karot', 'koherens', 'okta']) assert.equal(seen[label].views[view].statuses, statuses, `${label} · ${view}`);
-      assert.equal(seen[label].rpcAfter, seen[label].rpc, `${label}: switching views sends nothing`);
+    for (const [label, [statuses, mode]] of Object.entries(expected)) {
+      const { shown } = seen[label];
+      assert.deepEqual([shown.view, shown.statuses, shown.mode, shown.plates, shown.nodes], ['trace', statuses, mode, tones(statuses), tones(statuses)], label);
+      assert.equal(shown.switcher, false, label + ': there is no view selector');
+      assert.match(shown.label, /^ELA Core · /, label);
+      assert.equal(seen[label].rpcAfter, seen[label].rpc, label + ': drawing the Core sends nothing');
     }
-    // Values come only from the real query: the success read shows its block height, a refusal shows none.
-    assert.match(seen.success.views.karot.text, /eth_blockNumber → 9954992/);
-    assert.match(seen.success.views.karot.text, /eth_chainId → 9800/);
-    assert.doesNotMatch(seen.refused.views.karot.text, /9954992|→/);
-    // Changed in 7C-36: the signal-path facts are drawn by Koherens, the stop by Okta (they were Optik and Gravür).
-    assert.match(seen.refused.views.koherens.text, /Safety gate · signal stopped here/);
-    assert.match(seen.refused.views.koherens.text, /no signal/);
-    assert.doesNotMatch(seen.refused.views.koherens.text, /signal arrived/);
-    assert.match(seen.success.views.koherens.text, /signal arrived/);
-    assert.match(seen.refused.views.okta.text, /stopped at 02/);
-    assert.match(seen.success.views.okta.text, /6 \/ 6 stages/);
-    assert.match(seen.refused.views.karot.text, /Not opened · 3 layers sealed/);
-    // The same meaning in HTML, for every view.
-    for (const view of ['karot', 'koherens', 'okta']) {
-      assert.equal(seen.ready.views[view].caption, 'No command has run yet. All six stages are waiting.');
-      assert.equal(seen.refused.views[view].caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.');
-      assert.equal(seen.success.views[view].caption, 'All six stages ran and succeeded.');
-      assert.equal(seen.partial.views[view].caption, 'Stopped at 05 Data read (Failed). Result: Failed.');
-    }
+    assert.equal(seen.ready.shown.art, 'Awaiting a command');
+    assert.equal(seen.success.shown.art, 'Read-only execution trace');
+    assert.equal(seen.refused.shown.art, 'Read-only execution trace');
+    // The same meaning in HTML, unchanged.
+    assert.equal(seen.ready.shown.caption, 'No command has run yet. All six stages are waiting.');
+    assert.equal(seen.refused.shown.caption, 'Stopped at 02 Safety gate (Blocked). 03, 04, 05 did not run. Result: Blocked.');
+    assert.equal(seen.success.shown.caption, 'All six stages ran and succeeded.');
+    assert.equal(seen.partial.shown.caption, 'Stopped at 05 Data read (Failed). Result: Failed.');
   }, { timeout: 180_000 });
 
-  uiTest('nine theme and view combinations by click: the same record, nothing runs again, nothing is sent', async t => {
+  uiTest('the three themes by click: the same record and the same original trace, nothing redrawn, nothing sent', async t => {
     const seen = [];
-    let before, after, start;
+    let before, after, start, first;
+    // The original trace keeps its own colours in every theme: the fill of a plate face and a node.
+    const ART = `JSON.stringify([getComputedStyle(document.querySelector('#core-viz .ot')).backgroundColor, getComputedStyle(document.querySelector('#core-viz [data-node="0"]')).fill, document.querySelector('#core-viz [data-plate="0"] polygon:nth-child(2)').getAttribute('stroke')])`;
     try {
       await openPage();
       await submit('Diana ağını kontrol et.');
       before = await evaluate(SESSION_VIEW);
-      const first = await core('karot');
+      first = await core('trace');
       start = networkLog.length;
       for (const theme of ['light', 'dark', 'blue']) {
         await clickAt(`#theme-switch [data-theme="${theme}"]`);
-        const afterTheme = await core();
-        seen.push(['theme ' + theme, afterTheme.renders]);
-        for (const view of ['karot', 'koherens', 'okta']) {
-          await clickAt(`#view-switch [data-view="${view}"]`);
-          const shown = await core(view);
-          const bg = await evaluate(`getComputedStyle(document.documentElement).backgroundColor`);
-          seen.push([theme, view, shown.theme, shown.checked.join(','), shown.statuses, shown.label, bg]);
-        }
+        const shown = await core('trace');
+        const bg = await evaluate(`getComputedStyle(document.documentElement).backgroundColor`);
+        seen.push([theme, shown.theme, shown.checked.join(','), shown.statuses, shown.mode, shown.renders, bg, await evaluate(ART)]);
       }
       after = await evaluate(SESSION_VIEW);
-      seen.push(['first renders', first.renders]);
     } finally {
       await resetCore();
     }
-    const requests = networkLog.slice(start).map(url => new URL(url)).filter(url => !url.pathname.startsWith('/ela/assets/') || !/^\/ela\/assets\/(karot|koherens|okta|quantum)-[\w-]+\.js$/.test(url.pathname));
-    if (PROBE) { t.diagnostic(JSON.stringify({ seen, before, after, requests: requests.map(String) })); return; }
+    const requests = networkLog.slice(start);
+    if (PROBE) { t.diagnostic(JSON.stringify({ seen, before, after, requests })); return; }
     assert.deepEqual(after, before, 'the session result, context, flow, and RPC count are untouched');
-    assert.deepEqual(requests.map(String), [], 'only Core view chunks were fetched');
+    assert.deepEqual(requests, [], 'a theme switch fetches nothing');
     const backgrounds = {};
-    for (const row of seen.filter(r => r.length === 7)) {
-      const [theme, view, shownTheme, checked, statuses, label, bg] = row;
-      assert.deepEqual([shownTheme, checked, statuses], [theme, `${theme},${view}`, 'ok ok ok ok ok ok'], `${theme} × ${view}`);
-      assert.match(label, { karot: /^Core sample · /, koherens: /^Coherence chip · /, okta: /^Seal crystal · / }[view], `${theme} × ${view}`);
+    for (const [theme, shownTheme, checked, statuses, mode, renders, bg, art] of seen) {
+      assert.deepEqual([shownTheme, checked, statuses, mode], [theme, theme, 'ok ok ok ok ok ok', 'replay'], theme);
+      assert.equal(renders, first.renders, theme + ': a theme switch is CSS only and never redraws the Core');
+      assert.equal(art, '["rgb(10, 14, 27)","rgb(221, 237, 255)","#7ea5d8"]', theme + ': the original colours');
       backgrounds[theme] = bg;
     }
     assert.deepEqual(backgrounds, { light: 'rgb(238, 241, 245)', dark: 'rgb(11, 12, 14)', blue: 'rgb(8, 15, 32)' });
-    // A theme switch is CSS only: it never redraws the Core.
-    const themeRows = seen.filter(r => r[0].startsWith('theme '));
-    assert.equal(themeRows[0][1], seen.find(r => r[0] === 'first renders')[1], 'switching to White did not redraw');
   }, { timeout: 120_000 });
 
-  uiTest('theme and view selectors work with the keyboard: one Tab stop each, arrow keys move the choice', async t => {
+  uiTest('the theme selector works with the keyboard: one Tab stop, arrow keys move the choice', async t => {
     const seen = {};
     try {
       await openPage();
-      await core('karot');
+      await core('trace');
       await evaluate(`document.querySelector('#theme-switch [aria-checked="true"]').focus()`);
       await pressKey('ArrowRight', 39);
       seen.theme = await evaluate(`[document.documentElement.dataset.theme, document.activeElement.dataset.theme, document.activeElement.getAttribute('aria-checked'), document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#theme-switch button')].map(b => b.tabIndex).join(',')]`);
-      await evaluate(`document.querySelector('#view-switch [aria-checked="true"]').focus()`);
-      await pressKey('ArrowLeft', 37);
-      seen.view = await core('okta');
-      seen.viewFocus = await evaluate(`[document.activeElement.dataset.view, document.activeElement.matches(':focus-visible'), [...document.querySelectorAll('#view-switch button')].map(b => b.tabIndex).join(',')]`);
+      seen.core = await core('trace');
     } finally {
       await resetCore();
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
     assert.deepEqual(seen.theme, ['light', 'light', 'true', true, '0,-1,-1'], 'Blue → (wraps) White');
-    assert.equal(seen.view.view, 'okta', 'Karot → (wraps) Seal crystal');
-    assert.deepEqual(seen.viewFocus, ['okta', true, '-1,-1,0']);
+    assert.equal(seen.core.view, 'trace');
   });
 
-  uiTest('theme and view are remembered on reload; the stored theme applies before the Core loads', async t => {
+  uiTest('the theme is remembered on reload and applies before the Core loads; a stored Core view is ignored', async t => {
     const seen = {};
     try {
       await openPage();
       await clickAt('#theme-switch [data-theme="dark"]');
-      await clickAt('#view-switch [data-view="koherens"]');
-      await core('koherens');
+      // A choice stored by an earlier version (Karot, Koherens, Okta, Optik, Gravür) no longer applies.
+      await evaluate(`localStorage.setItem('ela-view', 'koherens')`);
       await env.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `document.addEventListener('DOMContentLoaded', () => { window.__themeAtParse = document.documentElement.dataset.theme ?? 'blue'; });` }).then(r => { seen.id = r.identifier; });
       await openPage();
-      seen.after = await core('koherens');
+      seen.after = await core('trace');
       seen.atParse = await evaluate(`window.__themeAtParse`);
     } finally {
       if (seen.id) await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: seen.id });
       await resetCore();
     }
     await openPage();
-    seen.fresh = await core('karot');
+    seen.fresh = await core('trace');
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
-    assert.deepEqual([seen.after.theme, seen.after.view, seen.after.checked.join(','), seen.atParse], ['dark', 'koherens', 'dark,koherens', 'dark']);
-    assert.deepEqual([seen.fresh.theme, seen.fresh.view, seen.fresh.checked.join(',')], ['blue', 'karot', 'blue,karot'], 'defaults: Blue and Karot');
+    assert.deepEqual([seen.after.theme, seen.after.view, seen.after.checked.join(','), seen.atParse], ['dark', 'trace', 'dark', 'dark']);
+    assert.deepEqual([seen.fresh.theme, seen.fresh.view, seen.fresh.checked.join(',')], ['blue', 'trace', 'blue'], 'default: Blue');
   });
 
   uiTest('the Core follows the language switch without running anything', async t => {
     const seen = {};
     try {
       await openPage();
+      seen.idleEn = await core('trace');
       await submit('Send 10 QOR.');
-      seen.en = await core('karot');
+      seen.en = await core('trace');
       const rpc = await evaluate(`window.__rpc.calls.length`);
       await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
       await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`);
-      seen.tr = await core('karot');
-      await clickAt('#view-switch [data-view="okta"]');
-      seen.trOkta = await core('okta');
-      await clickAt('#view-switch [data-view="koherens"]');
-      seen.trKoherens = await core('koherens');
+      seen.tr = await core('trace');
       seen.legend = await evaluate(`[...document.querySelectorAll('.core-legend li')].map(li => li.textContent.trim())`);
       seen.rpc = [rpc, await evaluate(`window.__rpc.calls.length`)];
+      await openPage();
+      await evaluate(`document.querySelector('button[data-lang=tr]').click()`);
+      await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`);
+      seen.idleTr = await core('trace');
     } finally {
       await evaluate(`document.querySelector('button[data-lang=en]').click()`);
       await resetCore();
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
-    assert.match(seen.en.text, /SPECIMEN SECTION/);
-    assert.match(seen.tr.text, /NUMUNE KESİTİ/);
-    assert.match(seen.tr.text, /Güvenlik kapısı/);
-    assert.match(seen.tr.text, /Açılmadı · 3 katman mühürlü/);
-    assert.match(seen.trOkta.text, /02'de durdu/);
-    assert.match(seen.trOkta.text, /MÜHÜR KRİSTALİ/);
-    assert.match(seen.trKoherens.text, /KOHERENS ÇİPİ/);
-    assert.match(seen.trKoherens.text, /Güvenlik kapısı · sinyal burada durdu/);
-    assert.match(seen.trKoherens.text, /SONUÇ/);
-    assert.equal(seen.tr.statuses, seen.en.statuses);
+    assert.deepEqual([seen.idleEn.art, seen.idleTr.art], ['Awaiting a command', 'Komut bekleniyor']);
+    assert.deepEqual([seen.en.art, seen.tr.art], ['Read-only execution trace', 'Salt okunur yürütme izi']);
+    assert.match(seen.tr.label, /^ELA Core · Reddedildi/);
+    assert.equal(seen.tr.caption, "02 Güvenlik kapısı aşamasında durdu (Engellendi). 03, 04, 05 çalışmadı. Sonuç: Engellendi.");
+    assert.deepEqual([seen.tr.statuses, seen.tr.plates], [seen.en.statuses, seen.en.plates]);
     assert.deepEqual(seen.legend, ['Bekliyor', 'Çalışıyor', 'Başarılı', 'Engellendi', 'Başarısız', 'Atlandı', 'Bilinmiyor']);
     assert.equal(seen.rpc[1], seen.rpc[0], 'the language switch sends nothing');
   });
 
-  // Changed in 7C-36: the moving segment is Koherens' waveguide (it was the Optik beam).
-  uiTest('a running query animates the coherence chip waveguide only when reduced motion is not requested', async t => {
+  // Changed in 7C-37: the original session trace is static, as it was drawn; a running query dims it
+  // (the original's idle scene) and shows the running stages as not done. Nothing in the Core animates,
+  // with or without reduced motion (it was the Koherens waveguide before).
+  uiTest('a running query: the original trace is static and shows the running stages as not done', async t => {
     const seen = {};
     await openPage();
     try {
       for (const reduce of [false, true]) {
         await env.page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }] });
-        await evaluate(`localStorage.setItem('ela-view', 'koherens')`);
         await openPage('slow');
-        await core('koherens');
+        await core('trace');
         seen[reduce ? 'reduce' : 'motion'] = await evaluate(`(async () => {
           document.getElementById('command').value = 'Diana ağını kontrol et.';
           document.getElementById('command-form').requestSubmit();
+          const host = document.getElementById('core-viz');
           const started = Date.now();
-          while (!document.querySelector('#core-viz .core-moving')) { if (Date.now() - started > 3000) return 'no running beam'; await new Promise(r => setTimeout(r, 10)); }
-          const statuses = document.getElementById('core-viz').dataset.statuses;
-          return [statuses, getComputedStyle(document.querySelector('#core-viz .core-moving')).animationName];
+          while (!(host.dataset.statuses ?? '').includes('running') || host.dataset.pending) { if (Date.now() - started > 3000) return 'not running'; await new Promise(r => setTimeout(r, 10)); }
+          const moving = [...host.querySelectorAll('*')].filter(e => getComputedStyle(e).animationName !== 'none' || getComputedStyle(e).transitionDuration.split(',').some(d => parseFloat(d) > 0)).length;
+          return [host.dataset.statuses, host.querySelector('.ot').dataset.mode, [0, 1, 2, 3, 4, 5].map(i => host.querySelector('[data-plate="' + i + '"]').dataset.state).join(' '), moving];
         })()`);
         await evaluate(`(async () => { while (document.getElementById('run').disabled) await new Promise(r => setTimeout(r, 20)); })()`);
       }
@@ -1334,11 +1318,60 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       await resetCore();
     }
     if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
-    assert.deepEqual(seen.motion, ['ok running running running running running', 'core-flow']);
-    assert.deepEqual(seen.reduce, ['ok running running running running running', 'none']);
+    for (const key of ['motion', 'reduce']) {
+      assert.deepEqual(seen[key], ['ok running running running running running', 'idle', 'done neutral neutral neutral neutral neutral', 0], key);
+    }
   });
 
-  uiTest('every theme × view at 1440, 390 and 320 px, and at 320 px with 200% text: no overflow, clipping, overlap, or low contrast', async t => {
+  // New in 7C-37: the original trace draws its caption over the art, as the concept did. Where that
+  // caption would not fit on one line (large text on a narrow screen) it sits below the drawing, which
+  // keeps its fixed height. It never touches a drawn plate or node, and nothing overflows.
+  uiTest('the Core caption never covers the original art: 320 and 390 px, 100% to 200% text, both languages', async t => {
+    const PLACE = `(() => {
+      const ot = document.querySelector('#core-viz .ot'), stage = ot.querySelector('.ot-stage'), cap = ot.querySelector('.ot-caption');
+      const R = e => e.getBoundingClientRect();
+      const c = R(cap), o = R(ot), st = R(stage);
+      const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+      const vis = b => ({ left: Math.max(b.left, st.left), right: Math.min(b.right, st.right), top: Math.max(b.top, st.top), bottom: Math.min(b.bottom, st.bottom) });
+      const over = getComputedStyle(cap).position === 'absolute';
+      return {
+        place: over ? 'over' : 'below',
+        ok: ![...ot.querySelectorAll('[data-plate], [data-node]')].some(e => hit(c, vis(R(e))))
+          && c.left >= o.left - 0.5 && c.right <= o.right + 0.5 && c.top >= o.top - 0.5 && c.bottom <= o.bottom + 0.5
+          && cap.scrollWidth <= cap.clientWidth + 1 && document.documentElement.scrollWidth === document.documentElement.clientWidth
+          && (over ? c.height < parseFloat(getComputedStyle(cap).fontSize) * 2 : c.top >= st.bottom - 0.5),
+      };
+    })()`;
+    const seen = {};
+    await openPage();
+    try {
+      for (const [width, scale] of [[320, 1], [320, 1.5], [320, 2], [390, 1], [390, 2]]) for (const lang of ['en', 'tr']) for (const command of [null, 'Send 10 QOR.']) {
+        await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: true });
+        await env.page.send('Page.setFontSizes', { fontSizes: { standard: Math.round(16 * scale), fixed: Math.round(13 * scale) } });
+        await openPage();
+        if (lang === 'tr') { await evaluate(`document.querySelector('button[data-lang=tr]').click()`); await evaluate(`new Promise(resolve => setTimeout(resolve, 150))`); }
+        if (command) await submit(command);
+        await core('trace');
+        seen[`${width}px ${scale * 100}% ${lang} ${command ? 'refused' : 'ready'}`] = await evaluate(PLACE);
+      }
+    } finally {
+      await evaluate(`document.querySelector('button[data-lang=en]').click()`);
+      await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16, fixed: 13 } });
+      await env.page.send('Emulation.clearDeviceMetricsOverride');
+      await resetCore();
+    }
+    if (PROBE) { t.diagnostic(JSON.stringify(seen)); return; }
+    for (const [label, result] of Object.entries(seen)) {
+      assert.equal(result.ok, true, label);
+      // As in the concept at normal text; below the drawing at 200% text on a phone. In between it
+      // is wherever it fits (checked by ok above).
+      if (label.includes(' 100% ')) assert.equal(result.place, 'over', label);
+      if (label.includes(' 200% ')) assert.equal(result.place, 'below', label);
+    }
+  }, { timeout: 300_000 });
+
+  // Changed in 7C-37: every theme with the original Core (it was every theme × view).
+  uiTest('every theme at 1440, 390 and 320 px, and at 320 px with 200% text: no overflow, clipping, overlap, or low contrast', async t => {
     const AUDIT = `(() => {
       const width = document.documentElement.clientWidth;
       const shown = element => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== 'hidden'; };
@@ -1374,12 +1407,12 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       for (const [width, scale] of [[1440, 1], [390, 1], [320, 1], [320, 2]]) {
         await env.page.send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 768 });
         await env.page.send('Page.setFontSizes', { fontSizes: { standard: 16 * scale, fixed: 13 * scale } });
-        for (const theme of ['light', 'dark', 'blue']) for (const view of ['karot', 'koherens', 'okta']) {
-          await evaluate(`(() => { localStorage.setItem('ela-theme', ${JSON.stringify(theme)}); localStorage.setItem('ela-view', ${JSON.stringify(view)}); })()`);
+        for (const theme of ['light', 'dark', 'blue']) {
+          await evaluate(`localStorage.setItem('ela-theme', ${JSON.stringify(theme)})`);
           await openPage();
           await submit('Send 10 QOR.');
-          await core(view);
-          results[`${width}px ${scale * 100}% ${theme} ${view}`] = await evaluate(AUDIT);
+          await core('trace');
+          results[`${width}px ${scale * 100}% ${theme}`] = await evaluate(AUDIT);
         }
       }
     } finally {
@@ -1475,10 +1508,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         core: [
           getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] svg path')).stroke,
           getComputedStyle(document.querySelector('.core-legend [data-status="failed"] svg path')).stroke,
-          (document.querySelector('#core-viz .core-d g[data-status="blocked"] path') ? getComputedStyle(document.querySelector('#core-viz .core-d g[data-status="blocked"] path')).stroke : null),
           getComputedStyle(document.querySelector('.core-legend [data-status="blocked"]')).getPropertyValue('--c').trim() ? getComputedStyle(document.querySelector('.core-legend [data-status="blocked"] .ln')).backgroundColor : null,
         ],
-        coreFailed: (document.querySelector('#core-viz .core-d g[data-status="failed"] path') ? getComputedStyle(document.querySelector('#core-viz .core-d g[data-status="failed"] path')).stroke : null),
+        // Changed in 7C-37: the original Core marks a stopped stage with its own failed node colour.
+        coreFailed: [...document.querySelectorAll('#core-viz [data-node][data-state="failed"]')].map(e => e.dataset.node + ' ' + getComputedStyle(e).fill).join(', ') || null,
       };
     })()`;
     const seen = {};
@@ -1516,9 +1549,11 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.deepEqual([refused.badgeMark, error.badgeMark, error.failedMarker], ['""', '"×"', 'dashed'], theme + ' marks');
       assert.deepEqual([success.badge, success.result], [GREEN[theme], GREEN[theme]], theme + ' success');
       assert.deepEqual(seen[theme + ' invalid'], [RED[theme], RED[theme]], theme + ' not-valid signature');
-      // Inside the Core: the same red for the legend and the drawn marks of a refusal and a failure.
-      assert.deepEqual(refused.core, [RED[theme], RED[theme], RED[theme], RED[theme]], theme + ' Core refusal marks');
-      assert.equal(error.coreFailed, RED[theme], theme + ' Core failure mark');
+      // Inside the Core: the legend uses the theme red. Changed in 7C-37: the restored original trace
+      // marks each stopped stage with its own failed node, in the original colour in every theme.
+      assert.deepEqual(refused.core, [RED[theme], RED[theme], RED[theme]], theme + ' Core legend refusal marks');
+      assert.equal(refused.coreFailed, '1 rgb(255, 147, 173), 5 rgb(255, 147, 173)', theme + ' Core refusal: gate and result');
+      assert.equal(error.coreFailed, '3 rgb(255, 147, 173), 5 rgb(255, 147, 173)', theme + ' Core failure: network check and result');
     }
   }, { timeout: 180_000 });
 
@@ -1620,7 +1655,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.deepEqual(closed, { hidden: true, expanded: 'false', label: 'Open verifier', controls: 'pqc-body', heading: 'Post-Quantum Signature Verification' });
     // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
     // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
-    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'draw.js', 'index.css', 'index.js', 'karot.js'], atLoad.join(', '));
+    // Changed in 7C-37: the Core chunk and its one visual, the original session trace (no drawing helpers).
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'index.css', 'index.js', 'trace.js'], atLoad.join(', '));
     assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
@@ -1729,9 +1765,10 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-31: also the gas chunk, loaded only for a command with a fee word.
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
     // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'draw', 'gas', 'index', 'karot', 'koherens', 'okta', 'panel', 'quantum', 'token', 'transaction'], scripts.join(', '));
+    // Changed in 7C-37: the Core chunk and the original session trace only; the later views are not bundled.
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'gas', 'index', 'panel', 'token', 'trace', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
-    for (const name of scripts.filter(n => /^(core|draw|karot|koherens|okta|quantum)-/.test(n))) {
+    for (const name of scripts.filter(n => /^(core|trace)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
       const code = readFileSync(join(env.outDir, 'assets', name), 'utf8');
       for (const marker of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'handleCommand', 'verifyMlDsa87', 'f96bc953da4e941be8354a22']) assert.equal(code.includes(marker), false, name + ': ' + marker);
