@@ -1,23 +1,19 @@
-// ELA Core: the theme and Core-view selectors and the three Core views. Loaded as its own chunk by
-// web.ts, so the main bundle stays within its budget; each view is a further chunk of its own.
+// ELA Core: the theme selector and the Core visual. Loaded as its own chunk by web.ts, so the main
+// bundle stays within its budget; the visual is a further chunk of its own.
 //
 // It adds no execution engine. The record it draws is read from what web.ts already rendered from
 // the agent session's real result: the execution flow (#flow, one state per stage), the query state,
 // and the values the query read. It never calls the session, sends no request, and runs nothing:
 // - a theme switch only sets <html data-theme> (pure CSS) and re-renders nothing;
-// - a view switch re-renders the Core from the same record;
 // - the Core re-renders only when web.ts changes the flow, the query state, the readout, or the language.
 import type { CoreRecord, CoreStage, Render, Status, Text } from './draw.ts';
 
-// Changed in 7C-36: the Core has three views, Karot, Koherens and Okta. Optik and Gravür keep their
-// sources but are no longer offered; a stored choice of either falls back to Karot.
-type View = 'karot' | 'koherens' | 'okta';
+// Changed in 7C-37: the Core shows only its original visual, the session trace (trace.ts). The later
+// views (Karot, Optik, Gravür, Koherens, Okta) keep their sources but are no longer offered, and the
+// view selector is gone; a stored view choice is ignored.
 type Theme = 'light' | 'dark' | 'blue';
-const VIEWS: Readonly<Record<View, () => Promise<{ render: Render }>>> = {
-  karot: () => import('./karot.ts'),
-  koherens: () => import('./koherens.ts'),
-  okta: () => import('./okta.ts'),
-};
+const VIEW = 'trace';
+const load = (): Promise<{ render: Render }> => import('./trace.ts');
 
 // Flow states written by web.ts → the seven Core states.
 const STATUS: Readonly<Record<string, Status>> = {
@@ -74,7 +70,6 @@ export function caption(r: CoreRecord): string {
   return s.map(st => `${st.n} ${st.name}: ${label(st)}`).join(' · ') + '.';
 }
 
-let view: View = (['karot', 'koherens', 'okta'] as const).find(v => v === store.get('view')) ?? 'karot';
 let renders = 0;
 let token = 0;
 const host = $('#core-viz')!;
@@ -82,14 +77,14 @@ const host = $('#core-viz')!;
 async function render(): Promise<void> {
   const mine = ++token;
   host.dataset.pending = 'true';
-  const { render: draw } = await VIEWS[view]();
+  const { render: draw } = await load();
   if (mine !== token) return;
   const record = readRecord();
   host.replaceChildren();
   draw(host, record, t);
   const text = $('#core-caption');
   if (text) text.textContent = caption(record);
-  host.dataset.view = view;
+  host.dataset.view = VIEW;
   host.dataset.statuses = record.stages.map(s => s.status).join(' ');
   host.dataset.outcome = record.outcome;
   host.dataset.renders = String(++renders);
@@ -120,7 +115,6 @@ function radios(group: HTMLElement, key: string, current: () => string, choose: 
 
 const theme = (): Theme => (root.dataset.theme as Theme | undefined) ?? 'blue';
 radios($('#theme-switch')!, 'theme', theme, value => { root.dataset.theme = value; store.set('theme', value); });
-radios($('#view-switch')!, 'view', () => view, value => { if (value !== view) { view = value as View; store.set('view', view); void render(); } });
 
 const watch = new MutationObserver(schedule);
 for (const id of ['#flow', '#query-state', '#block-number', '#evm-chain-id', '#balance-qor']) {

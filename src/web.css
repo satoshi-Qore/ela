@@ -1035,3 +1035,26 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
   --q-sap-hi: #68c6ff; --q-sap: #1c62de; --q-sap-deep: #0a2f8c; --q-sap-core: #051852;
   --q-vio: #7633ee; --q-line: #18202c; --q-spot: #fff; --q-bg-lo: #cfd7e4;
 }
+
+/* 7C-37: the original ELA Core visual, the session trace from the first ELA design concept. These are
+   the concept's own rules, unchanged apart from class names (.optics → .ot, .core-art → .ot-art,
+   .axis → .ot-axis, .optics-caption → .ot-caption, .core[data-mode] → .ot[data-mode]). The trace keeps
+   the concept's dark panel in every theme, as it was drawn: the panel gradient sits under the
+   original radial light. It has no animation. The concept clipped the trace with overflow:hidden;
+   contain:paint clips it the same way without making the box report its cropped art as overflow. */
+.core-viz .ot{isolation:isolate;position:relative;height:350px;contain:paint;background-color:#0a0e1b;background-image:radial-gradient(ellipse at 53% 53%,#242454 0,#11162d 39%,transparent 72%),linear-gradient(145deg,#14192a,#0a0e1b 62%)}
+.core-viz .ot-art{display:block;width:100%;height:100%;object-fit:contain;position:relative}
+.ot-axis{position:absolute;inset:17px 22px;border:1px solid #54628130;mask-image:linear-gradient(90deg,#000,transparent 17%,transparent 83%,#000);background:repeating-linear-gradient(0deg,transparent 0 32px,#6c81b219 33px 34px),repeating-linear-gradient(90deg,transparent 0 42px,#6c81b219 43px 44px)}
+.ot-axis-b{inset:50% 22px auto;border:0;border-top:1px solid #58698650}
+.ot-caption{position:absolute;left:21px;bottom:16px;line-height:normal;color:#bac5dc;font-family:"IBM Plex Mono",Consolas,monospace;font-size:.69rem;letter-spacing:.06em}
+.ot[data-mode=idle] .ot-art{opacity:.5}
+.ot[data-mode=refusal] .ot-art,.ot[data-mode=capture] .ot-art{filter:saturate(.65);opacity:.77}
+.ot-art .plate[data-state="neutral"]{opacity:.34}
+.ot-art .plate[data-state="failed"]{opacity:.88}
+.ot-art .nodes circle{fill:#ddedff}
+.ot-art .nodes circle:nth-child(3){fill:#ffe0a5}
+.ot-art .nodes circle[data-state="neutral"]{fill:#6d768c;opacity:.46}
+.ot-art .nodes circle[data-state="failed"]{fill:#ff93ad;r:5}
+.ot[data-mode="capture"] .signal,.ot[data-mode="refusal"] .signal,.ot[data-mode="idle"] .signal{opacity:.18}
+@media(max-width:760px){.core-viz .ot{height:198px}.core-viz .ot-art{height:100%;transform:scale(1.09) translateY(-4%)}.ot-axis{inset:10px 14px}.ot-axis-b{inset:49% 14px auto}.ot-caption{left:15px;bottom:7px;font-size:.64rem}}
+@media(max-width:350px){.core-viz .ot{height:173px}}
