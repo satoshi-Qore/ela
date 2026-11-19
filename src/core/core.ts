@@ -8,9 +8,8 @@
 // - the Core re-renders only when web.ts changes the flow, the query state, the readout, or the language.
 import type { CoreRecord, CoreStage, Render, Status, Text } from './draw.ts';
 
-// Changed in 7C-37: the Core shows only its original visual, the session trace (trace.ts). The later
-// views (Karot, Optik, Gravür, Koherens, Okta) keep their sources but are no longer offered, and the
-// view selector is gone; a stored view choice is ignored.
+// The Core shows the semantic execution map in trace.ts. trace-original.ts preserves the old
+// session trace; other retired views retain their sources. Stored view choices are ignored.
 type Theme = 'light' | 'dark' | 'blue';
 const VIEW = 'trace';
 const load = (): Promise<{ render: Render }> => import('./trace.ts');

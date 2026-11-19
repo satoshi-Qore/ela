@@ -18,6 +18,9 @@
     <script type="application/json" id="ela-i18n">
 {
   "en": {
+    "result.boundary": "A bounded execution environment",
+    "result.engine": "Understanding", "result.rules": "Deterministic · rule-based",
+    "result.scope": "Network scope", "result.access": "Access", "result.readonly": "Public data · read-only",
     "title": "ELA — Execution & Logic Agent",
     "state.ready": "Ready",
     "state.querying": "Querying",
@@ -177,6 +180,9 @@
     "core.c.result": "Result: {state}."
   },
   "tr": {
+    "result.boundary": "Sınırları belirli yürütme ortamı",
+    "result.engine": "Komut anlama", "result.rules": "Deterministik · kural tabanlı",
+    "result.scope": "Ağ kapsamı", "result.access": "Erişim", "result.readonly": "Açık veriler · salt okunur",
     "title": "ELA — Yürütme ve Mantık Ajanı",
     "state.ready": "Hazır",
     "state.querying": "Sorgulanıyor",
@@ -503,6 +509,100 @@
       </section>
 
       <div class="grid">
+        <section id="logic" class="module module-logic" aria-labelledby="logic-heading">
+          <div class="module-head">
+            <span class="mod-index" aria-hidden="true">02</span>
+            <h2 id="logic-heading" data-i18n="mod.logic">Execution &amp; Logic</h2>
+            <span class="tag" data-tone="live" data-i18n="tag.logic">Active · rule-based</span>
+          </div>
+          <p class="module-copy" data-i18n="logic.copy">Each stage shows what actually ran for the last command. Stages that did not run stay marked "not run".</p>
+
+          <div class="logic-body">
+            <section class="command-panel" aria-label="Command" data-i18n-label="cmd.panel">
+              <form id="command-form">
+                <label for="command" data-i18n="cmd.label">Command (English or Turkish)</label>
+                <textarea id="command" name="command" rows="2" required aria-describedby="command-help"
+                  placeholder="What's the latest block?" data-i18n-ph="cmd.placeholder"></textarea>
+                <p id="command-help" class="command-help" data-i18n="cmd.help">ELA only reads Diana testnet: it checks the network and reads the latest block. It never sends funds, signs transactions, or handles keys.</p>
+                <div class="form-actions">
+                  <div class="examples" role="group" aria-label="Example commands" data-i18n-label="cmd.examples">
+                    <button type="button" class="example" data-example="What's the latest block?">What's the latest block?</button>
+                    <button type="button" class="example" data-example="Check Diana network.">Check Diana network.</button>
+                    <button type="button" class="example" lang="tr" data-example="Son blok kaç?">Son blok kaç?</button>
+                    <button type="button" class="example" lang="tr" data-example="Diana ağını kontrol et.">Diana ağını kontrol et.</button>
+                  </div>
+                  <button type="submit" id="run" class="run"><span data-i18n="cmd.run">Run query</span> <span aria-hidden="true">→</span></button>
+                </div>
+              </form>
+              <div class="context-bar">
+                <p id="context-status" class="context-status" aria-live="polite">Context: none</p>
+                <button type="button" id="clear-context" class="example" disabled data-i18n="cmd.clear">Clear context</button>
+              </div>
+            </section>
+
+            <section class="result" aria-labelledby="result-heading">
+              <div class="result-heading">
+                <h3 id="result-heading" data-i18n="result.heading">Analysis</h3>
+                <div class="status">
+                  <span data-i18n="result.status">Status</span>
+                  <span id="query-state" class="state" data-state="ready">Ready</span>
+                </div>
+              </div>
+              <p id="query-message" class="message" role="status">Waiting for a command.</p>
+              <div id="tx-confirm" class="context-bar" hidden>
+                <button type="button" id="tx-confirm-yes" class="example" data-i18n="cmd.confirmTx">It is a transaction hash: look it up</button>
+                <button type="button" id="tx-confirm-no" class="example" data-i18n="cmd.cancelTx">Cancel</button>
+              </div>
+              <div class="result-boundary">
+                <p class="boundary-heading" data-i18n="result.boundary">A bounded execution environment</p>
+                <dl>
+                  <div><dt data-i18n="result.engine">Understanding</dt><dd data-i18n="result.rules">Deterministic · rule-based</dd></div>
+                  <div><dt data-i18n="result.scope">Network scope</dt><dd>Diana testnet · 9800</dd></div>
+                  <div><dt data-i18n="result.access">Access</dt><dd data-i18n="result.readonly">Public data · read-only</dd></div>
+                </dl>
+              </div>
+              <section id="plan" class="plan" aria-labelledby="plan-heading" hidden>
+                <div class="plan-heading">
+                  <h4 id="plan-heading" data-i18n="plan.heading">Executed steps</h4>
+                  <span id="plan-target" class="plan-target"></span>
+                </div>
+                <ol id="plan-steps" class="plan-steps"></ol>
+                <p id="plan-source" class="plan-source"></p>
+              </section>
+            </section>
+          </div>
+
+          <div class="core">
+            <div class="core-bar">
+              <p class="core-title" data-i18n="core.title">ELA Core</p>
+            </div>
+            <div class="core-body">
+              <div id="core-viz" class="core-viz"></div>
+              <ul class="core-legend" aria-label="State language" data-i18n-label="core.legend">
+                <li data-status="waiting"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-waiting);stroke-width:1.3;stroke-dasharray:1.2 2.4"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.waiting">Waiting</span></li>
+                <li data-status="running"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-running);stroke-width:1.3"/><path d="M0-6V6L-6 0Z" style="fill:var(--s-running)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.running">Running</span></li>
+                <li data-status="ok"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--s-ok);stroke:var(--s-ok);stroke-width:1.3"/><path d="M-2.7 0L-.5 2.2 2.7-1.9" style="fill:none;stroke:var(--core-well);stroke-width:1.6;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.ok">Succeeded</span></li>
+                <li data-status="blocked"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-blocked);stroke-width:2"/><path d="M-3.7 0H3.7" style="stroke:var(--s-blocked);stroke-width:2.4;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.blocked">Blocked</span></li>
+                <li data-status="failed"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-failed);stroke-width:1.3"/><path d="M-2.7-2.7L2.7 2.7M2.7-2.7L-2.7 2.7" style="stroke:var(--s-failed);stroke-width:1.4;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.failed">Failed</span></li>
+                <li data-status="skipped"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-skipped);stroke-width:1.3;stroke-dasharray:2.2 2"/><path d="M-2.2 0H2.2" style="stroke:var(--s-skipped);stroke-width:1.2"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.skipped">Skipped</span></li>
+                <li data-status="unknown"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-unknown);stroke-width:1.3;stroke-dasharray:1.2 2.2"/><path d="M-1.5-1.5Q0-3.4 1.5-1.5Q1.6 0 0 .5" style="fill:none;stroke:var(--s-unknown);stroke-width:1.2"/><circle cx="0" cy="2.3" r=".8" style="fill:var(--s-unknown)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.unknown">Unknown</span></li>
+              </ul>
+            </div>
+            <p id="core-caption" class="core-caption"></p>
+          </div>
+
+          <ol id="flow" class="flow" aria-label="Execution flow" data-i18n-label="flow.label">
+            <li data-state="idle"><span class="flow-n">01</span><span class="flow-name" data-i18n="flow.cmd">Command</span><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">02</span><span class="flow-name" data-i18n="flow.gate">Safety gate</span><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">03</span><span class="flow-name" data-i18n="flow.intent">Intent &amp; scope</span><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">04</span><span class="flow-name" data-i18n="flow.chain">Network check</span><code class="flow-code">eth_chainId</code><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code" data-balance="eth_getBalance" data-tx="eth_getTransactionByHash" data-block="eth_getBlockByNumber" data-gas="eth_gasPrice" data-token="eth_call">eth_blockNumber</code><span class="flow-state">not run</span></li>
+            <li data-state="idle"><span class="flow-n">06</span><span class="flow-name" data-i18n="flow.result">Result</span><span class="flow-state">not run</span></li>
+          </ol>
+
+
+        </section>
+
         <section id="diana" class="module module-diana" aria-labelledby="diana-heading">
           <div class="module-head">
             <span class="mod-index" aria-hidden="true">01</span>
@@ -563,90 +663,6 @@
             </dl>
           </div>
           <p class="module-note" data-i18n="diana.note">Values come from verified queries. The last reading remains visible until another query runs. Nothing is stored permanently.</p>
-        </section>
-
-        <section id="logic" class="module module-logic" aria-labelledby="logic-heading">
-          <div class="module-head">
-            <span class="mod-index" aria-hidden="true">02</span>
-            <h2 id="logic-heading" data-i18n="mod.logic">Execution &amp; Logic</h2>
-            <span class="tag" data-tone="live" data-i18n="tag.logic">Active · rule-based</span>
-          </div>
-          <p class="module-copy" data-i18n="logic.copy">Each stage shows what actually ran for the last command. Stages that did not run stay marked "not run".</p>
-
-          <div class="core">
-            <div class="core-bar">
-              <p class="core-title" data-i18n="core.title">ELA Core</p>
-            </div>
-            <div class="core-body">
-              <div id="core-viz" class="core-viz"></div>
-              <ul class="core-legend" aria-label="State language" data-i18n-label="core.legend">
-                <li data-status="waiting"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-waiting);stroke-width:1.3;stroke-dasharray:1.2 2.4"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.waiting">Waiting</span></li>
-                <li data-status="running"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-running);stroke-width:1.3"/><path d="M0-6V6L-6 0Z" style="fill:var(--s-running)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.running">Running</span></li>
-                <li data-status="ok"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--s-ok);stroke:var(--s-ok);stroke-width:1.3"/><path d="M-2.7 0L-.5 2.2 2.7-1.9" style="fill:none;stroke:var(--core-well);stroke-width:1.6;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.ok">Succeeded</span></li>
-                <li data-status="blocked"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-blocked);stroke-width:2"/><path d="M-3.7 0H3.7" style="stroke:var(--s-blocked);stroke-width:2.4;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.blocked">Blocked</span></li>
-                <li data-status="failed"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-failed);stroke-width:1.3"/><path d="M-2.7-2.7L2.7 2.7M2.7-2.7L-2.7 2.7" style="stroke:var(--s-failed);stroke-width:1.4;stroke-linecap:round"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.failed">Failed</span></li>
-                <li data-status="skipped"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-skipped);stroke-width:1.3;stroke-dasharray:2.2 2"/><path d="M-2.2 0H2.2" style="stroke:var(--s-skipped);stroke-width:1.2"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.skipped">Skipped</span></li>
-                <li data-status="unknown"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0-6L6 0 0 6-6 0Z" style="fill:var(--core-well);stroke:var(--s-unknown);stroke-width:1.3;stroke-dasharray:1.2 2.2"/><path d="M-1.5-1.5Q0-3.4 1.5-1.5Q1.6 0 0 .5" style="fill:none;stroke:var(--s-unknown);stroke-width:1.2"/><circle cx="0" cy="2.3" r=".8" style="fill:var(--s-unknown)"/></svg><i class="ln" aria-hidden="true"></i><span data-i18n="core.s.unknown">Unknown</span></li>
-              </ul>
-            </div>
-            <p id="core-caption" class="core-caption"></p>
-          </div>
-
-          <ol id="flow" class="flow" aria-label="Execution flow" data-i18n-label="flow.label">
-            <li data-state="idle"><span class="flow-n">01</span><span class="flow-name" data-i18n="flow.cmd">Command</span><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">02</span><span class="flow-name" data-i18n="flow.gate">Safety gate</span><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">03</span><span class="flow-name" data-i18n="flow.intent">Intent &amp; scope</span><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">04</span><span class="flow-name" data-i18n="flow.chain">Network check</span><code class="flow-code">eth_chainId</code><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">05</span><span class="flow-name" data-i18n="flow.block">Data read</span><code class="flow-code" data-balance="eth_getBalance" data-tx="eth_getTransactionByHash" data-block="eth_getBlockByNumber" data-gas="eth_gasPrice" data-token="eth_call">eth_blockNumber</code><span class="flow-state">not run</span></li>
-            <li data-state="idle"><span class="flow-n">06</span><span class="flow-name" data-i18n="flow.result">Result</span><span class="flow-state">not run</span></li>
-          </ol>
-
-          <div class="logic-body">
-            <section class="command-panel" aria-label="Command" data-i18n-label="cmd.panel">
-              <form id="command-form">
-                <label for="command" data-i18n="cmd.label">Command (English or Turkish)</label>
-                <textarea id="command" name="command" rows="2" required aria-describedby="command-help"
-                  placeholder="What's the latest block?" data-i18n-ph="cmd.placeholder"></textarea>
-                <p id="command-help" class="command-help" data-i18n="cmd.help">ELA only reads Diana testnet: it checks the network and reads the latest block. It never sends funds, signs transactions, or handles keys.</p>
-                <div class="form-actions">
-                  <div class="examples" role="group" aria-label="Example commands" data-i18n-label="cmd.examples">
-                    <button type="button" class="example" data-example="What's the latest block?">What's the latest block?</button>
-                    <button type="button" class="example" data-example="Check Diana network.">Check Diana network.</button>
-                    <button type="button" class="example" lang="tr" data-example="Son blok kaç?">Son blok kaç?</button>
-                    <button type="button" class="example" lang="tr" data-example="Diana ağını kontrol et.">Diana ağını kontrol et.</button>
-                  </div>
-                  <button type="submit" id="run" class="run"><span data-i18n="cmd.run">Run query</span> <span aria-hidden="true">→</span></button>
-                </div>
-              </form>
-              <div class="context-bar">
-                <p id="context-status" class="context-status" aria-live="polite">Context: none</p>
-                <button type="button" id="clear-context" class="example" disabled data-i18n="cmd.clear">Clear context</button>
-              </div>
-            </section>
-
-            <section class="result" aria-labelledby="result-heading">
-              <div class="result-heading">
-                <h3 id="result-heading" data-i18n="result.heading">Analysis</h3>
-                <div class="status">
-                  <span data-i18n="result.status">Status</span>
-                  <span id="query-state" class="state" data-state="ready">Ready</span>
-                </div>
-              </div>
-              <p id="query-message" class="message" role="status">Waiting for a command.</p>
-              <div id="tx-confirm" class="context-bar" hidden>
-                <button type="button" id="tx-confirm-yes" class="example" data-i18n="cmd.confirmTx">It is a transaction hash: look it up</button>
-                <button type="button" id="tx-confirm-no" class="example" data-i18n="cmd.cancelTx">Cancel</button>
-              </div>
-              <section id="plan" class="plan" aria-labelledby="plan-heading" hidden>
-                <div class="plan-heading">
-                  <h4 id="plan-heading" data-i18n="plan.heading">Executed steps</h4>
-                  <span id="plan-target" class="plan-target"></span>
-                </div>
-                <ol id="plan-steps" class="plan-steps"></ol>
-                <p id="plan-source" class="plan-source"></p>
-              </section>
-            </section>
-          </div>
         </section>
 
         <section id="pqc-panel" class="module pqc-panel" aria-labelledby="pqc-heading">

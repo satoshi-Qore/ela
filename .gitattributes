@@ -1,0 +1,2 @@
+# Official byte-pinned ML-DSA vector: never rewrite line endings on Windows checkout.
+tests/vectors/qorechain-pqc/ml-dsa-87.json -text
