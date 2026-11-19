@@ -9,12 +9,14 @@
 // - the Core re-renders only when web.ts changes the flow, the query state, the readout, or the language.
 import type { CoreRecord, CoreStage, Render, Status, Text } from './draw.ts';
 
-type View = 'karot' | 'optik' | 'gravur';
+// Changed in 7C-36: the Core has three views, Karot, Koherens and Okta. Optik and Gravür keep their
+// sources but are no longer offered; a stored choice of either falls back to Karot.
+type View = 'karot' | 'koherens' | 'okta';
 type Theme = 'light' | 'dark' | 'blue';
 const VIEWS: Readonly<Record<View, () => Promise<{ render: Render }>>> = {
   karot: () => import('./karot.ts'),
-  optik: () => import('./optik.ts'),
-  gravur: () => import('./gravur.ts'),
+  koherens: () => import('./koherens.ts'),
+  okta: () => import('./okta.ts'),
 };
 
 // Flow states written by web.ts → the seven Core states.
@@ -72,7 +74,7 @@ export function caption(r: CoreRecord): string {
   return s.map(st => `${st.n} ${st.name}: ${label(st)}`).join(' · ') + '.';
 }
 
-let view: View = (['karot', 'optik', 'gravur'] as const).find(v => v === store.get('view')) ?? 'karot';
+let view: View = (['karot', 'koherens', 'okta'] as const).find(v => v === store.get('view')) ?? 'karot';
 let renders = 0;
 let token = 0;
 const host = $('#core-viz')!;
