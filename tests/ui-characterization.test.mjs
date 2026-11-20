@@ -66,7 +66,7 @@ function chromeStartTimeout(value = process.env.ELA_CHROME_START_TIMEOUT_MS) {
 }
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
-const env = { work: undefined, outDir: undefined, server: undefined, origin: undefined, chrome: undefined, page: undefined, startMs: undefined };
+const env = { work: undefined, outDir: undefined, server: undefined, origin: undefined, chrome: undefined, page: undefined, startMs: undefined, browserUrl: undefined };
 const networkLog = [];
 const problems = [];
 
@@ -91,10 +91,10 @@ async function connect(url) {
     }
   });
   return {
-    send: (method, params = {}) => new Promise((resolvePromise, reject) => {
+    send: (method, params = {}, sessionId) => new Promise((resolvePromise, reject) => {
       const id = ++nextId;
       pending.set(id, { resolve: resolvePromise, reject });
-      socket.send(JSON.stringify({ id, method, params }));
+      socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
     }),
     on: listener => listeners.add(listener),
     once: (method, timeoutMs = 15_000) => new Promise((resolvePromise, reject) => {
@@ -116,12 +116,14 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
+  const nativeFetch = window.fetch.bind(window);
   const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, block: null, earliest: null, calls: [],
     code: '0x6080604052', erc20: {},
     gasPrice: '0x1a3185c500', feeHistory: { oldestBlock: '0x9d0be2', baseFeePerGas: ['0x174876e800', '0x174876e800'], gasUsedRatio: [0] }, priorityFee: '0x2e90edd00' };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
+    if (new URL(String(input), location.href).origin === location.origin) return nativeFetch(input, init);
     let body = null;
     try { body = JSON.parse(init.body); } catch {}
     rpc.calls.push({ url: String(input), httpMethod: init.method, credentials: init.credentials, redirect: init.redirect, method: body && body.method });
@@ -200,6 +202,7 @@ async function startBrowser() {
   });
   env.startMs = Math.round(performance.now() - started);
   const port = new URL(browserUrl).port;
+  env.browserUrl = browserUrl;
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
   env.page = await connect(targets.find(target => target.type === 'page').webSocketDebuggerUrl);
   env.page.on(({ method, params }) => {
@@ -1679,7 +1682,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
     // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
     // Changed in 7C-37: the Core chunk and its one visual, the original session trace (no drawing helpers).
-    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'index.css', 'index.js', 'trace.js'], atLoad.join(', '));
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'index.css', 'index.js', 'rules.js', 'trace.js'], atLoad.join(', '));
+    assert.ok(atLoad.every(name => !name.startsWith('local-model-')), 'no AI runtime or weights at page load');
     assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
@@ -1789,7 +1793,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
     // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
     // Changed in 7C-37: the Core chunk and the original session trace only; the later views are not bundled.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'gas', 'index', 'panel', 'token', 'trace', 'transaction'], scripts.join(', '));
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]{8}\.js$/, '')).sort(), ['balance', 'block', 'core', 'gas', 'index', 'local-model', 'local-model-worker', 'panel', 'rules', 'token', 'trace', 'transaction'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|trace)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1838,7 +1842,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', '0x095ea7b3', '0xa9059cbb', '0x23b872dd']) assert.equal(readFileSync(join(env.outDir, 'assets', tokenChunk), 'utf8').includes(marker), false, marker);
     assert.ok(sizes[main].gzip <= 14.75 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.75 KiB budget`);
     assert.ok(sizes[main].bytes <= 40 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 40 KiB budget`);
-    assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
+    assert.equal(/panel-/.test(html), false, 'index.html does not preload the panel');
+    for (const match of html.matchAll(/<link[^>]*rel="modulepreload"[^>]*href="([^"]+)"/g)) assert.match(match[1], /\/rules-[\w-]+\.js$/, 'only existing rules are eagerly preloaded');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
     assert.ok(panelCode.includes(vectorStart), 'the test vector ships with the panel');
@@ -2500,6 +2505,158 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     expectView(t, settled, { state: 'Error', message: 'QoreChain request timed out.', block: '—', context: CONTEXT_NONE, runEnabled: true, rpc: ['eth_chainId'] }, 'after timeout');
     if (!PROBE) assert.ok(elapsed > 6_000 && elapsed < 12_000, 'about 8 s: ' + elapsed);
   }, { timeout: 60_000 });
+
+  uiTest('7H-5: production UI lazily runs real model weights in a worker for an unresolved command', async t => {
+    const instrumentation = await env.page.send('Page.addScriptToEvaluateOnNewDocument', { source: `
+      window.__localModel = { calls: [], replies: [], starts: 0 };
+      const previousFetch=window.fetch;
+      window.fetch=(input,...args)=>{if(String(input).includes('ela-intent-v1'))window.__localModel.loadStarted=performance.now();return previousFetch(input,...args)};
+      const OriginalWorker = Worker;
+      window.Worker = class extends OriginalWorker {
+        constructor(...args) {
+          super(...args); window.__localModel.starts++;
+          window.__realModelWorker = this;
+          this.addEventListener('message', ({data}) => {
+            const call = window.__localModel.calls.find(c => c.id === data.id);
+            window.__localModel.replies.push({ id:data.id, ms:performance.now()-call.started, error:data.error });
+          });
+        }
+        postMessage(data, ...rest) {
+          window.__localModel.calls.push({ id:data.id, kind:data.kind, started:performance.now() });
+          return super.postMessage(data, ...rest);
+        }
+      };
+    ` });
+    try {
+      await openPage();
+      const begin = networkLog.length;
+      await submit('Check Diana network.');
+      assert.equal(await evaluate('window.__localModel.starts'), 0, 'deterministic routes do not start AI');
+      await submit('Send 1 QOR.');
+      assert.equal(await evaluate('window.__localModel.starts'), 0, 'the safety gate does not start AI');
+      const result = await submit('Diana testnet çalışıyor mu, check et.');
+      t.diagnostic('Observed real model: ' + JSON.stringify({result,stats:await evaluate('window.__localModel')}));
+      assert.equal(result.stateKey, 'success');
+      assert.deepEqual(result.rpc, ['eth_chainId', 'eth_blockNumber']);
+      const stats = await evaluate('window.__localModel');
+      assert.equal(stats.starts, 1);
+      assert.deepEqual(stats.calls.map(c => c.kind), ['load', 'classify']);
+      assert.ok(stats.replies.every(r => !r.error));
+      assert.ok(networkLog.slice(begin).some(url => /ela-intent-v1-.*\.bin$/.test(url)));
+      assert.ok(networkLog.slice(begin).every(url => url.startsWith(env.origin)), 'model and runtime are same-origin');
+      t.diagnostic('Real worker timings: ' + JSON.stringify(stats));
+      await submit('Diana testnet çalışıyor mu, check et.');
+      assert.equal(await evaluate('window.__localModel.starts'), 1, 'model reused within the page');
+      const browser = await connect(env.browserUrl);
+      const bounded = (method,params={},sessionId) => Promise.race([browser.send(method,params,sessionId),new Promise((_,reject)=>setTimeout(()=>reject(new Error('CDP memory measurement timed out')),2000))]);
+      let measuredHeap;
+      let measuredLocation;
+      try {
+      await bounded('Target.setDiscoverTargets',{discover:true});
+      const targets = await bounded('Target.getTargets');
+      const workerTarget = targets.targetInfos.find(target => target.type === 'worker');
+      assert.ok(workerTarget, 'the actual inference worker exists');
+      const { sessionId } = await bounded('Target.attachToTarget', { targetId:workerTarget.targetId, flatten:true });
+      await bounded('Runtime.enable',{},sessionId);
+      const workerLocation = await bounded('Runtime.evaluate',{expression:'location.href',returnByValue:true},sessionId);
+      measuredLocation = workerLocation.result.value;
+      const workerHeap = await bounded('Runtime.getHeapUsage', {}, sessionId);
+      measuredHeap = workerHeap;
+      t.diagnostic('Worker heap/backing storage (not process RSS): '+JSON.stringify(workerHeap));
+      await bounded('Target.detachFromTarget', {sessionId});
+      } catch(error) { t.diagnostic('Worker heap unavailable: '+error.message); }
+      finally { browser.close(); }
+      if (measuredLocation !== undefined) assert.match(measuredLocation,/local-model-worker/);
+      if (measuredHeap !== undefined) assert.ok(measuredHeap.usedSize + (measuredHeap.backingStorageSize ?? 0) < 300*1024*1024);
+      const validation = JSON.parse(readFileSync(join(ROOT,'tests/fixtures/local-model-validation.json'),'utf8'));
+      const metrics = await evaluate(`(async () => {
+        const rows = ${JSON.stringify(validation)};
+        const results = [], times = [];
+        for (let i=0;i<rows.length;i++) {
+          const id=10000+i, started=performance.now();
+          const candidates=await new Promise(resolve => {
+            const listener=({data})=>{if(data.id===id){window.__realModelWorker.removeEventListener('message',listener);resolve(data.result)}};
+            window.__realModelWorker.addEventListener('message',listener);
+            window.__realModelWorker.postMessage({kind:'classify',text:rows[i].input,id});
+          });
+          times.push(performance.now()-started);
+          results.push({lang:rows[i].lang,correct:[...candidates].sort((a,b)=>b.score-a.score)[0].label===rows[i].label});
+        }
+        const sorted=[...times].sort((a,b)=>a-b);
+        return {byLanguage:Object.fromEntries(['all','tr','en','mixed'].map(lang=>{const selected=results.filter(r=>lang==='all'||r.lang===lang);return[lang,{total:selected.length,correct:selected.filter(r=>r.correct).length}]})),inferenceMs:{mean:times.reduce((a,b)=>a+b,0)/times.length,p95:sorted[Math.ceil(sorted.length*.95)-1],max:sorted.at(-1)}};
+      })()`);
+      assert.equal(metrics.byLanguage.all.correct,148,'real worker validation agrees with reference inference');
+      assert.ok(metrics.inferenceMs.max < 1500);
+      t.diagnostic('Real browser validation: '+JSON.stringify(metrics));
+    } finally { await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: instrumentation.identifier }); }
+  });
+
+  uiTest('7H-5: corrupt, unavailable, oversized models and unsupported workers fall back safely', async () => {
+    for (const mode of ['corrupt','unavailable','oversized','no-worker']) {
+      const script = await env.page.send('Page.addScriptToEvaluateOnNewDocument', {source:`
+        const fetchBeforeFailure=window.fetch;
+        if(${JSON.stringify(mode)}==='no-worker') window.Worker=undefined;
+        window.fetch=async(input,...args)=>{
+          if(!String(input).includes('ela-intent-v1'))return fetchBeforeFailure(input,...args);
+          if(${JSON.stringify(mode)}==='unavailable')throw new Error('deliberate download failure');
+          if(${JSON.stringify(mode)}==='oversized')return new Response(new Uint8Array(5006177));
+          const original=await fetchBeforeFailure(input,...args);
+          const bytes=new Uint8Array(await original.arrayBuffer());bytes[0]^=1;return new Response(bytes);
+        };
+      `});
+      try {
+        await openPage();
+        const result=await submit('Diana testnet çalışıyor mu, check et.');
+        assert.equal(result.stateKey,'needs clarification',mode);
+        assert.deepEqual(result.rpc,[],mode);
+        const known=await submit('Is the network healthy?');
+        assert.equal(known.stateKey,'success',mode+' retains known rule commands');
+      } finally {await env.page.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:script.identifier});}
+    }
+  });
+
+  uiTest('7H-5: a missing optional model JavaScript chunk retains the existing rules', async () => {
+    const before=problems.length;
+    await env.page.send('Network.setBlockedURLs',{urls:['*qore.host*','*local-model-*.js']});
+    try {
+      await openPage();
+      const known=await submit('Is the network healthy?');
+      assert.equal(known.stateKey,'success');
+      assert.deepEqual(known.rpc,['eth_chainId','eth_blockNumber']);
+      const unknown=await submit('Diana testnet çalışıyor mu, check et.');
+      assert.equal(unknown.stateKey,'needs clarification');
+      assert.deepEqual(unknown.rpc,[]);
+    } finally {
+      await env.page.send('Network.setBlockedURLs',{urls:['*qore.host*']});
+      // The deliberately blocked JavaScript request is expected to log a network error.
+      const added=problems.splice(before);
+      assert.ok(added.every(problem=>/ERR_BLOCKED_BY_CLIENT/.test(problem)),JSON.stringify(added));
+    }
+  });
+
+  uiTest('7H-5: a stalled real worker is terminated and cannot produce an RPC decision', async () => {
+    const script=await env.page.send('Page.addScriptToEvaluateOnNewDocument',{source:`
+      const NativeWorker=Worker;window.__terminated=0;
+      window.Worker=class extends NativeWorker {
+        postMessage(data,...args){if(data.kind==='classify')return;return super.postMessage(data,...args)}
+        terminate(){window.__terminated++;return super.terminate()}
+      };
+    `});
+    try {
+      await openPage();
+      const started=Date.now();
+      const result=await submit('Diana testnet çalışıyor mu, check et.');
+      assert.equal(result.stateKey,'needs clarification');
+      assert.deepEqual(result.rpc,[]);
+      assert.ok(Date.now()-started<5000);
+      assert.equal(await evaluate('window.__terminated'),1);
+      const repeated=Date.now();
+      const next=await submit('Diana testnet çalışıyor mu, check et.');
+      assert.equal(next.stateKey,'needs clarification');
+      assert.deepEqual(next.rpc,[]);
+      assert.ok(Date.now()-repeated<500,'a stopped worker is not retried');
+    } finally {await env.page.send('Page.removeScriptToEvaluateOnNewDocument',{identifier:script.identifier});}
+  });
 
   // Changed in 7D: index.html declared no icon, so Chrome requested /favicon.ico and logged a 404.
   // It now declares an empty data URI icon: no favicon request and a clean console.

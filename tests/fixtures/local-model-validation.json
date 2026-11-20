@@ -1,0 +1,1262 @@
+[
+  {
+    "id": "nc-rpc-respond.1",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana RPC uç noktası yanıt veriyor mu?",
+    "input": "diana rpc uç noktası yanıt veriyor mu?"
+  },
+  {
+    "id": "nc-rpc-respond.2",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is Diana's RPC endpoint replying to calls?",
+    "input": "ıs diana's rpc endpoint replying to calls?"
+  },
+  {
+    "id": "nc-rpc-respond.3",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana'nın RPC'si cevap veriyor mu?",
+    "input": "diana'nın rpc'si cevap veriyor mu?"
+  },
+  {
+    "id": "nc-rpc-respond.4",
+    "lang": "en",
+    "label": "network_check",
+    "text": "does the diana rpc answer",
+    "input": "does the diana rpc answer"
+  },
+  {
+    "id": "nc-rpc-respond.5",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is the RPC for QoreChain testnet answering requests?",
+    "input": "ıs the rpc for qorechain testnet answering requests?"
+  },
+  {
+    "id": "nc-rpc-respond.6",
+    "lang": "mixed",
+    "label": "network_check",
+    "text": "Diana RPC respond ediyor mu?",
+    "input": "diana rpc respond ediyor mu?"
+  },
+  {
+    "id": "nc-chain-id.1",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana'nın zincir kimliğini doğrula.",
+    "input": "diana'nın zincir kimliğini doğrula."
+  },
+  {
+    "id": "nc-chain-id.2",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Verify the chain ID of the Diana testnet.",
+    "input": "verify the chain ıd of the diana testnet."
+  },
+  {
+    "id": "nc-chain-id.3",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana gerçekten 9800 zincir kimliğiyle mi çalışıyor?",
+    "input": "diana gerçekten 9800 zincir kimliğiyle mi çalışıyor?"
+  },
+  {
+    "id": "nc-chain-id.4",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Make sure the Diana endpoint reports the right chain ID.",
+    "input": "make sure the diana endpoint reports the right chain ıd."
+  },
+  {
+    "id": "nc-chain-id.5",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "chain id dogru mu diana icin",
+    "input": "chain id dogru mu diana icin"
+  },
+  {
+    "id": "nc-chain-id.6",
+    "lang": "mixed",
+    "label": "network_check",
+    "text": "Diana chain ID'sini verify et.",
+    "input": "diana chain ıd'sini verify et."
+  },
+  {
+    "id": "nc-inspect.1",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana test ağını denetle.",
+    "input": "diana test ağını denetle."
+  },
+  {
+    "id": "nc-inspect.2",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Inspect the Diana testnet.",
+    "input": "ınspect the diana testnet."
+  },
+  {
+    "id": "nc-inspect.3",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "QoreChain test ağını yokla.",
+    "input": "qorechain test ağını yokla."
+  },
+  {
+    "id": "nc-inspect.4",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Probe the QoreChain testnet.",
+    "input": "probe the qorechain testnet."
+  },
+  {
+    "id": "nc-inspect.5",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana ağını bir test et bakalım.",
+    "input": "diana ağını bir test et bakalım."
+  },
+  {
+    "id": "nc-inspect.6",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Give the Diana network a quick test.",
+    "input": "give the diana network a quick test."
+  },
+  {
+    "id": "nc-operational.1",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana testnet işlevsel mi?",
+    "input": "diana testnet işlevsel mi?"
+  },
+  {
+    "id": "nc-operational.2",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is the Diana testnet operational?",
+    "input": "ıs the diana testnet operational?"
+  },
+  {
+    "id": "nc-operational.3",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "QoreChain test zinciri faal mi?",
+    "input": "qorechain test zinciri faal mi?"
+  },
+  {
+    "id": "nc-operational.4",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is the QoreChain test chain functioning?",
+    "input": "ıs the qorechain test chain functioning?"
+  },
+  {
+    "id": "nc-operational.5",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "diana zinciri isliyor mu",
+    "input": "diana zinciri isliyor mu"
+  },
+  {
+    "id": "nc-operational.6",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is Diana's chain functioning normally?",
+    "input": "ıs diana's chain functioning normally?"
+  },
+  {
+    "id": "nc-maintenance.1",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Bakımdan sonra Diana testnet açıldı mı?",
+    "input": "bakımdan sonra diana testnet açıldı mı?"
+  },
+  {
+    "id": "nc-maintenance.2",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is the Diana testnet back up after the maintenance?",
+    "input": "ıs the diana testnet back up after the maintenance?"
+  },
+  {
+    "id": "nc-maintenance.3",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "Diana ağı yeniden hizmete girdi mi?",
+    "input": "diana ağı yeniden hizmete girdi mi?"
+  },
+  {
+    "id": "nc-maintenance.4",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Did QoreChain testnet come back online?",
+    "input": "did qorechain testnet come back online?"
+  },
+  {
+    "id": "nc-maintenance.5",
+    "lang": "tr",
+    "label": "network_check",
+    "text": "diana bakimdan cikti mi",
+    "input": "diana bakimdan cikti mi"
+  },
+  {
+    "id": "nc-maintenance.6",
+    "lang": "en",
+    "label": "network_check",
+    "text": "Is Diana back online yet?",
+    "input": "ıs diana back online yet?"
+  },
+  {
+    "id": "bn-latest.1",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Diana'daki en son blok kaç?",
+    "input": "diana'daki en son blok kaç?"
+  },
+  {
+    "id": "bn-latest.2",
+    "lang": "en",
+    "label": "block_number",
+    "text": "What's the newest block on Diana?",
+    "input": "what's the newest block on diana?"
+  },
+  {
+    "id": "bn-latest.3",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "QoreChain testnetin en güncel blok numarası nedir?",
+    "input": "qorechain testnetin en güncel blok numarası nedir?"
+  },
+  {
+    "id": "bn-latest.4",
+    "lang": "en",
+    "label": "block_number",
+    "text": "Tell me Diana's most recent block height.",
+    "input": "tell me diana's most recent block height."
+  },
+  {
+    "id": "bn-latest.5",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "en son blok diana",
+    "input": "en son blok diana"
+  },
+  {
+    "id": "bn-latest.6",
+    "lang": "mixed",
+    "label": "block_number",
+    "text": "Diana'nın latest block'u kaç?",
+    "input": "diana'nın latest block'u kaç?"
+  },
+  {
+    "id": "bn-how-many-blocks.1",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Diana'da şimdiye kadar kaç blok üretildi?",
+    "input": "diana'da şimdiye kadar kaç blok üretildi?"
+  },
+  {
+    "id": "bn-how-many-blocks.2",
+    "lang": "en",
+    "label": "block_number",
+    "text": "How many blocks has Diana produced so far?",
+    "input": "how many blocks has diana produced so far?"
+  },
+  {
+    "id": "bn-how-many-blocks.3",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "QoreChain testnette toplam kaç blok var?",
+    "input": "qorechain testnette toplam kaç blok var?"
+  },
+  {
+    "id": "bn-how-many-blocks.4",
+    "lang": "en",
+    "label": "block_number",
+    "text": "How many blocks are on the QoreChain testnet?",
+    "input": "how many blocks are on the qorechain testnet?"
+  },
+  {
+    "id": "bn-how-many-blocks.5",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "diana kac blok uretti",
+    "input": "diana kac blok uretti"
+  },
+  {
+    "id": "bn-how-many-blocks.6",
+    "lang": "mixed",
+    "label": "block_number",
+    "text": "Kaç blok var Diana'da total?",
+    "input": "kaç blok var diana'da total?"
+  },
+  {
+    "id": "bn-testnet-height.1",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Diana testnetin güncel yüksekliği",
+    "input": "diana testnetin güncel yüksekliği"
+  },
+  {
+    "id": "bn-testnet-height.2",
+    "lang": "en",
+    "label": "block_number",
+    "text": "Current height of Diana testnet",
+    "input": "current height of diana testnet"
+  },
+  {
+    "id": "bn-testnet-height.3",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Diana test ağında yükseklik şu an kaç?",
+    "input": "diana test ağında yükseklik şu an kaç?"
+  },
+  {
+    "id": "bn-testnet-height.4",
+    "lang": "en",
+    "label": "block_number",
+    "text": "What's the height on the Diana test network at present?",
+    "input": "what's the height on the diana test network at present?"
+  },
+  {
+    "id": "bn-testnet-height.5",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "diana testnet yuksekligi",
+    "input": "diana testnet yuksekligi"
+  },
+  {
+    "id": "bn-testnet-height.6",
+    "lang": "mixed",
+    "label": "block_number",
+    "text": "Diana testnet height ne kadar?",
+    "input": "diana testnet height ne kadar?"
+  },
+  {
+    "id": "bn-ask-ela.1",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "ELA, Diana'da hangi bloktayız söyler misin?",
+    "input": "ela, diana'da hangi bloktayız söyler misin?"
+  },
+  {
+    "id": "bn-ask-ela.2",
+    "lang": "en",
+    "label": "block_number",
+    "text": "ELA, could you tell me which block Diana is on?",
+    "input": "ela, could you tell me which block diana is on?"
+  },
+  {
+    "id": "bn-ask-ela.3",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Hey ELA, güncel blok kaç?",
+    "input": "hey ela, güncel blok kaç?"
+  },
+  {
+    "id": "bn-ask-ela.4",
+    "lang": "en",
+    "label": "block_number",
+    "text": "Hey ELA, what's the current block?",
+    "input": "hey ela, what's the current block?"
+  },
+  {
+    "id": "bn-ask-ela.5",
+    "lang": "en",
+    "label": "block_number",
+    "text": "ela block number?",
+    "input": "ela block number?"
+  },
+  {
+    "id": "bn-ask-ela.6",
+    "lang": "mixed",
+    "label": "block_number",
+    "text": "ELA, latest block number ne?",
+    "input": "ela, latest block number ne?"
+  },
+  {
+    "id": "bn-as-of.1",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Bugün itibarıyla son blok kaç?",
+    "input": "bugün itibarıyla son blok kaç?"
+  },
+  {
+    "id": "bn-as-of.2",
+    "lang": "en",
+    "label": "block_number",
+    "text": "As of today, what's the latest block?",
+    "input": "as of today, what's the latest block?"
+  },
+  {
+    "id": "bn-as-of.3",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "Şu itibarla en güncel blok hangisi?",
+    "input": "şu itibarla en güncel blok hangisi?"
+  },
+  {
+    "id": "bn-as-of.4",
+    "lang": "en",
+    "label": "block_number",
+    "text": "As of this moment, which block is newest?",
+    "input": "as of this moment, which block is newest?"
+  },
+  {
+    "id": "bn-as-of.5",
+    "lang": "tr",
+    "label": "block_number",
+    "text": "bugunku son blok numarasi ne",
+    "input": "bugunku son blok numarasi ne"
+  },
+  {
+    "id": "bn-as-of.6",
+    "lang": "mixed",
+    "label": "block_number",
+    "text": "As of today son block?",
+    "input": "as of today son block?"
+  },
+  {
+    "id": "fr-check-that-again.1",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Yine kontrol eder misin?",
+    "input": "yine kontrol eder misin?"
+  },
+  {
+    "id": "fr-check-that-again.2",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Would you check that again?",
+    "input": "would you check that again?"
+  },
+  {
+    "id": "fr-check-that-again.3",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Bir kontrol turu daha lütfen.",
+    "input": "bir kontrol turu daha lütfen."
+  },
+  {
+    "id": "fr-check-that-again.4",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "One more check.",
+    "input": "one more check."
+  },
+  {
+    "id": "fr-check-that-again.5",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "give it another check",
+    "input": "give it another check"
+  },
+  {
+    "id": "fr-check-that-again.6",
+    "lang": "mixed",
+    "label": "follow_up_repeat",
+    "text": "Bir check daha yap.",
+    "input": "bir check daha yap."
+  },
+  {
+    "id": "fr-short.1",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Bi daha.",
+    "input": "bi daha."
+  },
+  {
+    "id": "fr-short.2",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Again pls.",
+    "input": "again pls."
+  },
+  {
+    "id": "fr-short.3",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Tekrarla.",
+    "input": "tekrarla."
+  },
+  {
+    "id": "fr-short.4",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Redo.",
+    "input": "redo."
+  },
+  {
+    "id": "fr-short.5",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Yine.",
+    "input": "yine."
+  },
+  {
+    "id": "fr-short.6",
+    "lang": "mixed",
+    "label": "follow_up_repeat",
+    "text": "Again lütfen.",
+    "input": "again lütfen."
+  },
+  {
+    "id": "fr-reload.1",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Yeniden yükle.",
+    "input": "yeniden yükle."
+  },
+  {
+    "id": "fr-reload.2",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Reload it.",
+    "input": "reload it."
+  },
+  {
+    "id": "fr-reload.3",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Sayfayı değil, sorguyu yeniden yükle.",
+    "input": "sayfayı değil, sorguyu yeniden yükle."
+  },
+  {
+    "id": "fr-reload.4",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Reload the query, not the page.",
+    "input": "reload the query, not the page."
+  },
+  {
+    "id": "fr-reload.5",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "sorguyu tazele",
+    "input": "sorguyu tazele"
+  },
+  {
+    "id": "fr-reload.6",
+    "lang": "mixed",
+    "label": "follow_up_repeat",
+    "text": "Reload yap sorguyu.",
+    "input": "reload yap sorguyu."
+  },
+  {
+    "id": "fr-still-reachable.1",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Hâlâ erişilebilir mi?",
+    "input": "hâlâ erişilebilir mi?"
+  },
+  {
+    "id": "fr-still-reachable.2",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Is it still reachable?",
+    "input": "ıs it still reachable?"
+  },
+  {
+    "id": "fr-still-reachable.3",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Hâlâ cevap veriyor mu?",
+    "input": "hâlâ cevap veriyor mu?"
+  },
+  {
+    "id": "fr-still-reachable.4",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Still responding?",
+    "input": "still responding?"
+  },
+  {
+    "id": "fr-still-reachable.5",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "hala ulasilabiliyor mu",
+    "input": "hala ulasilabiliyor mu"
+  },
+  {
+    "id": "fr-still-reachable.6",
+    "lang": "mixed",
+    "label": "follow_up_repeat",
+    "text": "Still reachable mı?",
+    "input": "still reachable mı?"
+  },
+  {
+    "id": "fr-unsure.1",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Bağlantım koptu, tekrar kontrol eder misin?",
+    "input": "bağlantım koptu, tekrar kontrol eder misin?"
+  },
+  {
+    "id": "fr-unsure.2",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "My connection dropped, can you check again?",
+    "input": "my connection dropped, can you check again?"
+  },
+  {
+    "id": "fr-unsure.3",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "Emin olamadım, bir daha bakalım.",
+    "input": "emin olamadım, bir daha bakalım."
+  },
+  {
+    "id": "fr-unsure.4",
+    "lang": "en",
+    "label": "follow_up_repeat",
+    "text": "Not sure I saw it right, look again.",
+    "input": "not sure ı saw it right, look again."
+  },
+  {
+    "id": "fr-unsure.5",
+    "lang": "tr",
+    "label": "follow_up_repeat",
+    "text": "emin degilim tekrar bak",
+    "input": "emin degilim tekrar bak"
+  },
+  {
+    "id": "fr-unsure.6",
+    "lang": "mixed",
+    "label": "follow_up_repeat",
+    "text": "Emin değilim, check again.",
+    "input": "emin değilim, check again."
+  },
+  {
+    "id": "fc-latest-now.1",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "En son şimdi kaç?",
+    "input": "en son şimdi kaç?"
+  },
+  {
+    "id": "fc-latest-now.2",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "What's the latest now?",
+    "input": "what's the latest now?"
+  },
+  {
+    "id": "fc-latest-now.3",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Şimdiki son hali kaç?",
+    "input": "şimdiki son hali kaç?"
+  },
+  {
+    "id": "fc-latest-now.4",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "Latest as of now?",
+    "input": "latest as of now?"
+  },
+  {
+    "id": "fc-latest-now.5",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "latest now?",
+    "input": "latest now?"
+  },
+  {
+    "id": "fc-latest-now.6",
+    "lang": "mixed",
+    "label": "follow_up_current",
+    "text": "Latest now ne?",
+    "input": "latest now ne?"
+  },
+  {
+    "id": "fc-tell-now.1",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Şimdi söyle bakalım kaç.",
+    "input": "şimdi söyle bakalım kaç."
+  },
+  {
+    "id": "fc-tell-now.2",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "Tell me what it is now.",
+    "input": "tell me what it is now."
+  },
+  {
+    "id": "fc-tell-now.3",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Şu anki halini söyle.",
+    "input": "şu anki halini söyle."
+  },
+  {
+    "id": "fc-tell-now.4",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "Give me the current reading.",
+    "input": "give me the current reading."
+  },
+  {
+    "id": "fc-tell-now.5",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "simdi soyle kac",
+    "input": "simdi soyle kac"
+  },
+  {
+    "id": "fc-tell-now.6",
+    "lang": "mixed",
+    "label": "follow_up_current",
+    "text": "Tell me now kaç.",
+    "input": "tell me now kaç."
+  },
+  {
+    "id": "fc-earlier.1",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Az önce bir şey demiştin, şimdi kaç?",
+    "input": "az önce bir şey demiştin, şimdi kaç?"
+  },
+  {
+    "id": "fc-earlier.2",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "You told me earlier, what is it now?",
+    "input": "you told me earlier, what is it now?"
+  },
+  {
+    "id": "fc-earlier.3",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Demin söylediğin şimdi kaç oldu?",
+    "input": "demin söylediğin şimdi kaç oldu?"
+  },
+  {
+    "id": "fc-earlier.4",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "What you told me before, what's it now?",
+    "input": "what you told me before, what's it now?"
+  },
+  {
+    "id": "fc-earlier.5",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "what you said before, now?",
+    "input": "what you said before, now?"
+  },
+  {
+    "id": "fc-earlier.6",
+    "lang": "mixed",
+    "label": "follow_up_current",
+    "text": "Earlier dediğin now kaç?",
+    "input": "earlier dediğin now kaç?"
+  },
+  {
+    "id": "fc-where-now.1",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Şimdi nereye ulaştı?",
+    "input": "şimdi nereye ulaştı?"
+  },
+  {
+    "id": "fc-where-now.2",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "Where has it got to now?",
+    "input": "where has it got to now?"
+  },
+  {
+    "id": "fc-where-now.3",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Şimdi neredeyiz?",
+    "input": "şimdi neredeyiz?"
+  },
+  {
+    "id": "fc-where-now.4",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "Where are we now?",
+    "input": "where are we now?"
+  },
+  {
+    "id": "fc-where-now.5",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "and where are things at",
+    "input": "and where are things at"
+  },
+  {
+    "id": "fc-where-now.6",
+    "lang": "mixed",
+    "label": "follow_up_current",
+    "text": "Now neredeyiz?",
+    "input": "now neredeyiz?"
+  },
+  {
+    "id": "fc-latest-state.1",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Son haliyle kaç?",
+    "input": "son haliyle kaç?"
+  },
+  {
+    "id": "fc-latest-state.2",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "In its latest state, what is it?",
+    "input": "ın its latest state, what is it?"
+  },
+  {
+    "id": "fc-latest-state.3",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "Son haliyle ne gösteriyor?",
+    "input": "son haliyle ne gösteriyor?"
+  },
+  {
+    "id": "fc-latest-state.4",
+    "lang": "en",
+    "label": "follow_up_current",
+    "text": "What does it show in its newest state?",
+    "input": "what does it show in its newest state?"
+  },
+  {
+    "id": "fc-latest-state.5",
+    "lang": "tr",
+    "label": "follow_up_current",
+    "text": "en son haline gore kac",
+    "input": "en son haline gore kac"
+  },
+  {
+    "id": "fc-latest-state.6",
+    "lang": "mixed",
+    "label": "follow_up_current",
+    "text": "Latest haliyle kaç?",
+    "input": "latest haliyle kaç?"
+  },
+  {
+    "id": "us-gas-price.1",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Diana'da gas ücreti şu an ne?",
+    "input": "diana'da gas ücreti şu an ne?"
+  },
+  {
+    "id": "us-gas-price.2",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What's the gas price on Diana right now?",
+    "input": "what's the gas price on diana right now?"
+  },
+  {
+    "id": "us-gas-price.3",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Gaz fiyatları yüksek mi?",
+    "input": "gaz fiyatları yüksek mi?"
+  },
+  {
+    "id": "us-gas-price.4",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "Are gas fees high today?",
+    "input": "are gas fees high today?"
+  },
+  {
+    "id": "us-gas-price.5",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "gas price diana?",
+    "input": "gas price diana?"
+  },
+  {
+    "id": "us-gas-price.6",
+    "lang": "mixed",
+    "label": "unsupported",
+    "text": "Gas price ne kadar şu an?",
+    "input": "gas price ne kadar şu an?"
+  },
+  {
+    "id": "us-rewards.1",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Ödüllerim ne kadar birikti?",
+    "input": "ödüllerim ne kadar birikti?"
+  },
+  {
+    "id": "us-rewards.2",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "How much in rewards have I earned?",
+    "input": "how much in rewards have ı earned?"
+  },
+  {
+    "id": "us-rewards.3",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Doğrulayıcı ödülleri ne kadar?",
+    "input": "doğrulayıcı ödülleri ne kadar?"
+  },
+  {
+    "id": "us-rewards.4",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What are the validator rewards?",
+    "input": "what are the validator rewards?"
+  },
+  {
+    "id": "us-rewards.5",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "rewards?",
+    "input": "rewards?"
+  },
+  {
+    "id": "us-rewards.6",
+    "lang": "mixed",
+    "label": "unsupported",
+    "text": "Rewards ne kadar?",
+    "input": "rewards ne kadar?"
+  },
+  {
+    "id": "us-version.1",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Diana hangi yazılım sürümünü çalıştırıyor?",
+    "input": "diana hangi yazılım sürümünü çalıştırıyor?"
+  },
+  {
+    "id": "us-version.2",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "Which software version is Diana running?",
+    "input": "which software version is diana running?"
+  },
+  {
+    "id": "us-version.3",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Node sürümü kaç?",
+    "input": "node sürümü kaç?"
+  },
+  {
+    "id": "us-version.4",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What client version does the node use?",
+    "input": "what client version does the node use?"
+  },
+  {
+    "id": "us-version.5",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "surum ne",
+    "input": "surum ne"
+  },
+  {
+    "id": "us-version.6",
+    "lang": "mixed",
+    "label": "unsupported",
+    "text": "Client version ne?",
+    "input": "client version ne?"
+  },
+  {
+    "id": "us-chain-params.1",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Zincirin konsensüs parametreleri neler?",
+    "input": "zincirin konsensüs parametreleri neler?"
+  },
+  {
+    "id": "us-chain-params.2",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What are the chain's consensus parameters?",
+    "input": "what are the chain's consensus parameters?"
+  },
+  {
+    "id": "us-chain-params.3",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Maksimum blok boyutu kaç?",
+    "input": "maksimum blok boyutu kaç?"
+  },
+  {
+    "id": "us-chain-params.4",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What's the maximum block size?",
+    "input": "what's the maximum block size?"
+  },
+  {
+    "id": "us-chain-params.5",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "konsensus parametreleri",
+    "input": "konsensus parametreleri"
+  },
+  {
+    "id": "us-chain-params.6",
+    "lang": "mixed",
+    "label": "unsupported",
+    "text": "Max block size ne?",
+    "input": "max block size ne?"
+  },
+  {
+    "id": "us-history-height.1",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Dün bu saatte blok yüksekliği kaçtı?",
+    "input": "dün bu saatte blok yüksekliği kaçtı?"
+  },
+  {
+    "id": "us-history-height.2",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What was the block height at this time yesterday?",
+    "input": "what was the block height at this time yesterday?"
+  },
+  {
+    "id": "us-history-height.3",
+    "lang": "tr",
+    "label": "unsupported",
+    "text": "Bir hafta önceki blok numarası neydi?",
+    "input": "bir hafta önceki blok numarası neydi?"
+  },
+  {
+    "id": "us-history-height.4",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "What block number was it a week ago?",
+    "input": "what block number was it a week ago?"
+  },
+  {
+    "id": "us-history-height.5",
+    "lang": "en",
+    "label": "unsupported",
+    "text": "block height yesterday?",
+    "input": "block height yesterday?"
+  },
+  {
+    "id": "us-history-height.6",
+    "lang": "mixed",
+    "label": "unsupported",
+    "text": "Yesterday'ki block height?",
+    "input": "yesterday'ki block height?"
+  },
+  {
+    "id": "uk-thanks.1",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Teşekkürler, çok yardımcı oldun.",
+    "input": "teşekkürler, çok yardımcı oldun."
+  },
+  {
+    "id": "uk-thanks.2",
+    "lang": "en",
+    "label": "unknown",
+    "text": "Thanks, that was helpful.",
+    "input": "thanks, that was helpful."
+  },
+  {
+    "id": "uk-thanks.3",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Eyvallah.",
+    "input": "eyvallah."
+  },
+  {
+    "id": "uk-thanks.4",
+    "lang": "en",
+    "label": "unknown",
+    "text": "Cheers!",
+    "input": "cheers!"
+  },
+  {
+    "id": "uk-thanks.5",
+    "lang": "en",
+    "label": "unknown",
+    "text": "thx",
+    "input": "thx"
+  },
+  {
+    "id": "uk-thanks.6",
+    "lang": "mixed",
+    "label": "unknown",
+    "text": "Thanks, sağ ol.",
+    "input": "thanks, sağ ol."
+  },
+  {
+    "id": "uk-weather.1",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Yarın yağmur yağacak mı?",
+    "input": "yarın yağmur yağacak mı?"
+  },
+  {
+    "id": "uk-weather.2",
+    "lang": "en",
+    "label": "unknown",
+    "text": "Will it rain tomorrow?",
+    "input": "will it rain tomorrow?"
+  },
+  {
+    "id": "uk-weather.3",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Hafta sonu hava güzel olacak mı?",
+    "input": "hafta sonu hava güzel olacak mı?"
+  },
+  {
+    "id": "uk-weather.4",
+    "lang": "en",
+    "label": "unknown",
+    "text": "What's the forecast for the weekend?",
+    "input": "what's the forecast for the weekend?"
+  },
+  {
+    "id": "uk-weather.5",
+    "lang": "en",
+    "label": "unknown",
+    "text": "weather tomorrow?",
+    "input": "weather tomorrow?"
+  },
+  {
+    "id": "uk-weather.6",
+    "lang": "mixed",
+    "label": "unknown",
+    "text": "Weather nasıl yarın?",
+    "input": "weather nasıl yarın?"
+  },
+  {
+    "id": "uk-roadmap.1",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "İleride hangi özellikler gelecek?",
+    "input": "ileride hangi özellikler gelecek?"
+  },
+  {
+    "id": "uk-roadmap.2",
+    "lang": "en",
+    "label": "unknown",
+    "text": "What features are coming next?",
+    "input": "what features are coming next?"
+  },
+  {
+    "id": "uk-roadmap.3",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Güncelleme ne zaman çıkacak?",
+    "input": "güncelleme ne zaman çıkacak?"
+  },
+  {
+    "id": "uk-roadmap.4",
+    "lang": "en",
+    "label": "unknown",
+    "text": "When is the next ELA release?",
+    "input": "when is the next ela release?"
+  },
+  {
+    "id": "uk-roadmap.5",
+    "lang": "en",
+    "label": "unknown",
+    "text": "whats on the roadmap",
+    "input": "whats on the roadmap"
+  },
+  {
+    "id": "uk-roadmap.6",
+    "lang": "mixed",
+    "label": "unknown",
+    "text": "Roadmap'te ne var?",
+    "input": "roadmap'te ne var?"
+  },
+  {
+    "id": "uk-forgot.1",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Şey...",
+    "input": "şey..."
+  },
+  {
+    "id": "uk-forgot.2",
+    "lang": "en",
+    "label": "unknown",
+    "text": "Um, I was going to ask...",
+    "input": "um, ı was going to ask..."
+  },
+  {
+    "id": "uk-forgot.3",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Aklımdan çıktı ne soracağım.",
+    "input": "aklımdan çıktı ne soracağım."
+  },
+  {
+    "id": "uk-forgot.4",
+    "lang": "en",
+    "label": "unknown",
+    "text": "I forgot what I wanted to ask.",
+    "input": "ı forgot what ı wanted to ask."
+  },
+  {
+    "id": "uk-forgot.5",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "neyse",
+    "input": "neyse"
+  },
+  {
+    "id": "uk-forgot.6",
+    "lang": "mixed",
+    "label": "unknown",
+    "text": "Nevermind, boşver.",
+    "input": "nevermind, boşver."
+  },
+  {
+    "id": "uk-opinion.1",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Kriptoya yatırım mantıklı mı?",
+    "input": "kriptoya yatırım mantıklı mı?"
+  },
+  {
+    "id": "uk-opinion.2",
+    "lang": "en",
+    "label": "unknown",
+    "text": "Is crypto a good investment?",
+    "input": "ıs crypto a good investment?"
+  },
+  {
+    "id": "uk-opinion.3",
+    "lang": "tr",
+    "label": "unknown",
+    "text": "Piyasa yükselecek mi sence?",
+    "input": "piyasa yükselecek mi sence?"
+  },
+  {
+    "id": "uk-opinion.4",
+    "lang": "en",
+    "label": "unknown",
+    "text": "Do you think the market will go up?",
+    "input": "do you think the market will go up?"
+  },
+  {
+    "id": "uk-opinion.5",
+    "lang": "en",
+    "label": "unknown",
+    "text": "is crypto worth it",
+    "input": "is crypto worth it"
+  },
+  {
+    "id": "uk-opinion.6",
+    "lang": "mixed",
+    "label": "unknown",
+    "text": "Crypto'ya girmeli miyim?",
+    "input": "crypto'ya girmeli miyim?"
+  }
+]

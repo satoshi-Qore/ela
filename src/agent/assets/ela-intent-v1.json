@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "variant": "v16k-train-int8",
+  "teacher": "minishlab/potion-multilingual-128M@73908c3438cf03b6a01bcb9611d62b23d0726f08",
+  "bytes": 5006176,
+  "sha256": "45beb21528e52040ad5697deca3053e9f8eb610b16ee5d4f6c6df3cf83586afb",
+  "sources": {
+    "config.json": {
+      "bytes": 638,
+      "sha256": "391df63887405d569cf9c3e2fef920f65cfdd0175a28fc3300f4a0a96a02eece"
+    },
+    "head.json": {
+      "bytes": 31962,
+      "sha256": "83f0631d637216dbb6e6ba7476deb00adcca5c48808de57f9346c34309ad4578"
+    },
+    "tokenizer.json": {
+      "bytes": 813620,
+      "sha256": "f3247f2d681f4c564b5ef3c1b89b600931a291b5caafa16b9108574ec1f94f8e"
+    },
+    "embeddings.int8.bin": {
+      "bytes": 4096000,
+      "sha256": "9376f8c4917832be499feda7a052c030e50cd29b7ce086b84cc866f33765cbbd"
+    },
+    "scales.f32.bin": {
+      "bytes": 64000,
+      "sha256": "2501face2b41b7e68ce28675caff6f85914f0c5ce26285e4a0348ea12b7b2ade"
+    }
+  }
+}

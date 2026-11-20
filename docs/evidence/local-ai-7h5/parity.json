@@ -1,0 +1,25 @@
+{
+  "compared": 900,
+  "tokenMismatches": 0,
+  "maxScoreError": 2.06644883871121e-7,
+  "validationRawLabelAccuracy": {
+    "all": {
+      "total": 180,
+      "correct": 148
+    },
+    "tr": {
+      "total": 77,
+      "correct": 64
+    },
+    "en": {
+      "total": 76,
+      "correct": 63
+    },
+    "mixed": {
+      "total": 27,
+      "correct": 21
+    }
+  },
+  "trainingRows": 720,
+  "validationRows": 180
+}
