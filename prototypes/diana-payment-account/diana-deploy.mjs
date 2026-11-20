@@ -68,8 +68,8 @@ export const DEPLOY_PLAN = Object.freeze({
 });
 
 /**
- * The constructor parameters for the LIVE deployment. Null on purpose: the fixed policy is approved, but exact
- * dates are not selected and transaction execution has not been authorized. While this is null,
+ * The constructor parameters for the LIVE deployment. Null on purpose: the fixed policy and exact
+ * dates are approved, but transaction execution has not been authorized. While this is null,
  * signing, broadcasting and verification refuse to start.
  */
 export const LIVE_CONSTRUCTOR_PARAMS = null;
@@ -117,13 +117,16 @@ function approvedPolicyContext(params, plan) {
   // reviewed change to this same trusted configuration, not a caller's reviewed flag.
   const datesApproved=approved.timing.approvalStatus==='approved'
     && typeof approved.timing.approvalSource==='string' && approved.timing.approvalSource.length>0
+    && isUint(approved.timing.plannedDeploymentAt)
     && isUint(approved.timing.startsAt) && isUint(approved.timing.endsAt)
+    && approved.timing.startsAt-approved.timing.plannedDeploymentAt===approved.timing.startDelaySeconds
     && approved.timing.endsAt-approved.timing.startsAt===approved.timing.durationSeconds;
   const dateApprovalMatches=datesApproved && params?.startsAt===approved.timing.startsAt && params?.endsAt===approved.timing.endsAt;
   return {
     approvalStatus:approved.approvalStatus,approvalSource:approved.approvalSource,executionAuthorized:false,
     values:Object.fromEntries(Object.entries(approved.parameters).map(([key,value])=>[key,typeof value==='bigint'?value.toString():value])),
     durationSeconds:approved.timing.durationSeconds.toString(),
+    plannedDeploymentAt:approved.timing.plannedDeploymentAt.toString(),
     startRule:approved.timing.startRule,startDelaySeconds:approved.timing.startDelaySeconds.toString(),
     durationApprovalSource:approved.timing.durationApprovalSource,
     dateApprovalStatus:approved.timing.approvalStatus,dateApprovalSource:approved.timing.approvalSource,
@@ -142,11 +145,12 @@ export function constructorChecklist(params, { plan = DEPLOY_PLAN, nowSeconds, p
   const policyApproval=approvedPolicyContext(params,plan);
   const p = params ?? (policyApproval ? approvedPartialParams() : {});
   const now = BigInt(nowSeconds);
+  const scheduleStatus=policyApproval ? (now>=APPROVED_PAYMENT_POLICY.timing.plannedDeploymentAt ? 'EXPIRED' : 'VALID') : undefined;
   const recipientValid = typeof p.recipient === 'string' && isAddress(p.recipient, { strict: false }) && p.recipient === getAddress(p.recipient);
   const recipientValue = recipientValid ? BigInt(p.recipient) : 0n;
   const items = [
     ['chosen', 'Parameters chosen for the live deployment (not the test set)', (params !== null && params !== undefined && p.testOnly !== true) || policyApproval !== null],
-    ['reviewed', policyApproval ? 'Exact constructor dates reviewed (fixed policy already approved)' : 'Every value below reviewed and approved by the Invoice Owner (reviewed: true)', p.reviewed === true && (!policyApproval || policyApproval.dateApprovalMatches)],
+    ['reviewed', policyApproval ? 'Explicit constructor selected with the approved exact dates; default live constructor remains disabled' : 'Every value below reviewed and approved by the Invoice Owner (reviewed: true)', p.reviewed === true && (!policyApproval || policyApproval.dateApprovalMatches)],
     ['executor', 'executor is the Invoice Owner EVM address ' + plan.evm, sameAddress(p.executor, plan.evm)],
     ['invoiceIssuer', 'invoiceIssuer is the Invoice Owner EVM address (7C-21), which holds the registered ML-DSA-87 key', sameAddress(p.invoiceIssuer, plan.evm)],
     ['recipient-address', 'recipient is a checksummed address, not zero, not a precompile, not the placeholder', recipientValid && recipientValue > 0xffffn && !sameAddress(p.recipient, PLACEHOLDER_RECIPIENT)],
@@ -157,10 +161,10 @@ export function constructorChecklist(params, { plan = DEPLOY_PLAN, nowSeconds, p
         && p.spendingLimit <= limits.maxSpendingLimitWei && p.maxPerPayment % WEI_PER_UQOR === 0n && p.spendingLimit % WEI_PER_UQOR === 0n],
     ['maxPayments', 'maxPayments between 1 and ' + limits.maxPayments, isUint(p.maxPayments) && p.maxPayments >= 1n && p.maxPayments <= limits.maxPayments],
     ['dates', policyApproval ? 'Future start; exactly 3600 seconds; at least 3600 seconds remaining; starts within 30 days' : 'startsAt < endsAt; endsAt at least 1 day ahead; at most 1 year long; starts within 30 days',
-      isUint(p.startsAt) && isUint(p.endsAt) && (!policyApproval || (p.endsAt-p.startsAt===APPROVED_PAYMENT_POLICY.timing.durationSeconds && p.startsAt>now && p.startsAt<=253402300799n && now>=0n && now<=253402300799n)) && p.startsAt < p.endsAt && p.endsAt >= now + BigInt(policyApproval ? Math.min(limits.minRemainingSeconds, Number(APPROVED_PAYMENT_POLICY.timing.durationSeconds)) : limits.minRemainingSeconds)
+      isUint(p.startsAt) && isUint(p.endsAt) && (!policyApproval || (p.endsAt-p.startsAt===APPROVED_PAYMENT_POLICY.timing.durationSeconds && p.startsAt>now && now<APPROVED_PAYMENT_POLICY.timing.plannedDeploymentAt && p.startsAt-APPROVED_PAYMENT_POLICY.timing.plannedDeploymentAt===APPROVED_PAYMENT_POLICY.timing.startDelaySeconds && p.startsAt<=253402300799n && now>=0n && now<=253402300799n)) && p.startsAt < p.endsAt && p.endsAt >= now + BigInt(policyApproval ? Math.min(limits.minRemainingSeconds, Number(APPROVED_PAYMENT_POLICY.timing.durationSeconds)) : limits.minRemainingSeconds)
         && p.endsAt - p.startsAt <= BigInt(limits.maxDurationSeconds) && p.startsAt <= now + BigInt(limits.maxStartDelaySeconds)],
   ].map(([id, requirement, ok]) => ({ id, requirement, ok: ok === true }));
-  return { items, ready: items.every(i => i.ok), failing: items.filter(i => !i.ok).map(i => i.id), ...(policyApproval ? {policyApproval} : {}) };
+  return { items, ready: items.every(i => i.ok), failing: items.filter(i => !i.ok).map(i => i.id), ...(policyApproval ? {policyApproval,scheduleStatus} : {}) };
 }
 
 // ---- Network ----
@@ -313,10 +317,10 @@ export function deploymentPackage({artifact,params,nonce,plan=DEPLOY_PLAN}) {
   const policyApproval=approvedPolicyContext(params,plan);
   const missing = policyApproval ? policyApproval.pendingFields : ['recipient','maxPerPayment','spendingLimit','maxPayments','startsAt','endsAt'];
   if(!params||params.testOnly===true||params.reviewed!==true) return {...base,status:'blocked',missingApprovals:missing,runtimeSha256:null,readinessConfig:null,...(policyApproval?{policyApproval}:{})};
-  // Structural approval guards use a reference 15 minutes before the approved start, not a
+  // Structural approval guards use a reference immediately before the approved deployment deadline, not a
   // chosen deployment time, and stay reproducible after expiry. Live date and
   // recipient-code checks remain mandatory in PREPARE; this package never means readyToSign.
-  const checklist=constructorChecklist(params,{plan,nowSeconds:Number(policyApproval ? params.startsAt-APPROVED_PAYMENT_POLICY.timing.startDelaySeconds : params.startsAt),predictedAddress:base.predictedContractAddress});
+  const checklist=constructorChecklist(params,{plan,nowSeconds:Number(policyApproval ? APPROVED_PAYMENT_POLICY.timing.plannedDeploymentAt-1n : params.startsAt),predictedAddress:base.predictedContractAddress});
   if(checklist.failing.some(id=>id!=='recipient-code'))return {...base,status:'blocked',missingApprovals:policyApproval?policyApproval.pendingFields:checklist.failing.filter(id=>id!=='recipient-code'),runtimeSha256:null,readinessConfig:null,...(policyApproval?{policyApproval}:{})};
   const args=encodeConstructorArgs(params),initcode=artifact.bytecode+args.slice(2),runtime=expectedRuntimeCode(artifact,params);
   const runtimeSha256=hash(runtime);
@@ -331,7 +335,6 @@ export function deploymentPackage({artifact,params,nonce,plan=DEPLOY_PLAN}) {
 
 /** Named, read-only checks of everything the deployment depends on; the unsigned transaction; the predicted address. */
 export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact, params, now = () => Math.floor(Date.now() / 1000), write = () => {} }) {
-  const nowSeconds = now();
   const policyApproval=approvedPolicyContext(params,plan);
   const policyParams=params ?? (policyApproval ? approvedPartialParams() : null);
   const live = await fetchLiveState(plan.native, network);
@@ -351,6 +354,8 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
   const windowCostUqor = gasLimit === undefined ? undefined : evmWindowCost({ value: plan.valueWei, gas: gasLimit, maxFeePerGas: plan.maxFeePerGasWei });
   const addressCode = await rpc(network, 'eth_getCode', [predictedAddress, 'latest']);
   const recipientCode = policyParams?.recipient && isAddress(policyParams.recipient, { strict: false }) ? (await rpc(network, 'eth_getCode', [policyParams.recipient, 'latest'])).result : undefined;
+  // Evaluate time after the read-only network checks, not before potentially slow RPC reads.
+  const nowSeconds = now();
   const checklist = constructorChecklist(params, { plan, nowSeconds, predictedAddress, recipientCode });
 
   const checks = [
@@ -377,6 +382,8 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
 
   const report = {
     mode: 'prepare', signed: false, broadcast: false, deployed: false,
+    executionAuthorized:false,
+    ...(checklist.scheduleStatus ? {scheduleStatus:checklist.scheduleStatus} : {}),
     readyToSign: checks.every(c => c.ok), blockers: checks.filter(c => !c.ok).map(c => c.id), checks,
     signingFormat: 'EVM EIP-1559 (type 2), secp256k1 over keccak256(0x02 || rlp(fields)), chain ID ' + plan.evmChainId + '. Not a Cosmos SignDoc; no PQC signature in the EVM transaction.',
     tx: {

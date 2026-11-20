@@ -1,9 +1,9 @@
 /** Explicit user approval from ELA 7I-3. Public policy only, never transaction authority. */
 export const APPROVED_PAYMENT_POLICY = Object.freeze({
-  version: 2,
+  version: 3,
   approvalStatus: 'approved',
   approvalSource: 'Explicit user instruction ELA 7I-3, 2026-11-20',
-  approvalScope: 'fixed policy; one-hour duration and start 15 minutes after planned deployment; exact timestamps excluded',
+  approvalScope: 'fixed policy; one-hour duration and start 15 minutes after planned deployment; exact schedule explicitly approved 2026-11-20',
   executionAuthorized: false,
   network: Object.freeze({chainId:'qorechain-diana',evmChainId:9800}),
   parameters: Object.freeze({
@@ -19,10 +19,11 @@ export const APPROVED_PAYMENT_POLICY = Object.freeze({
     startDelaySeconds: 900n,
     durationApprovalSource: 'Explicit user one-hour test policy decision, 2026-11-20; supersedes seven-day duration',
     timeZone: 'Europe/Istanbul',
-    approvalStatus: 'pending',
-    approvalSource: null,
+    approvalStatus: 'approved',
+    approvalSource: 'Explicit user exact schedule approval, 2026-11-20, Europe/Istanbul (UTC+03:00); not execution authority',
     durationSeconds: 3600n,
-    startsAt: null,
-    endsAt: null,
+    plannedDeploymentAt: 1795199400n,
+    startsAt: 1795200300n,
+    endsAt: 1795203900n,
   }),
 });
