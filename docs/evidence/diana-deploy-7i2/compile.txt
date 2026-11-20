@@ -1,0 +1,25 @@
+Warning: this project is configured to use a local compiler executable:
+  "E:\\ELA\\worktrees\\ela-agent-v1\\prototypes\\diana-payment-account\\.tools\\solc.exe"
+Running this executable may execute arbitrary code.
+Compiling 2 files with Solc 0.8.28
+Solc 0.8.28 finished in 163.73ms
+Compiler run successful!
+error: file ../src/DianaPaymentAccount.sol not found
+  ╭▸ prototypes/diana-payment-account/test/DianaPaymentAccount.t.sol:4:45
+  │
+4 │ import {DianaPaymentAccount, IQorePQC} from "../src/DianaPaymentAccount.sol";
+  ╰╴                                            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+note: internal lint engine failure (compilation itself succeeded).
+note: please file a bug report at
+      https://github.com/foundry-rs/foundry/issues/new?template=BUG-FORM.yml
+      and attach the full output above.
+help: rerun with `--no-lint` to skip linting for this build, or consider temporarily
+      disabling forge lint on build:
+      https://getfoundry.sh/forge/linting#disable-linting-on-build
+
+Error: post-build lint step failed
+
+Context:
+- solar reported 1 error; see the diagnostic printed above

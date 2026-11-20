@@ -1,0 +1,35 @@
+✖ artifact compiler, target, constructor ABI and immutable slot provenance fail closed (15.6767ms)
+✔ public package binds all eight arguments to runtime SHA256 and 7I1 policy without an execution permit (11.3429ms)
+✔ missing, test-only or unreviewed constructor parameters cannot produce a live runtime pin (10.4367ms)
+✔ existing deployment CLI retains null and interactive gates without reading records or calling effects (3257.4067ms)
+✔ PREPARE with no approved policy reads current nonce/fees/window but never estimates placeholder deployment (35.5444ms)
+✔ reviewed fixture PREPARE retains all deployment window, gas, fee and policy guards (46.2662ms)
+✔ post-deployment verifier rejects wrong network before receipt/code reads (1.3011ms)
+✔ existing VERIFY CLI parses a retained public PREPARE report and dispatches only read verification (0.3526ms)
+✔ post-deployment VERIFY binds transaction hash, fees, access list and receipt inclusion to the prepared intent (25.8457ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 8
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5074.6639
+
+✖ failing tests:
+
+test at tests\diana-deployment-package.test.mjs:16:1
+✖ artifact compiler, target, constructor ABI and immutable slot provenance fail closed (15.6767ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-deployment-package.test.mjs:19:47)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Artifact does not match/,
+    operator: 'throws',
+    diff: 'simple'
+  }

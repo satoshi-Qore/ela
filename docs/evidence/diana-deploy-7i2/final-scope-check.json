@@ -1,0 +1,10 @@
+{
+  "base": "c162dbfe6182a076fb473086c05840759ac3557b",
+  "liveObservationStillMatchesFinalArtifact": true,
+  "approvedLiveParameters": null,
+  "liveRuntimePin": null,
+  "realSigning": false,
+  "broadcast": false,
+  "contractSourceChanged": false,
+  "notes": "No repeat network experiment needed: final hardening changes validation, persistence and verification; same compiled bytecode and missing-parameter PREPARE facts retained."
+}

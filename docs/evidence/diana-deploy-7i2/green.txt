@@ -1,0 +1,12 @@
+✔ artifact compiler, target, constructor ABI and immutable slot provenance fail closed (31.4538ms)
+✔ public package binds all eight arguments to runtime SHA256 and 7I1 policy without an execution permit (10.2149ms)
+✔ missing, test-only or unreviewed constructor parameters cannot produce a live runtime pin (7.8648ms)
+✔ existing deployment CLI retains null and interactive gates without reading records or calling effects (2942.2168ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4523.6657

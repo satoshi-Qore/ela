@@ -4,3 +4,7 @@ tests/vectors/qorechain-pqc/ml-dsa-87.json -text
 # Keep genuine 7I-1 RPC observations and test logs verbatim.
 docs/evidence/diana-payment-7i1/*.txt -text -whitespace
 docs/evidence/diana-payment-7i1/*.json -text -whitespace
+
+# Preserve 7I-2 compiler, fixture and read-only network evidence.
+docs/evidence/diana-deploy-7i2/*.txt -text -whitespace
+docs/evidence/diana-deploy-7i2/*.json -text -whitespace

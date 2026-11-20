@@ -312,18 +312,14 @@ test('the CREATE address is predicted from sender and nonce, and the expected ru
 });
 
 test('the artifact loader maps immutables by declaration order and refuses a mismatched source', () => {
-  const src = Buffer.from([
-    'pragma solidity 0.8.28;', 'contract DianaPaymentAccount {',
-    '    address public immutable executor;', '    address payable public immutable recipient;', '    address public immutable invoiceIssuer;',
-    '    uint256 public immutable maxPerPayment;', '    uint256 public immutable spendingLimit;', '    uint256 public immutable maxPayments;',
-    '    uint256 public immutable startsAt;', '    uint256 public immutable endsAt;', '}', '',
-  ].join('\n'));
-  const refs = { 163: [{ start: 7, length: 32 }], 149: [{ start: 0, length: 32 }], 151: [{ start: 1, length: 32 }], 153: [{ start: 2, length: 32 }], 155: [{ start: 3, length: 32 }], 157: [{ start: 4, length: 32 }], 159: [{ start: 5, length: 32 }], 161: [{ start: 6, length: 32 }] };
-  const art = (k, r = refs) => JSON.stringify({ bytecode: { object: '0x60' }, deployedBytecode: { object: '0x' + '00'.repeat(64), immutableReferences: r }, metadata: { compiler: { version: 'x' }, settings: { evmVersion: 'paris' }, sources: { 'src/DianaPaymentAccount.sol': { keccak256: k } } } });
+  const src = readFileSync(new URL('../src/DianaPaymentAccount.sol',import.meta.url));
+  const compiled=JSON.parse(readFileSync(new URL('../../../docs/evidence/diana-deploy-7i2/compiled-contract.json',import.meta.url)));
+  const refs=compiled.deployedBytecode.immutableReferences;
+  const art=(k,r=refs)=>JSON.stringify({...compiled,deployedBytecode:{...compiled.deployedBytecode,immutableReferences:r},metadata:{...compiled.metadata,sources:{'src/DianaPaymentAccount.sol':{keccak256:k}}}});
   const read = data => p => (String(p).endsWith('.json') ? data : src);
-  const loaded = loadDeployArtifact({ artifactPath: 'a.json', sourcePath: 's.sol', read: read(art(keccak256(toHex(src)))) });
+  const loaded = loadDeployArtifact({ artifactPath: 'a.json', sourcePath: 's.sol', read: read(art(compiled.metadata.sources['src/DianaPaymentAccount.sol'].keccak256)) });
   assert.deepEqual(Object.keys(loaded.immutables), NAMES);
-  assert.deepEqual(NAMES.map(n => loaded.immutables[n][0].start), [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(NAMES.map(n => loaded.immutables[n][0].start), [1017, 945, 909, 981, 873, 1969, 1413, 805]);
   assert.throws(() => loadDeployArtifact({ artifactPath: 'a.json', sourcePath: 's.sol', read: read(art('0x' + '22'.repeat(32))) }), /Artifact does not match the contract source/);
   assert.throws(() => loadDeployArtifact({ artifactPath: 'a.json', sourcePath: 's.sol', read: read(art(keccak256(toHex(src)), { 149: [] })) }), /Artifact does not match the contract source/);
 });
@@ -431,8 +427,8 @@ test('VERIFY: receipt, predicted address, on-chain runtime code with the constru
     const c = {
       nonce: NONCE + 1n, pendingNonce: NONCE + 1n,
       codes: { [PREDICTED.toLowerCase()]: intent.expectedRuntime },
-      txs: { [hash]: { type: '0x2', chainId: '0x2648', from: account.evm.toLowerCase(), to: null, nonce: '0x3', gas: '0x' + parsed.gas.toString(16), value: '0x0', input: parsed.data } },
-      receipts: { [hash]: { status: '0x1', contractAddress: PREDICTED.toLowerCase(), blockNumber: '0x' + (HEIGHT + 2n).toString(16), gasUsed: '0x14d5ab' } },
+      txs: { [hash]: { hash, blockHash:'0x'+'aa'.repeat(32),blockNumber:'0x'+(HEIGHT+2n).toString(16),maxFeePerGas:'0x'+intent.tx.maxFeePerGas.toString(16),maxPriorityFeePerGas:'0x'+intent.tx.maxPriorityFeePerGas.toString(16),accessList:[], type: '0x2', chainId: '0x2648', from: account.evm.toLowerCase(), to: null, nonce: '0x3', gas: '0x' + parsed.gas.toString(16), value: '0x0', input: parsed.data } },
+      receipts: { [hash]: { transactionHash:hash,from:account.evm,to:null,blockHash:'0x'+'aa'.repeat(32),status: '0x1', contractAddress: PREDICTED.toLowerCase(), blockNumber: '0x' + (HEIGHT + 2n).toString(16), gasUsed: '0x14d5ab' } },
       window: { ...fakeNode().chain.window, used_txs: '1', remaining_txs: '0', used_value: '256500', remaining_value: '0', live: false },
     };
     for (const [k, v] of Object.entries(change)) c[k] = typeof v === 'function' ? v(structuredClone(c[k])) : v;

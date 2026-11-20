@@ -1,0 +1,6 @@
+Warning: this project is configured to use a local compiler executable:
+  "E:\\ELA\\worktrees\\ela-agent-v1\\prototypes\\diana-payment-account\\.tools\\solc.exe"
+Running this executable may execute arbitrary code.
+Compiling 2 files with Solc 0.8.28
+Solc 0.8.28 finished in 151.00ms
+Compiler run successful!

@@ -22,12 +22,13 @@
 //   BROADCAST `broadcastOnce`       eth_sendRawTransaction once, never retried.
 //   VERIFY    `verifyDeployment`    read-only: receipt, address, on-chain runtime code, nonce, window.
 //
-// `node .\diana-deploy.mjs` (default): PREPARE only, with TEST constructor parameters that are never
-// accepted for signing. Every other option is refused while LIVE_CONSTRUCTOR_PARAMS is null: the
-// recipient has not been chosen, so no real deployment can be signed or sent by this file.
+// Default PREPARE never substitutes test parameters for missing live approval. Broadcast and
+// verify remain refused while LIVE_CONSTRUCTOR_PARAMS is null. After separate approval, the
+// existing CLI uses --prepare-report to preserve public expectations without signed bytes.
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { win32 as path } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createInterface } from 'node:readline/promises';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sdk from '@qorechain/sdk';
 import { evmWindowCost, parseEvmWindow } from '@qorechain/evm/window';
@@ -38,7 +39,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { classicalKeyHex, fetchLiveState } from './diana-hybrid-prepare.mjs';
 import { readParsedRecord } from './diana-hybrid-sign.mjs';
 import { withVerifiedAccount } from './diana-canonical-pqc.mjs';
-import { INVOICE_OWNER } from './diana-verify-recovery.mjs';
+import { INVOICE_OWNER, RECORD_PATH, readRecordBytes } from './diana-verify-recovery.mjs';
 import { WINDOW_PLAN, fetchEvmState, loadArtifact } from './diana-window-prepare.mjs';
 
 const GWEI = 10n ** 9n;
@@ -211,6 +212,14 @@ export function loadDeployArtifact({ artifactPath, sourcePath, read = readFileSy
     throw new Error('Artifact does not match the contract source');
   }
   const raw = JSON.parse(artifactText);
+  const pin = JSON.parse(readFileSync(new URL('./deployment-artifact-manifest.json',import.meta.url),'utf8'));
+  const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+  const rawRefs = raw.deployedBytecode?.immutableReferences ?? {};
+  const mapping = Object.keys(rawRefs).sort((a,b)=>Number(a)-Number(b)).map(id=>[id,rawRefs[id]]);
+  if (base.sourceKeccak!==pin.sourceKeccak || base.compiler!==pin.compiler || base.evmVersion!==pin.evmVersion
+    || sha(Buffer.from(base.bytecode.slice(2),'hex'))!==pin.creationBytecodeSha256
+    || typeof raw.deployedBytecode?.object!=='string' || sha(Buffer.from(raw.deployedBytecode.object.slice(2),'hex'))!==pin.runtimeTemplateSha256
+    || sha(JSON.stringify(mapping))!==pin.immutableReferencesSha256) throw new Error('Artifact does not match the contract source');
   const source = String(read(sourcePath ?? fileURLToPath(new URL('./src/DianaPaymentAccount.sol', import.meta.url)), 'utf8'));
   const names = [...source.matchAll(/^\s*(?:address(?: payable)?|uint256) public immutable (\w+);/gm)].map(m => m[1]);
   const refs = raw.deployedBytecode?.immutableReferences ?? {};
@@ -218,19 +227,72 @@ export function loadDeployArtifact({ artifactPath, sourcePath, read = readFileSy
   if (typeof raw.deployedBytecode?.object !== 'string' || !/^0x[0-9a-f]+$/i.test(raw.deployedBytecode.object) || ids.length !== names.length) {
     throw new Error('Artifact does not match the contract source');
   }
+  const expectedNames = ['executor','recipient','invoiceIssuer','maxPerPayment','spendingLimit','maxPayments','startsAt','endsAt'];
+  const constructor = raw.abi?.find(item => item.type === 'constructor');
+  if (base.compiler !== '0.8.28+commit.7893614a' || base.evmVersion !== 'paris'
+    || JSON.stringify(names) !== JSON.stringify(expectedNames)
+    || constructor?.stateMutability !== 'nonpayable'
+    || JSON.stringify(constructor?.inputs?.map(item => [item.name,item.type])) !== JSON.stringify([
+      ['executor_','address'],['recipient_','address'],['maxPerPayment_','uint256'],['spendingLimit_','uint256'],
+      ['maxPayments_','uint256'],['startsAt_','uint256'],['endsAt_','uint256'],['invoiceIssuer_','address'],
+    ])) throw new Error('Artifact does not match the contract source');
   const immutables = Object.fromEntries(names.map((name, i) => [name, refs[String(ids[i])]]));
-  return Object.freeze({ ...base, deployedBytecode: raw.deployedBytecode.object, immutables });
+  const occupied = new Set();
+  const counts = [2,4,3,2,2,2,2,2];
+  for (const [i,name] of names.entries()) {
+    if (!Array.isArray(immutables[name]) || immutables[name].length !== counts[i]) throw new Error('Artifact does not match the contract source');
+    for (const slot of immutables[name]) {
+      if (!Number.isSafeInteger(slot.start) || slot.start < 0 || slot.length !== 32 || slot.start + 32 > (raw.deployedBytecode.object.length-2)/2
+        || !/^0{64}$/.test(raw.deployedBytecode.object.slice(2+slot.start*2,2+(slot.start+32)*2))) throw new Error('Artifact does not match the contract source');
+      for(let at=slot.start;at<slot.start+32;at++) {
+        if(occupied.has(at)) throw new Error('Artifact does not match the contract source');
+        occupied.add(at);
+      }
+    }
+  }
+
+  const rawSource = Buffer.from(source), lfSource = Buffer.from(source.replace(/\r\n/g,'\n'));
+  const compiledSource = keccak256(rawSource) === base.sourceKeccak ? rawSource : lfSource;
+  return Object.freeze({ ...base, sourceSha256:createHash('sha256').update(compiledSource).digest('hex'), deployedBytecode: raw.deployedBytecode.object, immutables });
 }
 
 /** The runtime code the contract must have once deployed with these constructor values. */
 export function expectedRuntimeCode(artifact, params) {
+  if (!params) throw new Error('Constructor parameters not chosen');
   const code = Buffer.from(artifact.deployedBytecode.slice(2), 'hex');
   const values = { executor: params.executor, recipient: params.recipient, invoiceIssuer: params.invoiceIssuer, maxPerPayment: params.maxPerPayment, spendingLimit: params.spendingLimit, maxPayments: params.maxPayments, startsAt: params.startsAt, endsAt: params.endsAt };
   for (const [name, ranges] of Object.entries(artifact.immutables)) {
-    const word = Buffer.from(BigInt(values[name]).toString(16).padStart(64, '0'), 'hex');
-    for (const { start, length } of ranges) word.copy(code, start, 0, length);
+    const value=BigInt(values[name]);
+    if(value<0n||value>=2n**256n)throw new Error('Deployment intent does not match the plan');
+    const word=Buffer.from(value.toString(16).padStart(64,'0'),'hex');
+    for(const {start,length} of ranges){
+      if(!Number.isSafeInteger(start)||start<0||length!==32||start+32>code.length)throw new Error('Artifact does not match the contract source');
+      word.copy(code,start,0,length);
+    }
   }
   return '0x' + code.toString('hex');
+}
+
+/** Public, reproducible deployment data only. A template hash is never a live runtime pin. */
+export function deploymentPackage({artifact,params,nonce,plan=DEPLOY_PLAN}) {
+  const hash = hex => createHash('sha256').update(Buffer.from(hex.slice(2),'hex')).digest('hex');
+  const base = {version:1,executionAuthorized:false,compiler:artifact.compiler,evmVersion:artifact.evmVersion,
+    sourceKeccak:artifact.sourceKeccak,sourceSha256:artifact.sourceSha256,
+    creationBytecodeSha256:hash(artifact.bytecode),runtimeTemplateSha256:hash(artifact.deployedBytecode),
+    nonce:BigInt(nonce).toString(),predictedContractAddress:getContractAddress({from:plan.evm,nonce:BigInt(nonce)})};
+  const missing = ['recipient','maxPerPayment','spendingLimit','maxPayments','startsAt','endsAt'];
+  if(!params||params.testOnly===true||params.reviewed!==true) return {...base,status:'blocked',missingApprovals:missing,runtimeSha256:null,readinessConfig:null};
+  // Structural approval guards stay reproducible even after the policy expires. Live date and
+  // recipient-code checks remain mandatory in PREPARE; this package never means readyToSign.
+  const checklist=constructorChecklist(params,{plan,nowSeconds:Number(params.startsAt),predictedAddress:base.predictedContractAddress});
+  if(checklist.failing.some(id=>id!=='recipient-code'))return {...base,status:'blocked',missingApprovals:checklist.failing.filter(id=>id!=='recipient-code'),runtimeSha256:null,readinessConfig:null};
+  const args=encodeConstructorArgs(params),initcode=artifact.bytecode+args.slice(2),runtime=expectedRuntimeCode(artifact,params);
+  const runtimeSha256=hash(runtime);
+  return {...base,status:'public_data_only',constructor:Object.fromEntries(Object.entries(params).map(([k,v])=>[k,typeof v==='bigint'?v.toString():v])),
+    constructorArgs:args,initcodeSha256:hash(initcode),initcodeKeccak:keccak256(initcode),runtimeSha256,runtimeKeccak:keccak256(runtime),
+    readinessConfig:{contractAddress:base.predictedContractAddress,executor:params.executor,invoiceIssuer:params.invoiceIssuer,expectedRuntimeSha256:runtimeSha256,
+      pqcKeySha256:{executor:plan.pqcPublicKeySha256,invoiceIssuer:plan.pqcPublicKeySha256},
+      policy:{recipient:params.recipient,maxPerPaymentWei:params.maxPerPayment.toString(),spendingLimitWei:params.spendingLimit.toString(),maxPayments:params.maxPayments.toString(),startsAt:params.startsAt.toString(),endsAt:params.endsAt.toString()}}};
 }
 
 // ---- PREPARE ----
@@ -247,8 +309,8 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
 
   const nonce = BigInt(evm.nonce);
   const predictedAddress = getContractAddress({ from: plan.evm, nonce });
-  const initcode = artifact.bytecode + encodeConstructorArgs(params).slice(2);
-  const estimate = await rpc(network, 'eth_estimateGas', [{ from: plan.evm, data: initcode, value: '0x0' }, 'latest']);
+  const initcode = params ? artifact.bytecode + encodeConstructorArgs(params).slice(2) : null;
+  const estimate = initcode ? await rpc(network, 'eth_estimateGas', [{ from: plan.evm, data: initcode, value: '0x0' }, 'latest']) : {};
   const gasEstimate = typeof estimate.result === 'string' ? BigInt(estimate.result) : undefined;
   const gasLimit = gasEstimate === undefined ? undefined : ((BigInt(Math.ceil(Number(gasEstimate) * plan.gasMultiplier)) + 9999n) / 10000n) * 10000n;
   const maxCostWei = gasLimit === undefined ? undefined : plan.valueWei + gasLimit * plan.maxFeePerGasWei;
@@ -287,7 +349,7 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
       type: 'eip1559', chainId: plan.evmChainId, from: plan.evm, to: null, nonce: nonce.toString(), value: plan.valueWei.toString(),
       gasEstimate: gasEstimate?.toString() ?? null, gas: gasLimit?.toString() ?? null,
       maxFeePerGas: plan.maxFeePerGasWei.toString(), maxPriorityFeePerGas: plan.maxPriorityFeePerGasWei.toString(),
-      initcodeBytes: (initcode.length - 2) / 2, initcodeKeccak: keccak256(initcode), maxCostWei: maxCostWei?.toString() ?? null, windowCostUqor: windowCostUqor?.toString() ?? null,
+      initcodeBytes: initcode ? (initcode.length - 2) / 2 : null, initcodeKeccak: initcode ? keccak256(initcode) : null, maxCostWei: maxCostWei?.toString() ?? null, windowCostUqor: windowCostUqor?.toString() ?? null,
     },
     predictedContractAddress: predictedAddress,
     ...(window.found ? {} : { ifWindowOpensFirst: { nonce: (nonce + 1n).toString(), predictedContractAddress: getContractAddress({ from: plan.evm, nonce: nonce + 1n }) } }),
@@ -305,9 +367,10 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
     constructor: {
       testOnly: params?.testOnly === true,
       values: params ? Object.fromEntries(Object.entries(params).map(([k, v]) => [k, typeof v === 'bigint' ? v.toString() : v])) : null,
-      argsKeccak: keccak256(encodeConstructorArgs(params)), checklist: checklist.items, failing: checklist.failing,
+      argsKeccak: params ? keccak256(encodeConstructorArgs(params)) : null, checklist: checklist.items, failing: checklist.failing,
     },
-    artifact: { compiler: artifact.compiler, evmVersion: artifact.evmVersion, sourceKeccak: artifact.sourceKeccak, runtimeKeccak: keccak256(expectedRuntimeCode(artifact, params)) },
+    deploymentPackage: deploymentPackage({artifact,params,nonce,plan}),
+    artifact: { compiler: artifact.compiler, evmVersion: artifact.evmVersion, sourceKeccak: artifact.sourceKeccak, runtimeKeccak: params ? keccak256(expectedRuntimeCode(artifact, params)) : null, runtimeSha256: params && params.testOnly !== true && params.reviewed === true ? createHash('sha256').update(Buffer.from(expectedRuntimeCode(artifact,params).slice(2),'hex')).digest('hex') : null },
   };
   write(report);
   return report;
@@ -327,6 +390,7 @@ export function deploymentIntent(prepared, params, { plan = DEPLOY_PLAN, artifac
   if (!params || (params.testOnly === true && acceptTestParams !== true)) throw new Error('Constructor parameters not chosen');
   if (prepared?.mode !== 'prepare' || prepared.signed !== false || prepared.readyToSign !== true || prepared.blockers.length) throw new DeployCheckError(prepared?.blockers ?? ['prepare']);
   const t = prepared.tx;
+  if (!/^(0|[1-9][0-9]*)$/.test(t.nonce) || BigInt(t.nonce)>BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('Deployment intent does not match the plan');
   const initcode = artifact.bytecode + encodeConstructorArgs(params).slice(2);
   if (t.type !== 'eip1559' || t.chainId !== plan.evmChainId || !sameAddress(t.from, plan.evm) || t.to !== null || t.value !== '0'
     || BigInt(t.gas) > plan.maxGasLimit || t.maxFeePerGas !== plan.maxFeePerGasWei.toString() || t.maxPriorityFeePerGas !== plan.maxPriorityFeePerGasWei.toString()
@@ -414,6 +478,7 @@ export async function broadcastOnce(serialized, network) {
 // ---- VERIFY ----
 
 export const VERIFY_FAILURES = Object.freeze([
+  'Wrong Diana network',
   'Transaction not found',
   'Transaction is not the planned deployment',
   'Deployment failed or not included',
@@ -425,19 +490,26 @@ export const VERIFY_FAILURES = Object.freeze([
 
 /** VERIFY (read-only): the receipt, the address, the on-chain runtime code, the nonce and the window. */
 export async function verifyDeployment({ network, txHash, intent }) {
+  const chain=await rpc(network,'eth_chainId',[]);
+  if(chain.result!=='0x2648')return {mode:'verify',txHash,verified:false,failures:['Wrong Diana network']};
   const failures = [];
   const fail = f => { if (!failures.includes(f)) failures.push(f); };
   const tx = (await rpc(network, 'eth_getTransactionByHash', [txHash])).result;
   if (!tx) return { mode: 'verify', txHash, verified: false, failures: ['Transaction not found'] };
   const t = intent.tx;
-  if (tx.type !== '0x2' || BigInt(tx.chainId ?? -1) !== BigInt(t.chainId) || !sameAddress(tx.from, intent.from) || (tx.to !== null && tx.to !== undefined)
+  if (String(tx.hash).toLowerCase()!==txHash.toLowerCase() || tx.type !== '0x2' || BigInt(tx.chainId ?? -1) !== BigInt(t.chainId) || !sameAddress(tx.from, intent.from) || tx.to !== null
+    || BigInt(tx.maxFeePerGas??-1)!==t.maxFeePerGas || BigInt(tx.maxPriorityFeePerGas??-1)!==t.maxPriorityFeePerGas
+    || !Array.isArray(tx.accessList) || tx.accessList.length!==0 || tx.authorizationList!==undefined
     || BigInt(tx.nonce) !== BigInt(t.nonce) || BigInt(tx.gas) !== t.gas || BigInt(tx.value) !== t.value || String(tx.input).toLowerCase() !== t.data.toLowerCase()) {
     fail('Transaction is not the planned deployment');
   }
   const receipt = (await rpc(network, 'eth_getTransactionReceipt', [txHash])).result;
-  if (!receipt || receipt.status !== '0x1') fail('Deployment failed or not included');
+  if (!receipt || receipt.status !== '0x1' || String(receipt.transactionHash).toLowerCase()!==txHash.toLowerCase()
+    || !sameAddress(receipt.from,intent.from) || receipt.to!==null || !/^0x[0-9a-f]{64}$/i.test(receipt.blockHash??'')
+    || receipt.blockHash!==tx.blockHash || receipt.blockNumber!==tx.blockNumber || !/^0x[1-9a-f][0-9a-f]*$/i.test(receipt.blockNumber??'')
+    || !/^0x[1-9a-f][0-9a-f]*$/i.test(receipt.gasUsed??'') || BigInt(receipt.gasUsed)>t.gas) fail('Deployment failed or not included');
   if (!receipt || !sameAddress(receipt.contractAddress, intent.predictedAddress)) fail('Contract address is not the predicted address');
-  const code = (await rpc(network, 'eth_getCode', [intent.predictedAddress, 'latest'])).result;
+  const code = (await rpc(network, 'eth_getCode', [intent.predictedAddress, {blockHash:receipt?.blockHash,requireCanonical:true}])).result;
   if (typeof code !== 'string' || code.toLowerCase() !== intent.expectedRuntime.toLowerCase()) fail('On-chain code differs from the compiled contract');
   const nonce = (await rpc(network, 'eth_getTransactionCount', [intent.from, 'latest'])).result;
   if (typeof nonce !== 'string' || BigInt(nonce) !== BigInt(t.nonce) + 1n) fail('EVM nonce did not advance by one');
@@ -447,6 +519,7 @@ export async function verifyDeployment({ network, txHash, intent }) {
     mode: 'verify', txHash, verified: failures.length === 0, failures, contractAddress: receipt?.contractAddress ?? null,
     blockNumber: receipt?.blockNumber ? BigInt(receipt.blockNumber).toString() : null, gasUsed: receipt?.gasUsed ? BigInt(receipt.gasUsed).toString() : null,
     codeKeccak: typeof code === 'string' && code !== '0x' ? keccak256(code) : null,
+    runtimeSha256: typeof code === 'string' && /^0x(?:[0-9a-f]{2})+$/i.test(code) ? createHash('sha256').update(Buffer.from(code.slice(2),'hex')).digest('hex') : null,
   };
 }
 
@@ -456,7 +529,7 @@ export const signConfirmation = intent => 'SIGN DEPLOYMENT NONCE ' + intent.tx.n
 export const broadcastConfirmation = hash => 'BROADCAST DEPLOYMENT ' + hash.slice(2, 10).toUpperCase() + ' TO DIANA ' + DEPLOY_PLAN.evmChainId;
 
 export const DEPLOY_FAILURES = Object.freeze([
-  'Interactive Windows terminal required', 'Unknown option', 'Not confirmed', 'Constructor parameters not chosen', 'Artifact does not match the contract source',
+  'Interactive Windows terminal required', 'Unknown option', 'Preparation report required', 'Not confirmed', 'Constructor parameters not chosen', 'Artifact does not match the contract source',
   'Deployment intent does not match the plan', 'Chain state changed since PREPARE', 'Record key is not the on-chain key',
   'Signed transaction differs from the plan', 'Creation dry run failed', 'Signed bytes changed before broadcast',
   'Broadcast refused by the node', 'Broadcast result unknown', 'Broadcast hash mismatch', 'Network request blocked', 'Chain state unreadable',
@@ -498,7 +571,7 @@ export async function runDeployBroadcast({ network, readRecord, confirm, write, 
     await same();
     if (keccak256(serialized) !== hash) throw new Error('Signed bytes changed before broadcast');
     const result = await broadcastOnce(serialized, network);
-    const verify = { command: 'verifyDeployment(txHash ' + hash + ')', conditions: VERIFY_FAILURES.slice(1).map(f => 'not: ' + f) };
+    const verify = { command: 'node diana-deploy.mjs --verify ' + hash + ' --prepare-report <saved-prepare.json>', conditions: VERIFY_FAILURES.map(f => 'not: ' + f) };
     if (result.outcome === 'UNKNOWN') { write({ ...report, broadcast: 'UNKNOWN', verify, next: 'Do not re-run. Check the hash read-only.' }); throw new Error('Broadcast result unknown'); }
     if (result.outcome === 'REFUSED') { write({ ...report, broadcast: 'REFUSED', code: result.code, window: result.window }); throw new Error('Broadcast refused by the node'); }
     if (result.txHash !== hash.toLowerCase()) { write({ ...report, broadcast: 'ACCEPTED' }); throw new Error('Broadcast hash mismatch'); }
@@ -516,28 +589,72 @@ export function failureMessage(error) {
 
 export function parseArgs(args) {
   if (args.length === 0) return { mode: 'prepare' };
+  if(args.length===3&&args[0]==='--broadcast'&&args[1]==='--prepare-report'&&args[2])return {mode:'broadcast',prepareReport:args[2]};
   if (args.length === 1 && args[0] === '--broadcast') return { mode: 'broadcast' };
+  if (args.length === 4 && args[0] === '--verify' && /^0x[0-9a-fA-F]{64}$/.test(args[1]) && args[2] === '--prepare-report' && args[3]) return {mode:'verify',txHash:args[1].toLowerCase(),prepareReport:args[3]};
   if (args.length === 2 && args[0] === '--verify' && /^0x[0-9a-fA-F]{64}$/.test(args[1])) return { mode: 'verify', txHash: args[1].toLowerCase() };
   throw new Error('Unknown option');
 }
 
 const writeReport = report => process.stdout.write(JSON.stringify(report, (k, v) => typeof v === 'bigint' ? v.toString() : v, 2) + '\n');
 
-async function main() {
-  const { mode } = parseArgs(process.argv.slice(2));
-  if (mode !== 'prepare') {
-    // Live parameters (above all the recipient) are not chosen: no signing, broadcast or verification target exists yet.
-    if (LIVE_CONSTRUCTOR_PARAMS === null) throw new Error('Constructor parameters not chosen');
-    throw new Error('Unknown option');
+/** Persist only public PREPARE data, before any confirmation/record access; never overwrite. */
+export function deploymentReporter({prepareReport,write=writeReport,save=writeFileSync}) {
+  return report=>{
+    if(report.mode==='prepare')save(prepareReport,JSON.stringify(report,null,2)+'\n',{flag:'wx'});
+    if(report.verify)report={...report,verify:{...report.verify,argv:['node','diana-deploy.mjs','--verify',report.txHash,'--prepare-report',prepareReport]}};
+    write(report);
+  };
+}
+
+/** Gate existing phase functions; injected effects let public-data tests prove no keys are touched. */
+export async function dispatchDeployment({parsed,params=LIVE_CONSTRUCTOR_PARAMS,interactive=false,effects}) {
+  if(parsed.mode==='prepare') return effects.prepare();
+  if(!params || params.testOnly===true || params.reviewed!==true) throw new Error('Constructor parameters not chosen');
+  if(parsed.mode==='broadcast') {
+    if(!interactive) throw new Error('Interactive Windows terminal required');
+    if(!parsed.prepareReport)throw new Error('Preparation report required');
+    return effects.broadcast();
   }
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  await prepareDeployment({ network: dianaDeployNetwork(), artifact: loadDeployArtifact(), params: testConstructorParams(DEPLOY_PLAN, nowSeconds), now: () => nowSeconds, write: writeReport });
+  if(parsed.mode==='verify') {
+    if(!parsed.prepareReport) throw new Error('Preparation report required');
+    return effects.verify();
+  }
+  throw new Error('Unknown option');
+}
+
+async function main() {
+  const parsed=parseArgs(process.argv.slice(2));
+  const interactive=process.platform==='win32' && !!process.stdin.isTTY && !!process.stdout.isTTY && process.execArgv.length===0 && !process.env.NODE_OPTIONS;
+  await dispatchDeployment({parsed,interactive,effects:{
+    prepare:async()=>{
+      const result=await prepareDeployment({network:dianaDeployNetwork(),artifact:loadDeployArtifact(),params:LIVE_CONSTRUCTOR_PARAMS,write:writeReport});
+      if(!result.readyToSign)process.exitCode=2;
+      return result;
+    },
+    broadcast:async()=>{
+      const prompt=createInterface({input:process.stdin,output:process.stdout,terminal:true});
+      try {
+        return await runDeployBroadcast({network:dianaDeployNetwork(),artifact:loadDeployArtifact(),params:LIVE_CONSTRUCTOR_PARAMS,
+          readRecord:()=>readRecordBytes(RECORD_PATH),
+          confirm:async phrase=>(await prompt.question('\n*** Type '+phrase+' to continue, anything else stops: ')).trim(),
+          write:deploymentReporter({prepareReport:parsed.prepareReport})});
+      }finally{prompt.close();}
+    },
+    verify:async()=>{
+      const prepared=JSON.parse(readFileSync(parsed.prepareReport,'utf8'));
+      const artifact=loadDeployArtifact();
+      const intent=deploymentIntent(prepared,LIVE_CONSTRUCTOR_PARAMS,{artifact});
+      const result=await verifyDeployment({network:dianaDeployNetwork(),txHash:parsed.txHash,intent});
+      writeReport(result);if(!result.verified)process.exitCode=2;return result;
+    },
+  }});
 }
 
 // Runs only when started directly (`node .\diana-deploy.mjs`), not when imported by tests.
-if (process.argv[1] && fileURLToPath(import.meta.url).toLowerCase() === path.resolve(process.argv[1]).toLowerCase()) {
+if (process.argv[1] && fileURLToPath(import.meta.url).toLowerCase() === resolve(process.argv[1]).toLowerCase()) {
   main().catch(error => {
-    process.stderr.write('Diana deployment tool stopped: ' + failureMessage(error) + '. Nothing was signed or sent.\n');
+    process.stderr.write('Diana deployment tool stopped: ' + failureMessage(error) + (LIVE_CONSTRUCTOR_PARAMS===null ? '. Nothing was signed or sent.\n' : '. Check the public phase report; never retry an uncertain broadcast.\n'));
     process.exitCode = 1;
   });
 }
