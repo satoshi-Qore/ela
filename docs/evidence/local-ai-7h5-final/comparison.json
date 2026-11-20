@@ -1,0 +1,15 @@
+{
+  "comparedTo": "15ac8d8 existing node-evaluation.json",
+  "unchanged": [
+    "artifact identity",
+    "thresholds",
+    "baseline outcomes",
+    "integrated outcomes",
+    "per-language regression outcomes",
+    "validation outcomes",
+    "attack outcomes",
+    "changed commands"
+  ],
+  "protectedProductionSourcesChanged": false,
+  "notes": "Timing measurements vary; no additional accuracy gain. No source under src/ or prototypes/ changed in this continuation."
+}

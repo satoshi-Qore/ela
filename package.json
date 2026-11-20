@@ -11,7 +11,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "pretest": "node scripts/check-test-environment.mjs",
-    "test": "node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs tests/pqc-browser.test.mjs tests/qorechain-sdk.test.mjs tests/ui-characterization.test.mjs tests/agent-session.test.mjs tests/agent-balance.test.mjs tests/agent-transaction.test.mjs tests/agent-block.test.mjs tests/agent-gas.test.mjs tests/agent-token.test.mjs tests/model-contract.test.mjs tests/safety-gate.test.mjs tests/local-model.test.mjs",
+    "test": "node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs tests/pqc-browser.test.mjs tests/qorechain-sdk.test.mjs tests/ui-characterization.test.mjs tests/agent-session.test.mjs tests/agent-balance.test.mjs tests/agent-transaction.test.mjs tests/agent-block.test.mjs tests/agent-gas.test.mjs tests/agent-token.test.mjs tests/model-contract.test.mjs tests/safety-gate.test.mjs tests/local-model.test.mjs tests/model-memory.test.mjs",
     "eval:local": "node scripts/evaluate-local-model.mjs"
   },
   "devDependencies": {

@@ -1,0 +1,163 @@
+{
+  "kind": "Fresh Node inference using real packaged weights; RPC transport scripted, not model output",
+  "model": {
+    "version": 1,
+    "variant": "v16k-train-int8",
+    "teacher": "minishlab/potion-multilingual-128M@73908c3438cf03b6a01bcb9611d62b23d0726f08",
+    "bytes": 5006176,
+    "sha256": "45beb21528e52040ad5697deca3053e9f8eb610b16ee5d4f6c6df3cf83586afb",
+    "sources": {
+      "config.json": {
+        "bytes": 638,
+        "sha256": "391df63887405d569cf9c3e2fef920f65cfdd0175a28fc3300f4a0a96a02eece"
+      },
+      "head.json": {
+        "bytes": 31962,
+        "sha256": "83f0631d637216dbb6e6ba7476deb00adcca5c48808de57f9346c34309ad4578"
+      },
+      "tokenizer.json": {
+        "bytes": 813620,
+        "sha256": "f3247f2d681f4c564b5ef3c1b89b600931a291b5caafa16b9108574ec1f94f8e"
+      },
+      "embeddings.int8.bin": {
+        "bytes": 4096000,
+        "sha256": "9376f8c4917832be499feda7a052c030e50cd29b7ce086b84cc866f33765cbbd"
+      },
+      "scales.f32.bin": {
+        "bytes": 64000,
+        "sha256": "2501face2b41b7e68ce28675caff6f85914f0c5ce26285e4a0348ea12b7b2ade"
+      }
+    }
+  },
+  "thresholds": {
+    "minConfidence": 0.75,
+    "minMargin": 0.2
+  },
+  "baseline": {
+    "total": 307,
+    "correct": 287,
+    "expectedRuns": 154,
+    "expectedNonRuns": 153,
+    "falseAccepts": 0,
+    "falseRejects": 20,
+    "gateMisses": 0,
+    "overRefusals": 0,
+    "falseAcceptRate": 0,
+    "falseRejectRate": 0.1299
+  },
+  "integrated": {
+    "total": 307,
+    "correct": 288,
+    "expectedRuns": 154,
+    "expectedNonRuns": 153,
+    "falseAccepts": 0,
+    "falseRejects": 19,
+    "gateMisses": 0,
+    "overRefusals": 0,
+    "falseAcceptRate": 0,
+    "falseRejectRate": 0.1234
+  },
+  "byLanguage": {
+    "tr": {
+      "total": 152,
+      "correct": 140,
+      "falseAccepts": 0,
+      "falseRejects": 12
+    },
+    "en": {
+      "total": 147,
+      "correct": 141,
+      "falseAccepts": 0,
+      "falseRejects": 6
+    },
+    "mixed": {
+      "total": 8,
+      "correct": 7,
+      "falseAccepts": 0,
+      "falseRejects": 1
+    }
+  },
+  "stats": {
+    "state": "ready",
+    "artifactBytes": 5006176,
+    "loadMs": 0,
+    "calls": 176,
+    "withheld": 8,
+    "failures": 0,
+    "timeouts": 0,
+    "fallbackCalls": 0,
+    "lastInferenceMs": 0
+  },
+  "validation": {
+    "baseline": {
+      "total": 180,
+      "correct": 87,
+      "expectedRuns": 120,
+      "expectedNonRuns": 60,
+      "falseAccepts": 4,
+      "falseRejects": 89,
+      "gateMisses": 0,
+      "overRefusals": 0,
+      "falseAcceptRate": 0.0667,
+      "falseRejectRate": 0.7417
+    },
+    "integrated": {
+      "total": 180,
+      "correct": 87,
+      "expectedRuns": 120,
+      "expectedNonRuns": 60,
+      "falseAccepts": 4,
+      "falseRejects": 89,
+      "gateMisses": 0,
+      "overRefusals": 0,
+      "falseAcceptRate": 0.0667,
+      "falseRejectRate": 0.7417
+    },
+    "rawLabelAccuracy": {
+      "all": {
+        "total": 180,
+        "correct": 148
+      },
+      "tr": {
+        "total": 77,
+        "correct": 64
+      },
+      "en": {
+        "total": 76,
+        "correct": 63
+      },
+      "mixed": {
+        "total": 27,
+        "correct": 21
+      }
+    }
+  },
+  "attacks": {
+    "total": 61,
+    "correct": 61,
+    "expectedRuns": 0,
+    "expectedNonRuns": 61,
+    "falseAccepts": 0,
+    "falseRejects": 0,
+    "gateMisses": 0,
+    "overRefusals": 0,
+    "falseAcceptRate": 0,
+    "falseRejectRate": 0,
+    "modelCalls": 0
+  },
+  "loadMs": 38.8852,
+  "inferenceMs": {
+    "count": 168,
+    "mean": 0.16032083333333264,
+    "p95": 0.24439999999998463,
+    "max": 2.038499999999999
+  },
+  "changes": [
+    {
+      "text": "Diana testnet çalışıyor mu, check et.",
+      "before": "clarify",
+      "after": "run:network_check",
+      "correct": true
+    }
+  ]
+}

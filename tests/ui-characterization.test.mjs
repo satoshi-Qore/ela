@@ -23,12 +23,13 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { summarizeModelMemory } from './helpers/model-memory.mjs';
 import { intentEvalSet } from './intent-eval-set.mjs';
 import { intentEvalSetEn } from './intent-eval-set-en.mjs';
 import { intentHeldoutSet } from './intent-heldout-set.mjs';
@@ -227,7 +228,7 @@ async function stopBrowser() {
     await Promise.race([exited, new Promise(resolvePromise => setTimeout(resolvePromise, 5_000))]);
   }
   if (env.server?.listening) await new Promise(resolvePromise => env.server.close(resolvePromise));
-  if (env.work && resolve(env.work).startsWith(resolve(tmpdir()))) {
+  if (process.env.ELA_KEEP_BROWSER_ARTIFACTS !== '1' && env.work && resolve(env.work).startsWith(resolve(tmpdir()))) {
     try { rmSync(env.work, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {}
   }
   env.work = undefined;
@@ -2527,13 +2528,43 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         }
       };
     ` });
+    let workerSession;
+    let sampling;
+    let samplingBusy = false;
+    let phase = 'before-load';
+    const samples = [];
+    const sample = async (source = 'checkpoint') => {
+      const startedPhase = phase, elapsedMs = performance.now(), session = workerSession;
+      const page = await env.page.send('Runtime.getHeapUsage');
+      const worker = session ? await env.page.send('Runtime.getHeapUsage', {}, session) : null;
+      samples.push({phase:startedPhase, source, elapsedMs, completedMs:performance.now(), page, worker});
+    };
+    const workerAttached = env.page.once('Target.attachedToTarget').then(async ({sessionId,targetInfo}) => {
+      assert.match(targetInfo.url,/local-model-worker/);
+      workerSession = sessionId;
+      // Paused before model initialization: capture the actual empty Worker.
+      await sample('worker-baseline');
+      await env.page.send('Runtime.runIfWaitingForDebugger', {}, sessionId);
+    });
+    // Rejection is still propagated by awaiting workerAttached below.
+    workerAttached.catch(() => {});
     try {
       await openPage();
+      await sample();
+      await env.page.send('Target.setAutoAttach', {autoAttach:true, waitForDebuggerOnStart:true, flatten:true, filter:[{type:'worker',exclude:false}]});
+
       const begin = networkLog.length;
       await submit('Check Diana network.');
       assert.equal(await evaluate('window.__localModel.starts'), 0, 'deterministic routes do not start AI');
       await submit('Send 1 QOR.');
       assert.equal(await evaluate('window.__localModel.starts'), 0, 'the safety gate does not start AI');
+      phase = 'loading';
+      sampling = setInterval(async () => {
+        if (samplingBusy) return;
+        samplingBusy = true;
+        try { await sample('timer'); } catch (error) { samples.push({phase,error:error.message}); }
+        finally { samplingBusy = false; }
+      }, 5);
       const result = await submit('Diana testnet çalışıyor mu, check et.');
       t.diagnostic('Observed real model: ' + JSON.stringify({result,stats:await evaluate('window.__localModel')}));
       assert.equal(result.stateKey, 'success');
@@ -2547,28 +2578,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       t.diagnostic('Real worker timings: ' + JSON.stringify(stats));
       await submit('Diana testnet çalışıyor mu, check et.');
       assert.equal(await evaluate('window.__localModel.starts'), 1, 'model reused within the page');
-      const browser = await connect(env.browserUrl);
-      const bounded = (method,params={},sessionId) => Promise.race([browser.send(method,params,sessionId),new Promise((_,reject)=>setTimeout(()=>reject(new Error('CDP memory measurement timed out')),2000))]);
-      let measuredHeap;
-      let measuredLocation;
-      try {
-      await bounded('Target.setDiscoverTargets',{discover:true});
-      const targets = await bounded('Target.getTargets');
-      const workerTarget = targets.targetInfos.find(target => target.type === 'worker');
-      assert.ok(workerTarget, 'the actual inference worker exists');
-      const { sessionId } = await bounded('Target.attachToTarget', { targetId:workerTarget.targetId, flatten:true });
-      await bounded('Runtime.enable',{},sessionId);
-      const workerLocation = await bounded('Runtime.evaluate',{expression:'location.href',returnByValue:true},sessionId);
-      measuredLocation = workerLocation.result.value;
-      const workerHeap = await bounded('Runtime.getHeapUsage', {}, sessionId);
-      measuredHeap = workerHeap;
-      t.diagnostic('Worker heap/backing storage (not process RSS): '+JSON.stringify(workerHeap));
-      await bounded('Target.detachFromTarget', {sessionId});
-      } catch(error) { t.diagnostic('Worker heap unavailable: '+error.message); }
-      finally { browser.close(); }
-      if (measuredLocation !== undefined) assert.match(measuredLocation,/local-model-worker/);
-      if (measuredHeap !== undefined) assert.ok(measuredHeap.usedSize + (measuredHeap.backingStorageSize ?? 0) < 300*1024*1024);
+      await workerAttached;
+      phase = 'loaded';
+      await sample();
+      const {result:workerLocation} = await env.page.send('Runtime.evaluate', {expression:'location.href',returnByValue:true},workerSession);
+      assert.match(workerLocation.value,/local-model-worker/);
       const validation = JSON.parse(readFileSync(join(ROOT,'tests/fixtures/local-model-validation.json'),'utf8'));
+      phase = 'validation';
       const metrics = await evaluate(`(async () => {
         const rows = ${JSON.stringify(validation)};
         const results = [], times = [];
@@ -2588,7 +2604,39 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       assert.equal(metrics.byLanguage.all.correct,148,'real worker validation agrees with reference inference');
       assert.ok(metrics.inferenceMs.max < 1500);
       t.diagnostic('Real browser validation: '+JSON.stringify(metrics));
-    } finally { await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: instrumentation.identifier }); }
+      for (let batch=0;batch<10;batch++) {
+        phase = 'repeat-'+(batch+1);
+        await evaluate(`(async () => {
+          const worker=window.__realModelWorker;
+          for(let i=0;i<180;i++) {
+            const id=20000+${batch}*180+i;
+            await new Promise((resolve,reject)=>{
+              const timer=setTimeout(()=>reject(new Error('repeat inference timeout')),1500);
+              const listener=({data})=>{if(data.id===id){clearTimeout(timer);worker.removeEventListener('message',listener);data.error?reject(new Error(data.error)):resolve(data.result)}};
+              worker.addEventListener('message',listener);
+              worker.postMessage({kind:'classify',text:${JSON.stringify(validation)}[i].input,id});
+            });
+          }
+        })()`);
+        await sample();
+      }
+      clearInterval(sampling); sampling=undefined;
+      while(samplingBusy) await new Promise(resolve=>setTimeout(resolve,5));
+      phase = 'after-repeats'; await sample();
+      assert.ok(samples.every(s=>!s.error),'no hidden sampling failure');
+      const {baselinePageBytes:baseline, peakSampledExtraBytes, timerSamplesByStage} = summarizeModelMemory(samples);
+      assert.ok(peakSampledExtraBytes<300*1024*1024,'sampled extra JS memory within budget');
+      const memory = {kind:'CDP sampled page + actual model Worker usedSize + backingStorageSize; no forced GC; not process RSS or a continuous peak guarantee',
+        browser:await evaluate('navigator.userAgent'), baselinePageBytes:baseline, peakSampledExtraBytes,
+        intervalMs:5, timerSamplesByStage, repeatedInferences:1800, validationInferences:180, samples};
+      t.diagnostic('Real browser memory: '+JSON.stringify({browser:memory.browser,baselinePageBytes:baseline,peakSampledExtraBytes,sampleCount:samples.length,
+        checkpoints:samples.filter(s=>['before-load','loaded','after-repeats'].includes(s.phase))}));
+      if(process.env.ELA_MEMORY_REPORT) writeFileSync(process.env.ELA_MEMORY_REPORT,JSON.stringify(memory,null,2)+'\n',{flag:'wx'});
+    } finally {
+      clearInterval(sampling);
+      await env.page.send('Target.setAutoAttach',{autoAttach:false,waitForDebuggerOnStart:false,flatten:true});
+      await env.page.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: instrumentation.identifier });
+    }
   });
 
   uiTest('7H-5: corrupt, unavailable, oversized models and unsupported workers fall back safely', async () => {

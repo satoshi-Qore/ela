@@ -5,3 +5,6 @@ tests/vectors/qorechain-pqc/ml-dsa-87.json -text
 docs/evidence/local-ai-7h5/*.txt -text -whitespace
 # Pinned model package is binary; never apply line-ending conversion.
 src/agent/assets/ela-intent-v1.bin -text
+
+# Preserve final verification logs, including deliberate failing guard checks.
+docs/evidence/local-ai-7h5-final/*.txt -text -whitespace

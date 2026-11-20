@@ -1,0 +1,26 @@
+
+> ela@0.1.0 build
+> tsc --noEmit && vite build --outDir docs/evidence/local-ai-7h5-final/production-build-verified --emptyOutDir false
+
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 46 modules transformed.
+rendering chunks...
+computing gzip size...
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/local-model-worker-BNxNYglA.js     36.81 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/index.html                                62.29 kB │ gzip: 15.77 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/ela-intent-v1-B_JXvHGs.bin      5,006.17 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/index-C4IaQun2.css                 53.75 kB │ gzip: 12.52 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/trace-uRGNvVHh.js                   2.66 kB │ gzip:  1.21 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/core-3Q7bLjvx.js                    3.34 kB │ gzip:  1.60 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/gas-BWy0ISwd.js                     3.64 kB │ gzip:  1.81 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/balance-CtzmfQFn.js                 3.69 kB │ gzip:  1.84 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/block-CdWiImgO.js                   4.12 kB │ gzip:  1.94 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/transaction-CII44ZOL.js             4.52 kB │ gzip:  1.99 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/token-DFyd7GSl.js                   6.15 kB │ gzip:  2.93 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/local-model-Ddj0gkVe.js             7.22 kB │ gzip:  3.45 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/index-CZVmhcwA.js                   9.95 kB │ gzip:  3.76 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/rules-CNJ3_I_k.js                  31.17 kB │ gzip: 11.86 kB
+docs/evidence/local-ai-7h5-final/production-build-verified/assets/panel-BLBP1R-T.js                  49.09 kB │ gzip: 21.93 kB
+
+✓ built in 503ms
