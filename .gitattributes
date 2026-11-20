@@ -3,4 +3,4 @@ tests/vectors/qorechain-pqc/ml-dsa-87.json -text
 
 # Keep genuine 7I-1 RPC observations and test logs verbatim.
 docs/evidence/diana-payment-7i1/*.txt -text -whitespace
-docs/evidence/diana-payment-7i1/*.json -text
+docs/evidence/diana-payment-7i1/*.json -text -whitespace
