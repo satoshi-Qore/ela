@@ -1,0 +1,66 @@
+✔ one frozen policy records the explicitly approved fields without authorizing execution (1.9314ms)
+✔ default constructor checklist recognizes approved values while dates remain unreviewed (1.9263ms)
+✔ default deployment package waits only for dates and does not produce a live runtime pin (12.1092ms)
+✔ approved seven-day duration is enforced by existing date checks without choosing actual dates (5.4872ms)
+✔ policy approval and even fixture dates cannot unlock the default live constructor or execute effects (1.1848ms)
+✔ default PREPARE reports approved policy with date-only blockers without estimating or completing a constructor (34.5869ms)
+✔ another network or an unrelated supplied policy cannot inherit the Diana approval (0.3126ms)
+✖ caller reviewed flags cannot attribute exact-date approval to the 7I-3 policy approval (1.9347ms)
+✖ deployment-day eligibility rejects matching seven-day windows starting on another day (0.6618ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 7
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1998.5089
+
+✖ failing tests:
+
+test at tests\diana-approved-policy.test.mjs:85:1
+✖ caller reviewed flags cannot attribute exact-date approval to the 7I-3 policy approval (1.9347ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'startsAt',
+  -   'endsAt'
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-approved-policy.test.mjs:88:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'startsAt', 'endsAt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\diana-approved-policy.test.mjs:91:1
+✖ deployment-day eligibility rejects matching seven-day windows starting on another day (0.6618ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-approved-policy.test.mjs:95:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

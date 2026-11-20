@@ -54,3 +54,7 @@ Paket, ödeme ve limitlerin yanında süre sınırlarını, eski ve ileri nonce�
 ## 7I-2 deployment preparation
 
 The existing deployment tool now pins the reproducible Solidity 0.8.28/Paris artifact and can produce the 7I-1 runtime SHA-256/config after reviewed constructor values exist. Live values remain null; no signing or deployment occurred. See the [single decision table, live read-only evidence and checklists](../../docs/DIANA-DEPLOY-7I2.md).
+
+## 7I-3 approved policy
+
+The user has explicitly approved the fixed policy in [approved-payment-policy.mjs](approved-payment-policy.mjs). These values no longer await approval. Exact dates remain unset and execution is not authorized; LIVE_CONSTRUCTOR_PARAMS remains null. See [current approval scope, checks and remaining inputs](../../docs/DIANA-POLICY-7I3.md).
