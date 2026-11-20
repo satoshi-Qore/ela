@@ -19,3 +19,6 @@ node_modules/
 
 # Vite build output
 /dist/
+
+# Retained local verification build; evidence logs remain versioned.
+/docs/evidence/diana-payment-7i1/production-build-verified/

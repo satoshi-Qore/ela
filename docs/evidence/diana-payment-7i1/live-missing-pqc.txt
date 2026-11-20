@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "chainId": "qorechain-diana",
+  "evmChainId": "9800",
+  "status": "blocked",
+  "executionAuthorized": false,
+  "scope": "read_only_prerequisites",
+  "checks": [
+    {
+      "id": "contract_address",
+      "status": "blocked",
+      "message": "Public prerequisite is missing; no default is inferred."
+    },
+    {
+      "id": "executor",
+      "status": "pass",
+      "message": "Public prerequisite configured."
+    },
+    {
+      "id": "invoice_issuer",
+      "status": "pass",
+      "message": "Public prerequisite configured."
+    },
+    {
+      "id": "runtime_pin",
+      "status": "blocked",
+      "message": "Public prerequisite is missing; no default is inferred."
+    },
+    {
+      "id": "policy_configured",
+      "status": "blocked",
+      "message": "Public prerequisite is missing; no default is inferred."
+    },
+    {
+      "id": "payment_configured",
+      "status": "blocked",
+      "message": "Public prerequisite is missing; no default is inferred."
+    },
+    {
+      "id": "executor_key_pin",
+      "status": "blocked",
+      "message": "Public prerequisite is missing; no default is inferred."
+    },
+    {
+      "id": "issuer_key_pin",
+      "status": "blocked",
+      "message": "Public prerequisite is missing; no default is inferred."
+    },
+    {
+      "id": "network",
+      "status": "pass",
+      "message": "Diana EVM chain ID 9800 verified at the fixed endpoint."
+    },
+    {
+      "id": "snapshot",
+      "status": "pass",
+      "message": "Selected a recent block; all state reads use its number."
+    },
+    {
+      "id": "contract_deployed",
+      "status": "not_checked",
+      "message": "No contract address configured."
+    },
+    {
+      "id": "runtime_identity",
+      "status": "not_checked",
+      "message": "No contract address configured."
+    },
+    {
+      "id": "executor_pqc",
+      "status": "blocked",
+      "message": "Requires registered ML-DSA-87, 2592-byte key, possession proof and the reviewed role fingerprint."
+    },
+    {
+      "id": "issuer_pqc",
+      "status": "blocked",
+      "message": "Requires registered ML-DSA-87, 2592-byte key, possession proof and the reviewed role fingerprint."
+    },
+    {
+      "id": "policy",
+      "status": "not_checked",
+      "message": "Requires attested runtime code."
+    },
+    {
+      "id": "payment",
+      "status": "not_checked",
+      "message": "Requires attested runtime code and policy."
+    },
+    {
+      "id": "snapshot_consistent",
+      "status": "pass",
+      "message": "Chain identity and selected block hash are unchanged at completion."
+    }
+  ],
+  "observations": {
+    "pqc": {
+      "executor": {
+        "registered": false,
+        "algorithmId": 0,
+        "possessionProven": false,
+        "publicKeyBytes": 0,
+        "keySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "invoiceIssuer": {
+        "registered": false,
+        "algorithmId": 0,
+        "possessionProven": false,
+        "publicKeyBytes": 0,
+        "keySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  "snapshot": {
+    "number": "10437508",
+    "hash": "0xf0cef0144ef2498bfa506dacb9ae5290dd2477365097eeb57c02055f08b265b9",
+    "timestamp": "1795184451"
+  }
+}
+

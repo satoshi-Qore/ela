@@ -75,6 +75,10 @@ After running `npm ci`, start Vite with `npm run dev`. Open the local URL printe
 
 The standalone native block reader uses the consensus RPC `/status` endpoint. Native balance uses the Cosmos Bank `Balance` query with `denom=uqor`. See the [QoreChain testnet documentation](https://docs.qorechain.io/getting-started/connecting-to-testnet/) and the [Cosmos SDK Bank query definition](https://github.com/cosmos/cosmos-sdk/blob/v0.53.6/proto/cosmos/bank/v1beta1/query.proto).
 
+## Diana Payment Account readiness (7I-1)
+
+A separate read-only API and operator CLI inspect Diana network identity, candidate code, pinned PQC role keys and reviewed payment limits. They do not sign, deploy or send transactions, and do not extend the command agent's permissions or change the interface. Current live prerequisites remain blocked. See the [7I-1 report, evidence and usage](docs/DIANA-PAYMENT-7I1.md).
+
 ## License and credits
 
 - ELA source code is available under the [MIT License](LICENSE).
