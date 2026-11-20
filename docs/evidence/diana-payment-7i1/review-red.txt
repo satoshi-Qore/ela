@@ -1,0 +1,90 @@
+✔ complete public snapshot is ready for review but never authorizes execution (64.7232ms)
+✔ no deployed contract blocks policy reads but still checks public PQC roles (8.1046ms)
+✔ unregistered, wrong algorithm, missing possession and changed key block readiness (60.5768ms)
+✔ wrong chain stops before any account lookup (0.6036ms)
+✔ malformed envelopes, words, bools, offsets and empty precompile fail closed (12.7291ms)
+✔ code identity must match before any contract getter is trusted (4.7788ms)
+✔ all policy getters are checked against reviewed policy and roles (112.6347ms)
+✔ per-payment, total, count, nonce, balance, window and replay checks block unsafe proposals (174.8552ms)
+✔ missing prerequisites are explicit, never filled from the chain (2.3112ms)
+✔ invalid or secret-bearing public config sends zero requests (0.7437ms)
+✔ reorganization, stale/future blocks, invalid quantities and changing chain stop safely (45.3962ms)
+✔ timeouts, HTTP errors and unreadable JSON return a blocked report (7.2115ms)
+✔ operator CLI accepts only explicit public config/output and refuses execution flags (1.6717ms)
+✔ public configuration is copied before asynchronous reads (16.1501ms)
+✔ a snapshot that becomes stale during reads cannot become ready (14.7956ms)
+✔ large integer budget arithmetic remains exact above Number safe range (28.7525ms)
+✖ invoice expiry can exceed the policy window without widening that window (15.4633ms)
+✖ archived reports identify the validated public proposal and role configuration (15.7457ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 16
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 723.4665
+
+✖ failing tests:
+
+test at tests\diana-payment-readiness.test.mjs:121:1
+✖ invoice expiry can exceed the policy window without widening that window (15.4633ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'blocked'
+  - 'ready_for_review'
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-readiness-7i1/ela-core-original/tests/diana-payment-readiness.test.mjs:123:9)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'blocked',
+    expected: 'ready_for_review',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\diana-payment-readiness.test.mjs:126:1
+✖ archived reports identify the validated public proposal and role configuration (15.7457ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + undefined
+  - {
+  -   contractAddress: '0x1111111111111111111111111111111111111111',
+  -   executor: '0x2222222222222222222222222222222222222222',
+  -   expectedRuntimeSha256: '8610831f75a6b7da7c428c7c490db797438e90a401d6fa31ffa5fe8ac1470f84',
+  -   invoiceIssuer: '0x3333333333333333333333333333333333333333',
+  -   payment: {
+  -     amountWei: '100',
+  -     invoiceId: '0x5555555555555555555555555555555555555555555555555555555555555555',
+  -     nonce: '1',
+  -     recipient: '0x4444444444444444444444444444444444444444',
+  -     validUntil: '1500'
+  -   },
+  -   policy: {
+  -     endsAt: '2000',
+  -     maxPayments: '5',
+  -     maxPerPaymentWei: '1000',
+  -     recipient: '0x4444444444444444444444444444444444444444',
+  -     spendingLimitWei: '5000',
+  -     startsAt: '900'
+  -   },
+  -   pqcKeySha256: {
+  -     executor: '78bfa9f495432ef0c00b3de2f8129649374cb7849ad83157d2bce66636221329',
+  -     invoiceIssuer: '78bfa9f495432ef0c00b3de2f8129649374cb7849ad83157d2bce66636221329'
+  -   }
+  - }
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-readiness-7i1/ela-core-original/tests/diana-payment-readiness.test.mjs:127:54)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { contractAddress: '0x1111111111111111111111111111111111111111', executor: '0x2222222222222222222222222222222222222222', invoiceIssuer: '0x3333333333333333333333333333333333333333', expectedRuntimeSha256: '8610831f75a6b7da7c428c7c490db797438e90a401d6fa31ffa5fe8ac1470f84', pqcKeySha256: { executor: '78bfa9f495432ef0c00b3de2f8129649374cb7849ad83157d2bce66636221329', invoiceIssuer: '78bfa9f495432ef0c00b3de2f8129649374cb7849ad83157d2bce66636221329' }, policy: { recipient: '0x4444444444444444444444444444444444444444', maxPerPaymentWei: '1000', spendingLimitWei: '5000', maxPayments: '5', startsAt: '900', endsAt: '2000' }, payment: { recipient: '0x4444444444444444444444444444444444444444', amountWei: '100', nonce: '1', invoiceId: '0x5555555555555555555555555555555555555555555555555555555555555555', validUntil: '1500' } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

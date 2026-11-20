@@ -17,6 +17,8 @@ import { after, before, describe, test } from 'node:test';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { createConnection } from 'node:net';
+import { once } from 'node:events';
 import { tmpdir } from 'node:os';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,6 +76,52 @@ test('the demo is separate from the ELA interface and its production build', () 
   assert.equal(/pqc/i.test(read('vite.config.ts')), false, 'vite.config.ts');
   assert.equal(/demo\/pqc-verify|src\/pqc\/demo\/main/.test(read('src/pqc/panel.ts')), false, 'the panel does not load the offline page');
 });
+
+/** Await actual HTTP shutdown, rather than just the listening flag. */
+async function closeTestServer(server) {
+  await new Promise((resolvePromise, reject) => {
+    server.close(error => error && error.code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : resolvePromise());
+    // Chrome can leave accepted preconnections or incomplete requests behind when taken offline.
+    // Stop accepting first, then close those HTTP sockets; the CDP WebSocket is on Chrome's port.
+    server.closeAllConnections();
+  });
+  assert.equal(server.listening, false, 'HTTP fixture stopped listening');
+  assert.equal(server.address(), null, 'HTTP fixture released its listening address');
+  assert.equal(await new Promise((resolvePromise, reject) => server.getConnections((error, count) => error ? reject(error) : resolvePromise(count))), 0, 'HTTP fixture has no remaining connections');
+}
+
+for (const state of ['preconnected', 'incomplete request']) {
+  test(`HTTP fixture shutdown closes a ${state} connection before resolving`, { timeout: 5_000 }, async () => {
+    const server = createServer((_request, response) => response.end('ok'));
+    await new Promise(resolvePromise => server.listen(0, '127.0.0.1', resolvePromise));
+    const accepted = once(server, 'connection');
+    const client = createConnection(server.address().port, '127.0.0.1');
+    let closing;
+    let deadline;
+    try {
+      const [, [peer]] = await Promise.all([once(client, 'connect'), accepted]);
+      if (state === 'incomplete request') {
+        const received = once(peer, 'data');
+        client.write('GET / HTTP/1.1\r\nHost: localhost\r\n');
+        await received;
+      }
+      closing = closeTestServer(server);
+      await Promise.race([
+        closing,
+        new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('HTTP close callback is still waiting for the accepted connection')), 1_000); }),
+      ]);
+      assert.equal(server.listening, false);
+      assert.equal(server.address(), null);
+      assert.equal(await new Promise((resolvePromise, reject) => server.getConnections((error, count) => error ? reject(error) : resolvePromise(count))), 0);
+    } finally {
+      clearTimeout(deadline);
+      client.destroy();
+      server.closeAllConnections();
+      if (closing) await closing;
+      else await new Promise(resolvePromise => server.close(resolvePromise));
+    }
+  });
+}
 
 // --- Real browser checks -----------------------------------------------------------------------
 
@@ -247,7 +295,7 @@ async function stopBrowser() {
     env.chrome.kill();
     await Promise.race([exited, new Promise(resolvePromise => setTimeout(resolvePromise, 5_000))]);
   }
-  if (env.server?.listening) await new Promise(resolvePromise => env.server.close(resolvePromise));
+  if (env.server) await closeTestServer(env.server);
   if (env.work && resolve(env.work).startsWith(resolve(tmpdir()))) {
     try { rmSync(env.work, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {}
   }
@@ -324,16 +372,19 @@ browserTest('the page cannot open a network connection (CSP connect-src none)', 
   assert.ok(problems.some(item => item.phase === 'csp-probe' && /Content Security Policy/i.test(item.text)), 'Chrome reported the CSP block');
 });
 
-browserTest('after loading, verification keeps working with the network off and the server stopped', async () => {
+browserTest('after loading, verification keeps working with the network off and the server stopped', async t => {
   phase = 'offline';
   await env.page.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
-  await new Promise(resolvePromise => env.server.close(resolvePromise));
+  t.diagnostic('Offline CDP command completed; stopping the HTTP fixture.');
+  await closeTestServer(env.server);
+  t.diagnostic('HTTP close callback completed; checking CDP and offline verification.');
   assert.equal(await evaluate('navigator.onLine'), false);
   const before = requests.length;
   assert.equal((await click('load-vector')).state, 'valid');
   assert.deepEqual(await click('flip-byte').then(({ state, reason }) => ({ state, reason })), { state: 'invalid', reason: 'signature_mismatch' });
   assert.equal(requests.length, before);
   assert.deepEqual(problems.filter(item => item.phase === 'offline'), []);
+  t.diagnostic('CDP and valid/invalid PQC verification completed offline with no requests.');
 });
 
 browserTest('opening the page cold while offline fails: preloaded is not the same as offline-installed', async () => {

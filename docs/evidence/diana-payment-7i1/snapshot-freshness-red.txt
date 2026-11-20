@@ -1,0 +1,45 @@
+✔ complete public snapshot is ready for review but never authorizes execution (72.0526ms)
+✔ no deployed contract blocks policy reads but still checks public PQC roles (9.6642ms)
+✔ unregistered, wrong algorithm, missing possession and changed key block readiness (64.5762ms)
+✔ wrong chain stops before any account lookup (0.6061ms)
+✔ malformed envelopes, words, bools, offsets and empty precompile fail closed (12.8265ms)
+✔ code identity must match before any contract getter is trusted (4.8247ms)
+✔ all policy getters are checked against reviewed policy and roles (117.9268ms)
+✔ per-payment, total, count, nonce, balance, window and replay checks block unsafe proposals (199.3363ms)
+✔ missing prerequisites are explicit, never filled from the chain (0.6287ms)
+✔ invalid or secret-bearing public config sends zero requests (0.655ms)
+✔ reorganization, stale/future blocks, invalid quantities and changing chain stop safely (44.6628ms)
+✔ timeouts, HTTP errors and unreadable JSON return a blocked report (7.4211ms)
+✔ operator CLI accepts only explicit public config/output and refuses execution flags (1.1489ms)
+✔ public configuration is copied before asynchronous reads (15.0623ms)
+✖ a snapshot that becomes stale during reads cannot become ready (15.7071ms)
+✔ large integer budget arithmetic remains exact above Number safe range (29.4449ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 15
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 735.0899
+
+✖ failing tests:
+
+test at tests\diana-payment-readiness.test.mjs:108:1
+✖ a snapshot that becomes stale during reads cannot become ready (15.7071ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'ready_for_review'
+  - 'blocked'
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-readiness-7i1/ela-core-original/tests/diana-payment-readiness.test.mjs:111:9)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'ready_for_review',
+    expected: 'blocked',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

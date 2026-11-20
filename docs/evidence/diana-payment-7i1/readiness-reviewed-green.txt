@@ -1,0 +1,27 @@
+✔ complete public snapshot is ready for review but never authorizes execution (62.9301ms)
+✔ no deployed contract blocks policy reads but still checks public PQC roles (3.4593ms)
+✔ unregistered, wrong algorithm, missing possession and changed key block readiness (67.8463ms)
+✔ wrong chain stops before any account lookup (0.5701ms)
+✔ malformed envelopes, words, bools, offsets and empty precompile fail closed (13.3994ms)
+✔ code identity must match before any contract getter is trusted (4.9998ms)
+✔ all policy getters are checked against reviewed policy and roles (119.7515ms)
+✔ per-payment, total, count, nonce, balance, window and replay checks block unsafe proposals (188.7225ms)
+✔ missing prerequisites are explicit, never filled from the chain (2.4538ms)
+✔ invalid or secret-bearing public config sends zero requests (0.7638ms)
+✔ reorganization, stale/future blocks, invalid quantities and changing chain stop safely (44.147ms)
+✔ timeouts, HTTP errors and unreadable JSON return a blocked report (6.6002ms)
+✔ operator CLI accepts only explicit public config/output and refuses execution flags (0.4421ms)
+✔ public configuration is copied before asynchronous reads (14.7208ms)
+✔ a snapshot that becomes stale during reads cannot become ready (14.5535ms)
+✔ large integer budget arithmetic remains exact above Number safe range (30.31ms)
+✔ invoice expiry can exceed the policy window without widening that window (29.173ms)
+✔ archived reports identify the validated public proposal and role configuration (29.2988ms)
+✔ hash-bound reads fail closed if the RPC cannot honor EIP-1898 (0.6095ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 771.2112

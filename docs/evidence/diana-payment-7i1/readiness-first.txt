@@ -1,0 +1,20 @@
+✔ complete public snapshot is ready for review but never authorizes execution (67.8278ms)
+✔ no deployed contract blocks policy reads but still checks public PQC roles (9.0274ms)
+✔ unregistered, wrong algorithm, missing possession and changed key block readiness (62.7433ms)
+✔ wrong chain stops before any account lookup (0.5863ms)
+✔ malformed envelopes, words, bools, offsets and empty precompile fail closed (12.7959ms)
+✔ code identity must match before any contract getter is trusted (5.0048ms)
+✔ all policy getters are checked against reviewed policy and roles (115.8983ms)
+✔ per-payment, total, count, nonce, balance, window and replay checks block unsafe proposals (191.7315ms)
+✔ missing prerequisites are explicit, never filled from the chain (0.601ms)
+✔ invalid or secret-bearing public config sends zero requests (0.5902ms)
+✔ reorganization, stale/future blocks, invalid quantities and changing chain stop safely (43.3823ms)
+✔ timeouts, HTTP errors and unreadable JSON return a blocked report (11.5925ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 675.9948

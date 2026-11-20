@@ -1,0 +1,70 @@
+✖ complete public snapshot is ready for review but never authorizes execution (66.3706ms)
+✔ no deployed contract blocks policy reads but still checks public PQC roles (8.6552ms)
+✔ unregistered, wrong algorithm, missing possession and changed key block readiness (62.2293ms)
+✔ wrong chain stops before any account lookup (0.5378ms)
+✔ malformed envelopes, words, bools, offsets and empty precompile fail closed (12.5979ms)
+✔ code identity must match before any contract getter is trusted (4.6764ms)
+✔ all policy getters are checked against reviewed policy and roles (112.2519ms)
+✔ per-payment, total, count, nonce, balance, window and replay checks block unsafe proposals (176.5539ms)
+✔ missing prerequisites are explicit, never filled from the chain (2.4039ms)
+✔ invalid or secret-bearing public config sends zero requests (0.7291ms)
+✔ reorganization, stale/future blocks, invalid quantities and changing chain stop safely (43.8974ms)
+✔ timeouts, HTTP errors and unreadable JSON return a blocked report (19.7424ms)
+✔ operator CLI accepts only explicit public config/output and refuses execution flags (0.9159ms)
+✔ public configuration is copied before asynchronous reads (15.8798ms)
+✔ a snapshot that becomes stale during reads cannot become ready (15.1227ms)
+✔ large integer budget arithmetic remains exact above Number safe range (29.0421ms)
+✔ invoice expiry can exceed the policy window without widening that window (29.8525ms)
+✔ archived reports identify the validated public proposal and role configuration (29.7062ms)
+✖ hash-bound reads fail closed if the RPC cannot honor EIP-1898 (1.0613ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 17
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 769.5438
+
+✖ failing tests:
+
+test at tests\diana-payment-readiness.test.mjs:40:1
+✖ complete public snapshot is ready for review but never authorizes execution (66.3706ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + '0x100'
+  - {
+  -   blockHash: '0x1212121212121212121212121212121212121212121212121212121212121212',
+  -   requireCanonical: true
+  - }
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-readiness-7i1/ela-core-original/tests/diana-payment-readiness.test.mjs:45:104)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '0x100',
+    expected: { blockHash: '0x1212121212121212121212121212121212121212121212121212121212121212', requireCanonical: true },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\diana-payment-readiness.test.mjs:133:1
+✖ hash-bound reads fail closed if the RPC cannot honor EIP-1898 (1.0613ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'network_error'
+  - 'invalid_response'
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-readiness-7i1/ela-core-original/tests/diana-payment-readiness.test.mjs:142:131)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'network_error',
+    expected: 'invalid_response',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
