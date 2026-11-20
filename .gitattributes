@@ -8,3 +8,6 @@ docs/evidence/diana-payment-7i1/*.json -text -whitespace
 # Preserve 7I-2 compiler, fixture and read-only network evidence.
 docs/evidence/diana-deploy-7i2/*.txt -text -whitespace
 docs/evidence/diana-deploy-7i2/*.json -text -whitespace
+
+# Preserve approved-policy focused validation logs.
+docs/evidence/diana-policy-7i3/*.txt -text -whitespace

@@ -1,0 +1,15 @@
+✔ one frozen policy records the explicitly approved fields without authorizing execution (1.7197ms)
+✔ default constructor checklist recognizes approved values while dates remain unreviewed (1.921ms)
+✔ default deployment package waits only for dates and does not produce a live runtime pin (12.0511ms)
+✔ approved seven-day duration is enforced by existing date checks without choosing actual dates (5.1357ms)
+✔ policy approval and even fixture dates cannot unlock the default live constructor or execute effects (1.3422ms)
+✔ default PREPARE reports approved policy with date-only blockers without estimating or completing a constructor (32.3866ms)
+✔ another network or an unrelated supplied policy cannot inherit the Diana approval (0.2242ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1685.3212

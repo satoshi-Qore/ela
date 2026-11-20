@@ -1,0 +1,13 @@
+✔ one frozen policy records the explicitly approved fields without authorizing execution (1.7531ms)
+✔ default constructor checklist recognizes approved values while dates remain unreviewed (1.9287ms)
+✔ default deployment package waits only for dates and does not produce a live runtime pin (11.8768ms)
+✔ approved seven-day duration is enforced by existing date checks without choosing actual dates (5.5617ms)
+✔ policy approval and even fixture dates cannot unlock the default live constructor or execute effects (1.227ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1791.037

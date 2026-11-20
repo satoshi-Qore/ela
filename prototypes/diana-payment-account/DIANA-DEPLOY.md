@@ -113,3 +113,7 @@ These ceilings are review guards, not chosen values. The test set (`testConstruc
 ## 7I-2 continuation — 20 November 2026
 
 See [the current deployment package, decision table and pre/post checklist](../../docs/DIANA-DEPLOY-7I2.md). The null live-parameter guard remains. Default PREPARE no longer substitutes test arguments; no real gas/runtime pin is claimed while policy is missing. The existing CLI dispatch is complete behind null/TTY/approval guards; future broadcast saves a separate public PREPARE JSON with --prepare-report, and read-only VERIFY consumes that same file. Canonical compiler/bytecode/immutable pins and receipt/fee/hash validation are enforced. Earlier dated results above are retained.
+
+## 7I-3 approval update
+
+The fixed recipient, roles, amounts, count and seven-day duration are now approved in the single trusted [policy configuration](approved-payment-policy.mjs). Earlier pending-policy statements above are historical. Only exact dates remain pending as policy inputs; transaction execution requires separate authority and the live null guard remains. See [7I-3](../../docs/DIANA-POLICY-7I3.md).

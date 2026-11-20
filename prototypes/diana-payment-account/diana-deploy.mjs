@@ -26,6 +26,7 @@
 // verify remain refused while LIVE_CONSTRUCTOR_PARAMS is null. After separate approval, the
 // existing CLI uses --prepare-report to preserve public expectations without signed bytes.
 import { createHash } from 'node:crypto';
+import { APPROVED_PAYMENT_POLICY } from './approved-payment-policy.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { resolve } from 'node:path';
@@ -67,8 +68,9 @@ export const DEPLOY_PLAN = Object.freeze({
 });
 
 /**
- * The constructor parameters for the LIVE deployment. Null on purpose: the recipient has not been
- * chosen. While this is null, signing, broadcasting and verification refuse to start.
+ * The constructor parameters for the LIVE deployment. Null on purpose: the fixed policy is approved, but exact
+ * dates are not selected and transaction execution has not been authorized. While this is null,
+ * signing, broadcasting and verification refuse to start.
  */
 export const LIVE_CONSTRUCTOR_PARAMS = null;
 
@@ -105,18 +107,49 @@ export const encodeConstructorArgs = params => encodeAbiParameters(CONSTRUCTOR_T
 const sameAddress = (a, b) => typeof a === 'string' && typeof b === 'string' && isAddress(a, { strict: false }) && isAddress(b, { strict: false }) && a.toLowerCase() === b.toLowerCase();
 const isUint = v => typeof v === 'bigint' && v >= 0n && v < 2n ** 256n;
 
+/** Match the trusted approval only; generic fixture/caller policies do not inherit it. */
+function approvedPolicyContext(params, plan) {
+  const approved=APPROVED_PAYMENT_POLICY;
+  if(plan.chainId!==approved.network.chainId||plan.evmChainId!==approved.network.evmChainId||!sameAddress(plan.evm,approved.parameters.executor)||params?.testOnly===true)return null;
+  if(params && !Object.entries(approved.parameters).every(([key,value])=>
+    typeof value==='bigint' ? params[key]===value : sameAddress(params[key],value)))return null;
+  // Fixed-policy approval never supplies exact-date approval. That must be a later, explicit
+  // reviewed change to this same trusted configuration, not a caller's reviewed flag.
+  const datesApproved=approved.timing.approvalStatus==='approved'
+    && typeof approved.timing.approvalSource==='string' && approved.timing.approvalSource.length>0
+    && isUint(approved.timing.startsAt) && isUint(approved.timing.endsAt)
+    && approved.timing.endsAt-approved.timing.startsAt===approved.timing.durationSeconds;
+  const dateApprovalMatches=datesApproved && params?.startsAt===approved.timing.startsAt && params?.endsAt===approved.timing.endsAt;
+  return {
+    approvalStatus:approved.approvalStatus,approvalSource:approved.approvalSource,executionAuthorized:false,
+    values:Object.fromEntries(Object.entries(approved.parameters).map(([key,value])=>[key,typeof value==='bigint'?value.toString():value])),
+    durationSeconds:approved.timing.durationSeconds.toString(),
+    dateApprovalStatus:approved.timing.approvalStatus,dateApprovalSource:approved.timing.approvalSource,
+    dateApprovalMatches,pendingFields:datesApproved?[]:['startsAt','endsAt'],
+  };
+}
+function sameDeploymentDay(start,now) {
+  const maxTimestamp=253402300799n;
+  if(!isUint(start)||start>maxTimestamp||now<0n||now>maxTimestamp)return false;
+  const day=new Intl.DateTimeFormat('en-CA',{timeZone:APPROVED_PAYMENT_POLICY.timing.timeZone,year:'numeric',month:'2-digit',day:'2-digit'});
+  return day.format(Number(start)*1000)===day.format(Number(now)*1000);
+}
+const approvedPartialParams=()=>({...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:false,
+  startsAt:APPROVED_PAYMENT_POLICY.timing.startsAt,endsAt:APPROVED_PAYMENT_POLICY.timing.endsAt});
+
 /**
  * The live constructor checklist. Every item must pass before a live deployment can be signed.
  * `recipientCode` is the recipient's eth_getCode answer (`'0x'` for an account without code).
  */
 export function constructorChecklist(params, { plan = DEPLOY_PLAN, nowSeconds, predictedAddress, recipientCode, limits = LIVE_PARAM_LIMITS } = {}) {
-  const p = params ?? {};
+  const policyApproval=approvedPolicyContext(params,plan);
+  const p = params ?? (policyApproval ? approvedPartialParams() : {});
   const now = BigInt(nowSeconds);
   const recipientValid = typeof p.recipient === 'string' && isAddress(p.recipient, { strict: false }) && p.recipient === getAddress(p.recipient);
   const recipientValue = recipientValid ? BigInt(p.recipient) : 0n;
   const items = [
-    ['chosen', 'Parameters chosen for the live deployment (not the test set)', params !== null && params !== undefined && p.testOnly !== true],
-    ['reviewed', 'Every value below reviewed and approved by the Invoice Owner (reviewed: true)', p.reviewed === true],
+    ['chosen', 'Parameters chosen for the live deployment (not the test set)', (params !== null && params !== undefined && p.testOnly !== true) || policyApproval !== null],
+    ['reviewed', policyApproval ? 'Exact constructor dates reviewed (fixed policy already approved)' : 'Every value below reviewed and approved by the Invoice Owner (reviewed: true)', p.reviewed === true && (!policyApproval || policyApproval.dateApprovalMatches)],
     ['executor', 'executor is the Invoice Owner EVM address ' + plan.evm, sameAddress(p.executor, plan.evm)],
     ['invoiceIssuer', 'invoiceIssuer is the Invoice Owner EVM address (7C-21), which holds the registered ML-DSA-87 key', sameAddress(p.invoiceIssuer, plan.evm)],
     ['recipient-address', 'recipient is a checksummed address, not zero, not a precompile, not the placeholder', recipientValid && recipientValue > 0xffffn && !sameAddress(p.recipient, PLACEHOLDER_RECIPIENT)],
@@ -127,10 +160,10 @@ export function constructorChecklist(params, { plan = DEPLOY_PLAN, nowSeconds, p
         && p.spendingLimit <= limits.maxSpendingLimitWei && p.maxPerPayment % WEI_PER_UQOR === 0n && p.spendingLimit % WEI_PER_UQOR === 0n],
     ['maxPayments', 'maxPayments between 1 and ' + limits.maxPayments, isUint(p.maxPayments) && p.maxPayments >= 1n && p.maxPayments <= limits.maxPayments],
     ['dates', 'startsAt < endsAt; endsAt at least 1 day ahead; at most 1 year long; starts within 30 days',
-      isUint(p.startsAt) && isUint(p.endsAt) && p.startsAt < p.endsAt && p.endsAt >= now + BigInt(limits.minRemainingSeconds)
+      isUint(p.startsAt) && isUint(p.endsAt) && (!policyApproval || (p.endsAt-p.startsAt===APPROVED_PAYMENT_POLICY.timing.durationSeconds && sameDeploymentDay(p.startsAt,now))) && p.startsAt < p.endsAt && p.endsAt >= now + BigInt(limits.minRemainingSeconds)
         && p.endsAt - p.startsAt <= BigInt(limits.maxDurationSeconds) && p.startsAt <= now + BigInt(limits.maxStartDelaySeconds)],
   ].map(([id, requirement, ok]) => ({ id, requirement, ok: ok === true }));
-  return { items, ready: items.every(i => i.ok), failing: items.filter(i => !i.ok).map(i => i.id) };
+  return { items, ready: items.every(i => i.ok), failing: items.filter(i => !i.ok).map(i => i.id), ...(policyApproval ? {policyApproval} : {}) };
 }
 
 // ---- Network ----
@@ -280,15 +313,16 @@ export function deploymentPackage({artifact,params,nonce,plan=DEPLOY_PLAN}) {
     sourceKeccak:artifact.sourceKeccak,sourceSha256:artifact.sourceSha256,
     creationBytecodeSha256:hash(artifact.bytecode),runtimeTemplateSha256:hash(artifact.deployedBytecode),
     nonce:BigInt(nonce).toString(),predictedContractAddress:getContractAddress({from:plan.evm,nonce:BigInt(nonce)})};
-  const missing = ['recipient','maxPerPayment','spendingLimit','maxPayments','startsAt','endsAt'];
-  if(!params||params.testOnly===true||params.reviewed!==true) return {...base,status:'blocked',missingApprovals:missing,runtimeSha256:null,readinessConfig:null};
+  const policyApproval=approvedPolicyContext(params,plan);
+  const missing = policyApproval ? policyApproval.pendingFields : ['recipient','maxPerPayment','spendingLimit','maxPayments','startsAt','endsAt'];
+  if(!params||params.testOnly===true||params.reviewed!==true) return {...base,status:'blocked',missingApprovals:missing,runtimeSha256:null,readinessConfig:null,...(policyApproval?{policyApproval}:{})};
   // Structural approval guards stay reproducible even after the policy expires. Live date and
   // recipient-code checks remain mandatory in PREPARE; this package never means readyToSign.
   const checklist=constructorChecklist(params,{plan,nowSeconds:Number(params.startsAt),predictedAddress:base.predictedContractAddress});
-  if(checklist.failing.some(id=>id!=='recipient-code'))return {...base,status:'blocked',missingApprovals:checklist.failing.filter(id=>id!=='recipient-code'),runtimeSha256:null,readinessConfig:null};
+  if(checklist.failing.some(id=>id!=='recipient-code'))return {...base,status:'blocked',missingApprovals:policyApproval?policyApproval.pendingFields:checklist.failing.filter(id=>id!=='recipient-code'),runtimeSha256:null,readinessConfig:null,...(policyApproval?{policyApproval}:{})};
   const args=encodeConstructorArgs(params),initcode=artifact.bytecode+args.slice(2),runtime=expectedRuntimeCode(artifact,params);
   const runtimeSha256=hash(runtime);
-  return {...base,status:'public_data_only',constructor:Object.fromEntries(Object.entries(params).map(([k,v])=>[k,typeof v==='bigint'?v.toString():v])),
+  return {...base,status:'public_data_only',...(policyApproval?{policyApproval}:{}),constructor:Object.fromEntries(Object.entries(params).map(([k,v])=>[k,typeof v==='bigint'?v.toString():v])),
     constructorArgs:args,initcodeSha256:hash(initcode),initcodeKeccak:keccak256(initcode),runtimeSha256,runtimeKeccak:keccak256(runtime),
     readinessConfig:{contractAddress:base.predictedContractAddress,executor:params.executor,invoiceIssuer:params.invoiceIssuer,expectedRuntimeSha256:runtimeSha256,
       pqcKeySha256:{executor:plan.pqcPublicKeySha256,invoiceIssuer:plan.pqcPublicKeySha256},
@@ -300,6 +334,8 @@ export function deploymentPackage({artifact,params,nonce,plan=DEPLOY_PLAN}) {
 /** Named, read-only checks of everything the deployment depends on; the unsigned transaction; the predicted address. */
 export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact, params, now = () => Math.floor(Date.now() / 1000), write = () => {} }) {
   const nowSeconds = now();
+  const policyApproval=approvedPolicyContext(params,plan);
+  const policyParams=params ?? (policyApproval ? approvedPartialParams() : null);
   const live = await fetchLiveState(plan.native, network);
   const evm = await fetchEvmState(plan, network);
   const pending = await rpc(network, 'eth_getTransactionCount', [plan.evm, 'pending']);
@@ -316,7 +352,7 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
   const maxCostWei = gasLimit === undefined ? undefined : plan.valueWei + gasLimit * plan.maxFeePerGasWei;
   const windowCostUqor = gasLimit === undefined ? undefined : evmWindowCost({ value: plan.valueWei, gas: gasLimit, maxFeePerGas: plan.maxFeePerGasWei });
   const addressCode = await rpc(network, 'eth_getCode', [predictedAddress, 'latest']);
-  const recipientCode = params?.recipient && isAddress(params.recipient, { strict: false }) ? (await rpc(network, 'eth_getCode', [params.recipient, 'latest'])).result : undefined;
+  const recipientCode = policyParams?.recipient && isAddress(policyParams.recipient, { strict: false }) ? (await rpc(network, 'eth_getCode', [policyParams.recipient, 'latest'])).result : undefined;
   const checklist = constructorChecklist(params, { plan, nowSeconds, predictedAddress, recipientCode });
 
   const checks = [
@@ -366,7 +402,8 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
     },
     constructor: {
       testOnly: params?.testOnly === true,
-      values: params ? Object.fromEntries(Object.entries(params).map(([k, v]) => [k, typeof v === 'bigint' ? v.toString() : v])) : null,
+      ...(policyApproval?{policyApproval}:{}),
+      values: policyParams ? Object.fromEntries(Object.entries(policyParams).map(([k, v]) => [k, typeof v === 'bigint' ? v.toString() : v])) : null,
       argsKeccak: params ? keccak256(encodeConstructorArgs(params)) : null, checklist: checklist.items, failing: checklist.failing,
     },
     deploymentPackage: deploymentPackage({artifact,params,nonce,plan}),
