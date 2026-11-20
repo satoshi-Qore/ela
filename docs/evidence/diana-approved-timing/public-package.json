@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-11-20T18:19:44.444Z",
+  "source": "public unsigned package using PREPARE nonce; not execution authority",
+  "version": 1,
+  "executionAuthorized": false,
+  "compiler": "0.8.28+commit.7893614a",
+  "evmVersion": "paris",
+  "sourceKeccak": "0x8e31d4f81d6bfa18c5452fd4715d5865426e217616c661e883f92ac032a8b0e7",
+  "sourceSha256": "6c624379080492ca5f9e390265dc1966df49a3dce431326700d78d4c520ea280",
+  "creationBytecodeSha256": "ce5de4e8fd8693d003e06fb33bbe7da6571f5309fe6c2cf3f911eec3421fc71d",
+  "runtimeTemplateSha256": "0d0c24776f6588c965bda965289697bfc871a1ceb26de750013fdf00d99f493e",
+  "nonce": "2",
+  "predictedContractAddress": "0x2026C0190D739C646418BaeEe4e242d456b44502",
+  "status": "public_data_only",
+  "policyApproval": {
+    "approvalStatus": "approved",
+    "approvalSource": "Explicit user instruction ELA 7I-3, 2026-11-20",
+    "executionAuthorized": false,
+    "values": {
+      "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+      "maxPerPayment": "1000000000000000",
+      "spendingLimit": "3000000000000000",
+      "maxPayments": "3"
+    },
+    "durationSeconds": "3600",
+    "plannedDeploymentAt": "1795199400",
+    "startRule": "planned-deployment-plus-delay",
+    "startDelaySeconds": "900",
+    "durationApprovalSource": "Explicit user one-hour test policy decision, 2026-11-20; supersedes seven-day duration",
+    "dateApprovalStatus": "approved",
+    "dateApprovalSource": "Explicit user exact schedule approval, 2026-11-20, Europe/Istanbul (UTC+03:00); not execution authority",
+    "dateApprovalMatches": true,
+    "pendingFields": []
+  },
+  "constructor": {
+    "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+    "maxPerPayment": "1000000000000000",
+    "spendingLimit": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795200300",
+    "endsAt": "1795203900",
+    "testOnly": false,
+    "reviewed": true
+  },
+  "constructorArgs": "0x0000000000000000000000006a5d4d7b3357df968b2a3004071ece98f015c794000000000000000000000000c9ab55fec7c1fee27f3afc5df99e6a09b4b2d87500000000000000000000000000000000000000000000000000038d7ea4c68000000000000000000000000000000000000000000000000000000aa87bee5380000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000006b00952c000000000000000000000000000000000000000000000000000000006b00a33c0000000000000000000000006a5d4d7b3357df968b2a3004071ece98f015c794",
+  "initcodeSha256": "5d0865bf9225cee097380e2890d48807fcc9cb6b2ed60caf1afc58cc3a160b55",
+  "initcodeKeccak": "0xa451176fbf3b968377467d7936b95b095770cb46f7de363c0253dbfa977b28a6",
+  "runtimeSha256": "7d261992e59c5e30c224ffb9803269303bd9dbf914219df5bc2ce21b8048d4c0",
+  "runtimeKeccak": "0x6c1b92aa1ebc4ef2be0e84b1c568b9521d05384fda4da0b66fe78663921e16af",
+  "readinessConfig": {
+    "contractAddress": "0x2026C0190D739C646418BaeEe4e242d456b44502",
+    "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "expectedRuntimeSha256": "7d261992e59c5e30c224ffb9803269303bd9dbf914219df5bc2ce21b8048d4c0",
+    "pqcKeySha256": {
+      "executor": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a",
+      "invoiceIssuer": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a"
+    },
+    "policy": {
+      "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+      "maxPerPaymentWei": "1000000000000000",
+      "spendingLimitWei": "3000000000000000",
+      "maxPayments": "3",
+      "startsAt": "1795200300",
+      "endsAt": "1795203900"
+    }
+  }
+}

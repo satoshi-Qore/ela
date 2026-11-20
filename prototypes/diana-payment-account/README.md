@@ -60,3 +60,5 @@ The existing deployment tool now pins the reproducible Solidity 0.8.28/Paris art
 The user has explicitly approved the fixed policy in [approved-payment-policy.mjs](approved-payment-policy.mjs). These values no longer await approval. Exact dates remain unset and execution is not authorized; LIVE_CONSTRUCTOR_PARAMS remains null. See [current approval scope, checks and remaining inputs](../../docs/DIANA-POLICY-7I3.md).
 
 The current approved competition policy is **one hour**, starting 15 minutes after planned deployment; it supersedes the historical seven-day duration. Exact dates are unset and execution remains unauthorized. See [current policy report](../../docs/DIANA-POLICY-ONE-HOUR.md).
+
+Exact schedule approved on 2026-11-20: deployment 21:30, start 21:45, end 22:45 Europe/Istanbul (1795199400 / 1795200300 / 1795203900). This supersedes the prior unset-date statement. Execution remains unauthorized and the live constructor stays null. See [schedule evidence](../../docs/DIANA-APPROVED-TIMING.md).
