@@ -378,9 +378,10 @@ test('a wrapped honest model is measured with the same harness (false accepts an
   assert.ok(result.rows.filter(row => row.falseAccept).every(row => row.rpcMethods.every(method => BOTH.includes(method))));
 });
 
-test('no model or model weights are part of the project', () => {
+test('the local model adds only the pinned tokenizer, without a large inference framework', () => {
   const pkg = JSON.parse(read('package.json'));
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@qorechain/pqc', '@qorechain/sdk']);
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@huggingface/tokenizers', '@qorechain/pqc', '@qorechain/sdk']);
+  assert.equal(pkg.dependencies['@huggingface/tokenizers'], '0.2.0');
   assert.deepEqual(Object.keys(pkg.devDependencies).sort(), ['typescript', 'vite']);
   assert.equal(/transformers|onnx|tensorflow|tfjs|webllm|mlc-ai|llama/i.test(read('package-lock.json')), false);
 });

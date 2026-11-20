@@ -1,0 +1,18 @@
+▶ live interface today (mocked RPC, real Chrome)
+  ✔ 7H-5: production UI lazily runs real model weights in a worker for an unresolved command (865.2752ms)
+  ℹ Observed real model: {"result":{"state":"Success","stateKey":"success","message":"Diana testnet EVM JSON-RPC answered: chain ID 9800 verified, latest block 9954992. This confirms that one public EVM JSON-RPC endpoint answered; it is not a full network health check.","block":"9954992","chain":"qorechain-diana","evmChain":"9800","planVisible":true,"planTarget":"Target: Diana testnet · EVM chain 9800","steps":[["succeeded","eth_chainId"],["succeeded","eth_blockNumber"]],"context":"Context: last successful Diana network check · Diana testnet","clearEnabled":true,"runEnabled":true,"rpc":["eth_chainId","eth_blockNumber"]},"stats":{"calls":[{"id":1,"kind":"load","started":390.80000000004657},{"id":2,"kind":"classify","started":447.60000000009313}],"replies":[{"id":1,"ms":39.40000000002328},{"id":2,"ms":2.199999999953434}],"starts":1,"loadStarted":360.4000000000233}}
+  ℹ Real worker timings: {"calls":[{"id":1,"kind":"load","started":390.80000000004657},{"id":2,"kind":"classify","started":447.60000000009313}],"replies":[{"id":1,"ms":39.40000000002328},{"id":2,"ms":2.199999999953434}],"starts":1,"loadStarted":360.4000000000233}
+  ℹ Real browser validation: {"byLanguage":{"all":{"total":180,"correct":148},"tr":{"total":77,"correct":64},"en":{"total":76,"correct":63},"mixed":{"total":27,"correct":21}},"inferenceMs":{"mean":0.225,"p95":0.40000000002328306,"max":2.900000000023283}}
+  ℹ Real browser memory: {"browser":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36","baselinePageBytes":1277321,"peakSampledExtraBytes":39653150,"sampleCount":54,"checkpoints":[{"phase":"before-load","elapsedMs":961.0152,"page":{"usedSize":1187704,"totalSize":2359296,"embedderHeapUsedSize":3641128,"backingStorageSize":89617},"worker":null},{"phase":"loaded","elapsedMs":1162.7671,"page":{"usedSize":2590204,"totalSize":3670016,"embedderHeapUsedSize":4721848,"backingStorageSize":20123192},"worker":{"usedSize":6310012,"totalSize":12349440,"embedderHeapUsedSize":773712,"backingStorageSize":5935259}},{"phase":"loaded","elapsedMs":1163.6539,"page":{"usedSize":2590636,"totalSize":3670016,"embedderHeapUsedSize":4721848,"backingStorageSize":20123192},"worker":{"usedSize":6310012,"totalSize":12349440,"embedderHeapUsedSize":773712,"backingStorageSize":5935259}},{"phase":"after-repeats","elapsedMs":1513.344,"page":{"usedSize":4967916,"totalSize":12845056,"embedderHeapUsedSize":6964776,"backingStorageSize":15117016},"worker":{"usedSize":6012276,"totalSize":21000192,"embedderHeapUsedSize":1546736,"backingStorageSize":5939355}}]}
+  ✔ 7H-5: corrupt, unavailable, oversized models and unsupported workers fall back safely (375.1318ms)
+  ✔ 7H-5: a missing optional model JavaScript chunk retains the existing rules (76.1168ms)
+  ✔ 7H-5: a stalled real worker is terminated and cannot produce an RPC decision (1668.7374ms)
+✔ live interface today (mocked RPC, real Chrome) (3589.0215ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8698.5373

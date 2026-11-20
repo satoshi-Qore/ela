@@ -404,6 +404,7 @@ test('the session composes the existing pipeline and adds no network or decision
   const code = read('src/agent/session.ts').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   const imports = [...code.matchAll(/^import\s+(?:type\s+)?\{[^}]*\}\s+from\s+'([^']+)'/gm)].map(match => match[1]);
   assert.deepEqual([...new Set(imports)].sort(), ['../qorechain/read-client.ts', './conversation.ts', './intent.ts', './lexicon.ts']);
+  assert.match(code, /import\('\.\/local-model\.ts'\)/);
   assert.match(code, /import \{ actOnDecision, interpretCommand \} from '\.\/intent\.ts';/);
   for (const forbidden of ['fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'invokeTool', 'executePlan', 'runQuery', 'routeCommand', 'planCommand', 'assessRisk', 'decideIntent', 'localStorage', 'sign', 'wallet', 'privateKey']) {
     assert.equal(code.includes(forbidden), false, forbidden);

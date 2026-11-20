@@ -1104,5 +1104,7 @@ test('the live interface reaches the rule-based lexicon only through the agent s
   const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
   for (const name of ['lexicon', 'understandCommand', 'ruleClassifier']) assert.equal(web.includes(name), false, name);
   const session = readFileSync(new URL('../src/agent/session.ts', import.meta.url), 'utf8');
-  assert.match(session, /import \{ ruleClassifier \} from '\.\/lexicon\.ts';/);
+  assert.match(session, /import\('\.\/local-model\.ts'\)/);
+  const local = readFileSync(new URL('../src/agent/local-model.ts', import.meta.url), 'utf8');
+  assert.match(local, /import \{ ruleClassifier \} from '\.\/lexicon\.ts';/);
 });

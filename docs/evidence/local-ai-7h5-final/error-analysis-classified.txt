@@ -1,0 +1,146 @@
+{
+  "regression": {
+    "baseline": {
+      "total": 307,
+      "correct": 287,
+      "expectedRuns": 154,
+      "expectedNonRuns": 153,
+      "falseAccepts": 0,
+      "falseRejects": 20,
+      "gateMisses": 0,
+      "overRefusals": 0,
+      "falseAcceptRate": 0,
+      "falseRejectRate": 0.1299
+    },
+    "integrated": {
+      "total": 307,
+      "correct": 288,
+      "expectedRuns": 154,
+      "expectedNonRuns": 153,
+      "falseAccepts": 0,
+      "falseRejects": 19,
+      "gateMisses": 0,
+      "overRefusals": 0,
+      "falseAcceptRate": 0,
+      "falseRejectRate": 0.1234
+    },
+    "byLanguage": {
+      "tr": {
+        "total": 152,
+        "baselineCorrect": 140,
+        "correct": 140,
+        "falseAccepts": 0,
+        "falseRejects": 12,
+        "missCauses": {
+          "low_confidence": 5,
+          "model_filter_withheld_risky_wording": 7
+        }
+      },
+      "en": {
+        "total": 147,
+        "baselineCorrect": 141,
+        "correct": 141,
+        "falseAccepts": 0,
+        "falseRejects": 6,
+        "missCauses": {
+          "low_confidence": 5,
+          "model_filter_withheld_risky_wording": 1
+        }
+      },
+      "mixed": {
+        "total": 8,
+        "baselineCorrect": 6,
+        "correct": 7,
+        "falseAccepts": 0,
+        "falseRejects": 1,
+        "missCauses": {
+          "low_confidence": 1
+        }
+      }
+    },
+    "missCauses": {
+      "low_confidence": 11,
+      "model_filter_withheld_risky_wording": 8
+    }
+  },
+  "validation": {
+    "baseline": {
+      "total": 180,
+      "correct": 87,
+      "expectedRuns": 120,
+      "expectedNonRuns": 60,
+      "falseAccepts": 4,
+      "falseRejects": 89,
+      "gateMisses": 0,
+      "overRefusals": 0,
+      "falseAcceptRate": 0.0667,
+      "falseRejectRate": 0.7417
+    },
+    "integrated": {
+      "total": 180,
+      "correct": 87,
+      "expectedRuns": 120,
+      "expectedNonRuns": 60,
+      "falseAccepts": 4,
+      "falseRejects": 89,
+      "gateMisses": 0,
+      "overRefusals": 0,
+      "falseAcceptRate": 0.0667,
+      "falseRejectRate": 0.7417
+    },
+    "byLanguage": {
+      "tr": {
+        "total": 77,
+        "baselineCorrect": 35,
+        "correct": 35,
+        "falseAccepts": 1,
+        "falseRejects": 41,
+        "missCauses": {
+          "low_confidence": 39,
+          "preexisting-route-label-mismatch": 1,
+          "unknown_intent": 2
+        }
+      },
+      "en": {
+        "total": 76,
+        "baselineCorrect": 40,
+        "correct": 40,
+        "falseAccepts": 2,
+        "falseRejects": 34,
+        "missCauses": {
+          "low_confidence": 33,
+          "preexisting-route-label-mismatch": 2,
+          "unknown_intent": 1
+        }
+      },
+      "mixed": {
+        "total": 27,
+        "baselineCorrect": 12,
+        "correct": 12,
+        "falseAccepts": 1,
+        "falseRejects": 14,
+        "missCauses": {
+          "low_confidence": 14,
+          "preexisting-route-label-mismatch": 1
+        }
+      }
+    },
+    "missCauses": {
+      "low_confidence": 86,
+      "preexisting-route-label-mismatch": 4,
+      "unknown_intent": 3
+    },
+    "rawConfusions": {
+      "block_number -> network_check": 6,
+      "follow_up_current -> follow_up_repeat": 1,
+      "follow_up_current -> unknown": 2,
+      "follow_up_repeat -> unknown": 1,
+      "unknown -> follow_up_current": 1,
+      "unknown -> follow_up_repeat": 1,
+      "unknown -> unsupported": 4,
+      "unsupported -> block_number": 9,
+      "unsupported -> network_check": 2,
+      "unsupported -> unknown": 5
+    }
+  }
+}

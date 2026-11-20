@@ -15,7 +15,7 @@ import { ruleClassifier } from './lexicon.ts';
  *           → conversation.record (only a successful query replaces the context)
  *
  * The session takes only a command string. There is no way to hand it a decision, a label, a tool,
- * or an RPC method, so a classifier (rule-based today, a model later) can only influence the outcome
+ * or an RPC method, so a classifier can only influence the outcome
  * through `interpretCommand`, which runs the safety gate first and never shows the classifier a
  * command the gate refused. The tool registry allows only `eth_chainId` and `eth_blockNumber`, and
  * for a balance query only `eth_chainId` and `eth_getBalance`, all on the Diana EVM endpoint of
@@ -29,7 +29,7 @@ import { ruleClassifier } from './lexicon.ts';
  */
 
 export interface SessionOptions {
-  /** Intent classifier used after the deterministic routes. Defaults to the rule-based lexicon. */
+  /** After deterministic routes: lazy local model for unresolved rules; rules if loading fails. */
   readonly classifier?: IntentClassifier;
   readonly thresholds?: DecisionThresholds;
   /** Transport and timeout for the read-only tools (tests pass a fake fetch). */
@@ -86,7 +86,8 @@ const NOTHING_TO_CONFIRM: IntentDecision = Object.freeze({ kind: 'clarify', reas
 /** Creates an in-memory agent session with its own conversation context. */
 export function createSession(options: SessionOptions = {}): AgentSession {
   const conversation = createConversation();
-  const classifier = options.classifier ?? ruleClassifier;
+  const classifier = options.classifier ?? { classify: (text: string) =>
+    import('./local-model.ts').then(module => module.localClassifier.classify(text), () => ruleClassifier.classify(text)) };
   const interpretOptions = { classifier, ...(options.thresholds ? { thresholds: options.thresholds } : {}) };
   const readOptions: ReadOptions = {
     ...(options.fetch ? { fetch: options.fetch } : {}),

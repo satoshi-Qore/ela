@@ -1,0 +1,12 @@
+✔ memory audit includes page-only loading peak and real timer coverage (1.8432ms)
+✔ memory audit rejects missing, invalid and negative page or Worker metrics (2.3178ms)
+✔ memory audit cannot pass from batch checkpoints alone (0.2359ms)
+✔ memory audit requires all three measured stages and a loaded Worker (0.3958ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 80.7766

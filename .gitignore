@@ -19,3 +19,6 @@ node_modules/
 
 # Vite build output
 /dist/
+
+# Retained local verification build (logs and measurements are versioned)
+/docs/evidence/local-ai-7h5-final/production-build*/

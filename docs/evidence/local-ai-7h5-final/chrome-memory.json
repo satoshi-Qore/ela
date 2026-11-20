@@ -1,0 +1,855 @@
+{
+  "kind": "CDP sampled page + actual model Worker usedSize + backingStorageSize; no forced GC; not process RSS or a continuous peak guarantee",
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "baselinePageBytes": 1277321,
+  "peakSampledExtraBytes": 39653150,
+  "intervalMs": 5,
+  "repeatedInferences": 1800,
+  "validationInferences": 180,
+  "samples": [
+    {
+      "phase": "before-load",
+      "elapsedMs": 961.0152,
+      "page": {
+        "usedSize": 1187704,
+        "totalSize": 2359296,
+        "embedderHeapUsedSize": 3641128,
+        "backingStorageSize": 89617
+      },
+      "worker": null
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1025.8982,
+      "page": {
+        "usedSize": 2418648,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 98238
+      },
+      "worker": null
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1032.6873,
+      "page": {
+        "usedSize": 2425752,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 9298718
+      },
+      "worker": null
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1057.1916,
+      "page": {
+        "usedSize": 2448652,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 15116950
+      },
+      "worker": null
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1059.8283,
+      "page": {
+        "usedSize": 2448828,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 15116950
+      },
+      "worker": {
+        "usedSize": 303856,
+        "totalSize": 786432,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 0
+      }
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1063.3575,
+      "page": {
+        "usedSize": 2448828,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 15116950
+      },
+      "worker": {
+        "usedSize": 600784,
+        "totalSize": 1048576,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 36864
+      }
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1075.7238,
+      "page": {
+        "usedSize": 2448828,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 15116950
+      },
+      "worker": {
+        "usedSize": 3466472,
+        "totalSize": 7135232,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5867163
+      }
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1106.2064,
+      "page": {
+        "usedSize": 2458584,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 3966408,
+        "backingStorageSize": 20123158
+      },
+      "worker": {
+        "usedSize": 5636784,
+        "totalSize": 11825152,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5931163
+      }
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1128.0737,
+      "page": {
+        "usedSize": 2503944,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 4347112,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 5987712,
+        "totalSize": 12087296,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5933211
+      }
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1137.7258,
+      "page": {
+        "usedSize": 2507072,
+        "totalSize": 3407872,
+        "embedderHeapUsedSize": 4723872,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 5987712,
+        "totalSize": 12087296,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5933211
+      }
+    },
+    {
+      "phase": "loading",
+      "elapsedMs": 1147.5535,
+      "page": {
+        "usedSize": 2589588,
+        "totalSize": 3670016,
+        "embedderHeapUsedSize": 4721848,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 6310012,
+        "totalSize": 12349440,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5935259
+      }
+    },
+    {
+      "phase": "loaded",
+      "elapsedMs": 1162.7671,
+      "page": {
+        "usedSize": 2590204,
+        "totalSize": 3670016,
+        "embedderHeapUsedSize": 4721848,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 6310012,
+        "totalSize": 12349440,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5935259
+      }
+    },
+    {
+      "phase": "loaded",
+      "elapsedMs": 1163.6539,
+      "page": {
+        "usedSize": 2590636,
+        "totalSize": 3670016,
+        "embedderHeapUsedSize": 4721848,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 6310012,
+        "totalSize": 12349440,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5935259
+      }
+    },
+    {
+      "phase": "validation",
+      "elapsedMs": 1177.7187,
+      "page": {
+        "usedSize": 2781228,
+        "totalSize": 3670016,
+        "embedderHeapUsedSize": 4721848,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 8530804,
+        "totalSize": 14708736,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6013083
+      }
+    },
+    {
+      "phase": "validation",
+      "elapsedMs": 1193.8601,
+      "page": {
+        "usedSize": 2546364,
+        "totalSize": 4456448,
+        "embedderHeapUsedSize": 4847384,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 7825616,
+        "totalSize": 17330176,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 5982363
+      }
+    },
+    {
+      "phase": "validation",
+      "elapsedMs": 1206.8996,
+      "page": {
+        "usedSize": 2643096,
+        "totalSize": 4718592,
+        "embedderHeapUsedSize": 5233224,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 10510896,
+        "totalSize": 18640896,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6080667
+      }
+    },
+    {
+      "phase": "repeat-1",
+      "elapsedMs": 1208.7331,
+      "page": {
+        "usedSize": 2685732,
+        "totalSize": 4718592,
+        "embedderHeapUsedSize": 5233224,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 10562688,
+        "totalSize": 18903040,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6082715
+      }
+    },
+    {
+      "phase": "repeat-1",
+      "elapsedMs": 1216.7568,
+      "page": {
+        "usedSize": 2911284,
+        "totalSize": 4980736,
+        "embedderHeapUsedSize": 5472072,
+        "backingStorageSize": 20123192
+      },
+      "worker": {
+        "usedSize": 11776416,
+        "totalSize": 19951616,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6119579
+      }
+    },
+    {
+      "phase": "repeat-1",
+      "elapsedMs": 1231.4291,
+      "page": {
+        "usedSize": 2716164,
+        "totalSize": 5505024,
+        "embedderHeapUsedSize": 5583288,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9881792,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6068379
+      }
+    },
+    {
+      "phase": "repeat-1",
+      "elapsedMs": 1247.2167,
+      "page": {
+        "usedSize": 3569408,
+        "totalSize": 5505024,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 8128628,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6021275
+      }
+    },
+    {
+      "phase": "repeat-1",
+      "elapsedMs": 1247.7251,
+      "page": {
+        "usedSize": 3569408,
+        "totalSize": 5505024,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 8128628,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 773712,
+        "backingStorageSize": 6021275
+      }
+    },
+    {
+      "phase": "repeat-2",
+      "elapsedMs": 1262.5405,
+      "page": {
+        "usedSize": 4216040,
+        "totalSize": 6291456,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 11488144,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6154395
+      }
+    },
+    {
+      "phase": "repeat-2",
+      "elapsedMs": 1278.439,
+      "page": {
+        "usedSize": 3616180,
+        "totalSize": 6291456,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 8088016,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6047899
+      }
+    },
+    {
+      "phase": "repeat-2",
+      "elapsedMs": 1286.4856,
+      "page": {
+        "usedSize": 3970376,
+        "totalSize": 6553600,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9551588,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6119579
+      }
+    },
+    {
+      "phase": "repeat-2",
+      "elapsedMs": 1286.578,
+      "page": {
+        "usedSize": 3970376,
+        "totalSize": 6553600,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9551588,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6119579
+      }
+    },
+    {
+      "phase": "repeat-3",
+      "elapsedMs": 1294.3768,
+      "page": {
+        "usedSize": 4358936,
+        "totalSize": 7077888,
+        "embedderHeapUsedSize": 5715720,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 11235368,
+        "totalSize": 20738048,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6187163
+      }
+    },
+    {
+      "phase": "repeat-3",
+      "elapsedMs": 1310.2891,
+      "page": {
+        "usedSize": 4112852,
+        "totalSize": 7340032,
+        "embedderHeapUsedSize": 5831392,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9512720,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6113435
+      }
+    },
+    {
+      "phase": "repeat-3",
+      "elapsedMs": 1315.6365,
+      "page": {
+        "usedSize": 4469704,
+        "totalSize": 7340032,
+        "embedderHeapUsedSize": 5958040,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 10920260,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6185115
+      }
+    },
+    {
+      "phase": "repeat-3",
+      "elapsedMs": 1315.7497,
+      "page": {
+        "usedSize": 4469704,
+        "totalSize": 7340032,
+        "embedderHeapUsedSize": 5958040,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 10920260,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6185115
+      }
+    },
+    {
+      "phase": "repeat-4",
+      "elapsedMs": 1326.2886,
+      "page": {
+        "usedSize": 3790260,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 5958040,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 7337340,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 5994651
+      }
+    },
+    {
+      "phase": "repeat-4",
+      "elapsedMs": 1343.6063,
+      "page": {
+        "usedSize": 3632648,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6208984,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 12189584,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6240411
+      }
+    },
+    {
+      "phase": "repeat-4",
+      "elapsedMs": 1343.8181,
+      "page": {
+        "usedSize": 3632648,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6208984,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 12189584,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 902368,
+        "backingStorageSize": 6240411
+      }
+    },
+    {
+      "phase": "repeat-5",
+      "elapsedMs": 1350.0143,
+      "page": {
+        "usedSize": 3892604,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6208984,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 6710416,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1031200,
+        "backingStorageSize": 5968027
+      }
+    },
+    {
+      "phase": "repeat-5",
+      "elapsedMs": 1364.7968,
+      "page": {
+        "usedSize": 3629772,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6208984,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 11685580,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 6205595
+      }
+    },
+    {
+      "phase": "repeat-5",
+      "elapsedMs": 1371.2789,
+      "page": {
+        "usedSize": 4061476,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6208984,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 6743844,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 5978267
+      }
+    },
+    {
+      "phase": "repeat-5",
+      "elapsedMs": 1371.6607,
+      "page": {
+        "usedSize": 4061476,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6208984,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 6743844,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 5978267
+      }
+    },
+    {
+      "phase": "repeat-6",
+      "elapsedMs": 1380.4711,
+      "page": {
+        "usedSize": 4538940,
+        "totalSize": 7864320,
+        "embedderHeapUsedSize": 6325768,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9157576,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 6074523
+      }
+    },
+    {
+      "phase": "repeat-6",
+      "elapsedMs": 1396.4509,
+      "page": {
+        "usedSize": 4376736,
+        "totalSize": 8126464,
+        "embedderHeapUsedSize": 6582560,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 7450188,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 6011035
+      }
+    },
+    {
+      "phase": "repeat-6",
+      "elapsedMs": 1399.0175,
+      "page": {
+        "usedSize": 4536924,
+        "totalSize": 8126464,
+        "embedderHeapUsedSize": 6582560,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 7947528,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 6037659
+      }
+    },
+    {
+      "phase": "repeat-7",
+      "elapsedMs": 1401.0686,
+      "page": {
+        "usedSize": 4606868,
+        "totalSize": 8126464,
+        "embedderHeapUsedSize": 6582560,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 8027024,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 6039707
+      }
+    },
+    {
+      "phase": "repeat-7",
+      "elapsedMs": 1410.2051,
+      "page": {
+        "usedSize": 5149120,
+        "totalSize": 8388608,
+        "embedderHeapUsedSize": 6582560,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 10932340,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1160144,
+        "backingStorageSize": 6158491
+      }
+    },
+    {
+      "phase": "repeat-7",
+      "elapsedMs": 1427.3056,
+      "page": {
+        "usedSize": 5021524,
+        "totalSize": 8650752,
+        "embedderHeapUsedSize": 6577912,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9133620,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6095003
+      }
+    },
+    {
+      "phase": "repeat-7",
+      "elapsedMs": 1427.4019,
+      "page": {
+        "usedSize": 5021524,
+        "totalSize": 8650752,
+        "embedderHeapUsedSize": 6577912,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 9133620,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6095003
+      }
+    },
+    {
+      "phase": "repeat-8",
+      "elapsedMs": 1445.3897,
+      "page": {
+        "usedSize": 6142720,
+        "totalSize": 9175040,
+        "embedderHeapUsedSize": 6706832,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 7640812,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6025371
+      }
+    },
+    {
+      "phase": "repeat-8",
+      "elapsedMs": 1455.0329,
+      "page": {
+        "usedSize": 6771076,
+        "totalSize": 9961472,
+        "embedderHeapUsedSize": 6832976,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 10323024,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6156443
+      }
+    },
+    {
+      "phase": "repeat-8",
+      "elapsedMs": 1455.1929,
+      "page": {
+        "usedSize": 6771076,
+        "totalSize": 9961472,
+        "embedderHeapUsedSize": 6832976,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 10323024,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6156443
+      }
+    },
+    {
+      "phase": "repeat-9",
+      "elapsedMs": 1464.5091,
+      "page": {
+        "usedSize": 4460708,
+        "totalSize": 10485760,
+        "embedderHeapUsedSize": 6835856,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 5915028,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 5935259
+      }
+    },
+    {
+      "phase": "repeat-9",
+      "elapsedMs": 1479.6603,
+      "page": {
+        "usedSize": 5574896,
+        "totalSize": 10485760,
+        "embedderHeapUsedSize": 6962832,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 10798084,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6174875
+      }
+    },
+    {
+      "phase": "repeat-9",
+      "elapsedMs": 1483.1302,
+      "page": {
+        "usedSize": 5763248,
+        "totalSize": 10485760,
+        "embedderHeapUsedSize": 6962832,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 11504780,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6211739
+      }
+    },
+    {
+      "phase": "repeat-10",
+      "elapsedMs": 1485.5347,
+      "page": {
+        "usedSize": 5833192,
+        "totalSize": 10485760,
+        "embedderHeapUsedSize": 6962832,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 11615216,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6215835
+      }
+    },
+    {
+      "phase": "repeat-10",
+      "elapsedMs": 1495.584,
+      "page": {
+        "usedSize": 6397648,
+        "totalSize": 11272192,
+        "embedderHeapUsedSize": 6964776,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 8096676,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1288976,
+        "backingStorageSize": 6027419
+      }
+    },
+    {
+      "phase": "repeat-10",
+      "elapsedMs": 1511.1665,
+      "page": {
+        "usedSize": 4938776,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 6964776,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 6012276,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1546736,
+        "backingStorageSize": 5939355
+      }
+    },
+    {
+      "phase": "repeat-10",
+      "elapsedMs": 1512.5199,
+      "page": {
+        "usedSize": 4967916,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 6964776,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 6012276,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1546736,
+        "backingStorageSize": 5939355
+      }
+    },
+    {
+      "phase": "after-repeats",
+      "elapsedMs": 1513.344,
+      "page": {
+        "usedSize": 4967916,
+        "totalSize": 12845056,
+        "embedderHeapUsedSize": 6964776,
+        "backingStorageSize": 15117016
+      },
+      "worker": {
+        "usedSize": 6012276,
+        "totalSize": 21000192,
+        "embedderHeapUsedSize": 1546736,
+        "backingStorageSize": 5939355
+      }
+    }
+  ]
+}
