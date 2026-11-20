@@ -1,0 +1,59 @@
+{
+  "readyToSign": false,
+  "blockers": [
+    "window-live",
+    "window-unused",
+    "window-untargeted",
+    "window-bounds",
+    "gas",
+    "balance",
+    "constructor"
+  ],
+  "live": {
+    "sequence": "2",
+    "evmNonce": "2",
+    "pendingNonce": "2",
+    "uqorBalance": "99857500",
+    "gasPriceWei": "112500000000",
+    "baseFeeWei": "100000000000",
+    "evmTxMaxGas": "30000000",
+    "height": "10441011",
+    "pqcPublicKeySha256": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a"
+  },
+  "window": {
+    "found": false,
+    "live": false,
+    "openedHeight": "0",
+    "expiryHeight": "0",
+    "maxTxs": "0",
+    "usedTxs": "0",
+    "maxValue": "0",
+    "usedValue": "0",
+    "remainingBlocks": "0",
+    "remainingTxs": "0",
+    "remainingValue": "0",
+    "nativeOnly": false,
+    "allowedTargets": []
+  },
+  "tx": {
+    "type": "eip1559",
+    "chainId": 9800,
+    "from": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "to": null,
+    "nonce": "2",
+    "value": "0",
+    "gasEstimate": null,
+    "gas": null,
+    "maxFeePerGas": "150000000000",
+    "maxPriorityFeePerGas": "12500000000",
+    "initcodeBytes": null,
+    "initcodeKeccak": null,
+    "maxCostWei": null,
+    "windowCostUqor": null
+  },
+  "address": "0x2026C0190D739C646418BaeEe4e242d456b44502",
+  "ifWindowOpensFirst": {
+    "nonce": "3",
+    "predictedContractAddress": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d"
+  }
+}

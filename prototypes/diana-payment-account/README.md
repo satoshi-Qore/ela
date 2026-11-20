@@ -50,3 +50,7 @@ Paket, ödeme ve limitlerin yanında süre sınırlarını, eski ve ileri nonce�
 - Çalıştırmadan önce Diana EVM 9800, bytecode uyumu, güncel ücretler, PQ anahtar kaydı, hibrit imzalı pencere açılışı ve tek `allowedTargets` adresi doğrulanmalı. Pencere dışı ret, sözleşme kuralı reddi ve başarılı ödeme ayrı makbuz ve durum kanıtlarıyla gösterilmeli. [QoreChain pencere referansı](https://docs.qorechain.io/developer-guide/evm-window-reference/)
 - Prototipte fon kurtarma, anahtar değiştirme veya acil durdurma işlevi yok. Deneme ödemesi kadar test fonu ayrılmalı. Süre bitiminde veya yürütücü kaybında kalan fonlar sözleşmede kalır.
 - Bu prototip mevcut ELA arayüzüne veya Model2Vec’e bağlanmaz. Yarışma için sözleşme temelli akıllı hesap yorumunun kabulü ve canlı kanıtlar gerekir.
+
+## 7I-2 deployment preparation
+
+The existing deployment tool now pins the reproducible Solidity 0.8.28/Paris artifact and can produce the 7I-1 runtime SHA-256/config after reviewed constructor values exist. Live values remain null; no signing or deployment occurred. See the [single decision table, live read-only evidence and checklists](../../docs/DIANA-DEPLOY-7I2.md).

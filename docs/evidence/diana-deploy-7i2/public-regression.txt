@@ -1,0 +1,50 @@
+✔ artifact compiler, target, constructor ABI and immutable slot provenance fail closed (32.7366ms)
+✔ public package binds all eight arguments to runtime SHA256 and 7I1 policy without an execution permit (10.2732ms)
+✔ missing, test-only or unreviewed constructor parameters cannot produce a live runtime pin (8.2192ms)
+✔ existing deployment CLI retains null and interactive gates without reading records or calling effects (3186.8294ms)
+✖ PREPARE with no approved policy reads current nonce/fees/window but never estimates placeholder deployment (28.6149ms)
+✖ reviewed fixture PREPARE retains all deployment window, gas, fee and policy guards (46.7605ms)
+✖ post-deployment verifier rejects wrong network before receipt/code reads (0.7682ms)
+✔ existing VERIFY CLI parses a retained public PREPARE report and dispatches only read verification (0.3872ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 5
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4893.561
+
+✖ failing tests:
+
+test at tests\diana-deployment-package.test.mjs:89:1
+✖ PREPARE with no approved policy reads current nonce/fees/window but never estimates placeholder deployment (28.6149ms)
+  TypeError: Cannot read properties of null (reading 'executor')
+      at constructorValues (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/prototypes/diana-payment-account/diana-deploy.mjs:102:35)
+      at encodeConstructorArgs (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/prototypes/diana-payment-account/diana-deploy.mjs:103:87)
+      at Module.prepareDeployment (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/prototypes/diana-payment-account/diana-deploy.mjs:299:40)
+      at async TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-deployment-package.test.mjs:90:53)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at tests\diana-deployment-package.test.mjs:96:1
+✖ reviewed fixture PREPARE retains all deployment window, gas, fee and policy guards (46.7605ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-deployment-package.test.mjs:101:70)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /intent does not match/,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at tests\diana-deployment-package.test.mjs:103:1
+✖ post-deployment verifier rejects wrong network before receipt/code reads (0.7682ms)
+  TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+      at Module.verifyDeployment (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/prototypes/diana-payment-account/diana-deploy.mjs:492:81)
+      at async TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-deployment-package.test.mjs:105:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)

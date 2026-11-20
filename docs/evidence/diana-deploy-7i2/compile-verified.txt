@@ -1,0 +1,1285 @@
+Warning: this project is configured to use a local compiler executable:
+  "E:\\ELA\\worktrees\\ela-agent-v1\\prototypes\\diana-payment-account\\.tools\\solc.exe"
+Running this executable may execute arbitrary code.
+No files changed, compilation skipped
+note[interface-naming]: interface names should be prefixed with 'I'
+  ╭▸ test/DianaPaymentAccount.t.sol:6:11
+  │
+6 │ interface Vm {
+  │           ━━
+  │
+  ╰ help: https://getfoundry.sh/forge/linting/interface-naming
+
+note[screaming-snake-case-const]: constants should use SCREAMING_SNAKE_CASE
+   ╭▸ test/DianaPaymentAccount.t.sol:49:25
+   │
+49 │     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+   │                         ━━ help: consider using: `VM`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-const
+
+note[low-level-calls]: Low-level calls should be avoided
+    ╭▸ test/DianaPaymentAccount.t.sol:215:27
+    │
+215 │         (bool success,) = address(account).call(abi.encodeWithSignature("pay(address,uint256,uint256)", RECIPIENT, 1 ether, 0));
+    │                           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/low-level-calls
+
+note[multi-contract-file]: prefer having only one contract, interface or library per file
+  ╭▸ test/DianaPaymentAccount.t.sol:6:11
+  │
+6 │ interface Vm {
+  │           ━━
+  │
+  ╰ help: https://getfoundry.sh/forge/linting/multi-contract-file
+
+note[multi-contract-file]: prefer having only one contract, interface or library per file
+   ╭▸ test/DianaPaymentAccount.t.sol:17:10
+   │
+17 │ contract RejectingRecipient {
+   │          ━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/multi-contract-file
+
+note[multi-contract-file]: prefer having only one contract, interface or library per file
+   ╭▸ test/DianaPaymentAccount.t.sol:29:10
+   │
+29 │ contract ReenteringRecipient {
+   │          ━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/multi-contract-file
+
+note[multi-contract-file]: prefer having only one contract, interface or library per file
+   ╭▸ test/DianaPaymentAccount.t.sol:48:10
+   │
+48 │ contract DianaPaymentAccountTest {
+   │          ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/multi-contract-file
+
+warning[locked-ether]: contract can receive ETH but has no mechanism to send it out
+   ╭▸ test/DianaPaymentAccount.t.sol:17:10
+   │
+17 │ contract RejectingRecipient {
+   │          ━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/locked-ether
+
+warning[locked-ether]: contract can receive ETH but has no mechanism to send it out
+   ╭▸ test/DianaPaymentAccount.t.sol:29:10
+   │
+29 │ contract ReenteringRecipient {
+   │          ━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/locked-ether
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:35:44
+   │
+35 │         target.pay(payable(address(this)), 1 ether, 0, bytes32(uint256(1)), 2_000, new bytes(4627));
+   │                                            ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:35:77
+   │
+35 │         target.pay(payable(address(this)), 1 ether, 0, bytes32(uint256(1)), 2_000, new bytes(4627));
+   │                                                                             ━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:35:94
+   │
+35 │         target.pay(payable(address(this)), 1 ether, 0, bytes32(uint256(1)), 2_000, new bytes(4627));
+   │                                                                                              ━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:39:49
+   │
+39 │         try account.pay(payable(address(this)), 1 ether, 1, bytes32(uint256(2)), 2_000, new bytes(4627)) {
+   │                                                 ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:39:82
+   │
+39 │         try account.pay(payable(address(this)), 1 ether, 1, bytes32(uint256(2)), 2_000, new bytes(4627)) {
+   │                                                                                  ━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:39:99
+   │
+39 │         try account.pay(payable(address(this)), 1 ether, 1, bytes32(uint256(2)), 2_000, new bytes(4627)) {
+   │                                                                                                   ━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   ╭▸ test/DianaPaymentAccount.t.sol:42:21
+   │
+42 │             require(bytes4(errorData) == DianaPaymentAccount.ReentrantPayment.selector);
+   │                     ━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes4' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:60:20
+   │
+60 │         vm.chainId(9800);
+   │                    ━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:63:48
+   │
+63 │         account = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 3);
+   │                                                ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:63:57
+   │
+63 │         account = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 3);
+   │                                                         ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:63:66
+   │
+63 │         account = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 3);
+   │                                                                  ━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:68:34
+   │
+68 │         _pay(account, RECIPIENT, 2 ether, 0);
+   │                                  ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:69:54
+   │
+69 │         require(RECIPIENT.balance == beforeBalance + 2 ether);
+   │                                                      ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:70:31
+   │
+70 │         _assertState(account, 2 ether, 1, 8 ether);
+   │                               ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:70:43
+   │
+70 │         _assertState(account, 2 ether, 1, 8 ether);
+   │                                           ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:74:50
+   │
+74 │         _expectRejected(account, payable(address(0xCAFE)), 1 ether, 0, DianaPaymentAccount.WrongRecipient.selector);
+   │                                                  ━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:74:60
+   │
+74 │         _expectRejected(account, payable(address(0xCAFE)), 1 ether, 0, DianaPaymentAccount.WrongRecipient.selector);
+   │                                                            ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:75:37
+   │
+75 │         _assertState(account, 0, 0, 10 ether);
+   │                                     ━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:79:45
+   │
+79 │         _expectRejected(account, RECIPIENT, 2 ether + 1, 0, DianaPaymentAccount.InvalidAmount.selector);
+   │                                             ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:80:37
+   │
+80 │         _assertState(account, 0, 0, 10 ether);
+   │                                     ━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:84:34
+   │
+84 │         _pay(account, RECIPIENT, 2 ether, 0);
+   │                                  ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:85:45
+   │
+85 │         _expectRejected(account, RECIPIENT, 1 ether + 1, 1, DianaPaymentAccount.BudgetExceeded.selector);
+   │                                             ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:86:31
+   │
+86 │         _assertState(account, 2 ether, 1, 8 ether);
+   │                               ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:86:43
+   │
+86 │         _assertState(account, 2 ether, 1, 8 ether);
+   │                                           ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:87:34
+   │
+87 │         _pay(account, RECIPIENT, 1 ether, 1);
+   │                                  ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:88:31
+   │
+88 │         _assertState(account, 3 ether, 2, 7 ether);
+   │                               ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:92:67
+   │
+92 │         DianaPaymentAccount single = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 1);
+   │                                                                   ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:92:76
+   │
+92 │         DianaPaymentAccount single = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 1);
+   │                                                                            ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:93:33
+   │
+93 │         _pay(single, RECIPIENT, 1 ether, 0);
+   │                                 ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:94:44
+   │
+94 │         _expectRejected(single, RECIPIENT, 1 ether, 1, DianaPaymentAccount.PaymentCountExceeded.selector);
+   │                                            ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:95:30
+   │
+95 │         _assertState(single, 1 ether, 1, 9 ether);
+   │                              ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+   ╭▸ test/DianaPaymentAccount.t.sol:95:42
+   │
+95 │         _assertState(single, 1 ether, 1, 9 ether);
+   │                                          ━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:100:45
+    │
+100 │         _expectRejected(account, RECIPIENT, 1 ether, 0, DianaPaymentAccount.OutsidePaymentWindow.selector);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:101:37
+    │
+101 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:106:34
+    │
+106 │         _pay(account, RECIPIENT, 1 ether, 0);
+    │                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:107:31
+    │
+107 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:107:43
+    │
+107 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                                           ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:112:45
+    │
+112 │         _expectRejected(account, RECIPIENT, 1 ether, 0, DianaPaymentAccount.OutsidePaymentWindow.selector);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:113:37
+    │
+113 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:118:32
+    │
+118 │         account.pay(RECIPIENT, 1 ether, 0, bytes32(uint256(1)), END, new bytes(4627));
+    │                                ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:118:80
+    │
+118 │         account.pay(RECIPIENT, 1 ether, 0, bytes32(uint256(1)), END, new bytes(4627));
+    │                                                                                ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:119:37
+    │
+119 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:123:34
+    │
+123 │         _pay(account, RECIPIENT, 1 ether, 0);
+    │                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:124:45
+    │
+124 │         _expectRejected(account, RECIPIENT, 1 ether, 0, DianaPaymentAccount.InvalidNonce.selector);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:125:45
+    │
+125 │         _expectRejected(account, RECIPIENT, 1 ether, 2, DianaPaymentAccount.InvalidNonce.selector);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:126:31
+    │
+126 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:126:43
+    │
+126 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                                           ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:132:70
+    │
+132 │         DianaPaymentAccount rejecting = _funded(EXECUTOR, recipient, 2 ether, 3 ether, 2);
+    │                                                                      ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:132:79
+    │
+132 │         DianaPaymentAccount rejecting = _funded(EXECUTOR, recipient, 2 ether, 3 ether, 2);
+    │                                                                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:133:46
+    │
+133 │         _mockSignature(rejecting, recipient, 1 ether, bytes32(uint256(1)), 0, END, true);
+    │                                              ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:134:47
+    │
+134 │         _expectRejected(rejecting, recipient, 1 ether, 0, DianaPaymentAccount.PaymentFailed.selector);
+    │                                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:135:39
+    │
+135 │         _assertState(rejecting, 0, 0, 10 ether);
+    │                                       ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:139:36
+    │
+139 │         _pay(rejecting, recipient, 1 ether, 0);
+    │                                    ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:140:33
+    │
+140 │         _assertState(rejecting, 1 ether, 1, 9 ether);
+    │                                 ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:140:45
+    │
+140 │         _assertState(rejecting, 1 ether, 1, 9 ether);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:142:38
+    │
+142 │         require(recipient.balance == 1 ether);
+    │                                      ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:147:45
+    │
+147 │         _expectRejected(account, RECIPIENT, 1 ether, 0, DianaPaymentAccount.InsufficientBalance.selector);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:154:71
+    │
+154 │         DianaPaymentAccount reentrant = _funded(recipient, recipient, 2 ether, 3 ether, 2);
+    │                                                                       ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:154:80
+    │
+154 │         DianaPaymentAccount reentrant = _funded(recipient, recipient, 2 ether, 3 ether, 2);
+    │                                                                                ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:155:46
+    │
+155 │         _mockSignature(reentrant, recipient, 1 ether, bytes32(uint256(1)), 0, END, true);
+    │                                              ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:158:38
+    │
+158 │         require(recipient.balance == 1 ether);
+    │                                      ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:159:33
+    │
+159 │         _assertState(reentrant, 1 ether, 1, 9 ether);
+    │                                 ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:159:45
+    │
+159 │         _assertState(reentrant, 1 ether, 1, 9 ether);
+    │                                             ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:164:37
+    │
+164 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:189:42
+    │
+189 │             abi.encode(typeHash, uint256(9800), address(account), ISSUER, RECIPIENT, 1 ether, bytes32(uint256(1)), uint256(0), END)
+    │                                          ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:189:86
+    │
+189 │             abi.encode(typeHash, uint256(9800), address(account), ISSUER, RECIPIENT, 1 ether, bytes32(uint256(1)), uint256(0), END)
+    │                                                                                      ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:191:50
+    │
+191 │         require(account.invoiceDigest(RECIPIENT, 1 ether, bytes32(uint256(1)), 0, END) == expected);
+    │                                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:195:34
+    │
+195 │         _pay(account, RECIPIENT, 1 ether, 0);
+    │                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:196:31
+    │
+196 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:196:43
+    │
+196 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                                           ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:201:44
+    │
+201 │         _mockSignature(account, RECIPIENT, 1 ether, bytes32(uint256(1)), 0, END, false);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:202:41
+    │
+202 │         _expectInvoiceRejected(account, 1 ether, bytes32(uint256(1)), 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:203:37
+    │
+203 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:209:32
+    │
+209 │         account.pay(RECIPIENT, 1 ether, 0, bytes32(uint256(1)), END, new bytes(4626));
+    │                                ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:210:37
+    │
+210 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:215:116
+    │
+215 │         (bool success,) = address(account).call(abi.encodeWithSignature("pay(address,uint256,uint256)", RECIPIENT, 1 ether, 0));
+    │                                                                                                                    ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:217:37
+    │
+217 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:222:64
+    │
+222 │         bytes32 dianaDigest = account.invoiceDigest(RECIPIENT, 1 ether, id, 0, END);
+    │                                                                ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:223:44
+    │
+223 │         _mockSignature(account, RECIPIENT, 1 ether, id, 0, END, true);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:225:50
+    │
+225 │         require(account.invoiceDigest(RECIPIENT, 1 ether, id, 0, END) != dianaDigest);
+    │                                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:226:41
+    │
+226 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.WrongChain.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:227:37
+    │
+227 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:232:44
+    │
+232 │         _mockSignature(account, RECIPIENT, 1 ether, id, 0, END, true);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:233:66
+    │
+233 │         DianaPaymentAccount other = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 3);
+    │                                                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:233:75
+    │
+233 │         DianaPaymentAccount other = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 3);
+    │                                                                           ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:233:84
+    │
+233 │         DianaPaymentAccount other = _funded(EXECUTOR, RECIPIENT, 2 ether, 3 ether, 3);
+    │                                                                                    ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:234:39
+    │
+234 │         _expectInvoiceRejected(other, 1 ether, id, 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                       ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:235:35
+    │
+235 │         _assertState(other, 0, 0, 10 ether);
+    │                                   ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:240:44
+    │
+240 │         _mockSignature(account, RECIPIENT, 1 ether, id, 0, END, true);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:241:41
+    │
+241 │         _expectInvoiceRejected(account, 1 ether + 1, id, 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:242:41
+    │
+242 │         _expectInvoiceRejected(account, 1 ether, bytes32(uint256(2)), 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:243:37
+    │
+243 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:248:41
+    │
+248 │         _mockSignature(account, address(0xCAFE), 1 ether, id, 0, END, true);
+    │                                         ━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:248:50
+    │
+248 │         _mockSignature(account, address(0xCAFE), 1 ether, id, 0, END, true);
+    │                                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:249:41
+    │
+249 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:250:37
+    │
+250 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:255:44
+    │
+255 │         _mockSignature(account, RECIPIENT, 1 ether, id, 0, START, true);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:256:41
+    │
+256 │         _expectInvoiceRejected(account, 1 ether, id, 0, START, DianaPaymentAccount.InvalidInvoice.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:257:41
+    │
+257 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:258:37
+    │
+258 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:263:34
+    │
+263 │         _pay(account, RECIPIENT, 1 ether, 0);
+    │                                  ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:264:44
+    │
+264 │         _mockSignature(account, RECIPIENT, 1 ether, id, 1, END, true);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:265:41
+    │
+265 │         _expectInvoiceRejected(account, 1 ether, id, 1, END, DianaPaymentAccount.InvoiceAlreadyPaid.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:266:31
+    │
+266 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:266:43
+    │
+266 │         _assertState(account, 1 ether, 1, 9 ether);
+    │                                           ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:271:41
+    │
+271 │         _expectInvoiceRejected(account, 1 ether, bytes32(uint256(1)), 0, END, DianaPaymentAccount.PqcKeyUnavailable.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:272:37
+    │
+272 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:277:44
+    │
+277 │         _mockSignature(account, RECIPIENT, 1 ether, id, 0, END, true);
+    │                                            ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:279:41
+    │
+279 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.PqcKeyUnavailable.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:281:41
+    │
+281 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.PqcKeyUnavailable.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:283:41
+    │
+283 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.PqcKeyUnavailable.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:284:37
+    │
+284 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:289:63
+    │
+289 │         bytes memory input = _verifyInput(account, RECIPIENT, 1 ether, id, 0, END);
+    │                                                               ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:291:41
+    │
+291 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:295:41
+    │
+295 │         _expectInvoiceRejected(account, 1 ether, id, 0, END, DianaPaymentAccount.InvalidSignature.selector);
+    │                                         ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:296:37
+    │
+296 │         _assertState(account, 0, 0, 10 ether);
+    │                                     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:304:34
+    │
+304 │         vm.deal(address(funded), 10 ether);
+    │                                  ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:311:65
+    │
+311 │         target.pay(recipient, amount, nonce, id, END, new bytes(4627));
+    │                                                                 ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:319:81
+    │
+319 │         target.pay(recipient, amount, nonce, bytes32(nonce + 1), END, new bytes(4627));
+    │                                                                                 ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:327:72
+    │
+327 │         target.pay(RECIPIENT, amount, nonce, id, validUntil, new bytes(4627));
+    │                                                                        ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:334:59
+    │
+334 │             abi.encode(registered, algorithmId, new bytes(2592), possessionProven)
+    │                                                           ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:349:24
+    │
+349 │             (new bytes(2592), new bytes(4627), abi.encodePacked(target.invoiceDigest(recipient, amount, id, nonce, validUntil)))
+    │                        ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ test/DianaPaymentAccount.t.sol:349:41
+    │
+349 │             (new bytes(2592), new bytes(4627), abi.encodePacked(target.invoiceDigest(recipient, amount, id, nonce, validUntil)))
+    │                                         ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+   ╭▸ test/DianaPaymentAccount.t.sol:69:17
+   │
+69 │         require(RECIPIENT.balance == beforeBalance + 2 ether);
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ test/DianaPaymentAccount.t.sol:137:17
+    │
+137 │         require(recipient.balance == 0);
+    │                 ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ test/DianaPaymentAccount.t.sol:142:17
+    │
+142 │         require(recipient.balance == 1 ether);
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ test/DianaPaymentAccount.t.sol:158:17
+    │
+158 │         require(recipient.balance == 1 ether);
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ test/DianaPaymentAccount.t.sol:356:17
+    │
+356 │         require(address(target).balance == balance, "incorrect balance");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:46:30
+   │
+46 │     address public immutable executor;
+   │                              ━━━━━━━━ help: consider using: `EXECUTOR`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:47:38
+   │
+47 │     address payable public immutable recipient;
+   │                                      ━━━━━━━━━ help: consider using: `RECIPIENT`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:48:30
+   │
+48 │     address public immutable invoiceIssuer;
+   │                              ━━━━━━━━━━━━━ help: consider using: `INVOICE_ISSUER`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:49:30
+   │
+49 │     uint256 public immutable maxPerPayment;
+   │                              ━━━━━━━━━━━━━ help: consider using: `MAX_PER_PAYMENT`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:50:30
+   │
+50 │     uint256 public immutable spendingLimit;
+   │                              ━━━━━━━━━━━━━ help: consider using: `SPENDING_LIMIT`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:51:30
+   │
+51 │     uint256 public immutable maxPayments;
+   │                              ━━━━━━━━━━━ help: consider using: `MAX_PAYMENTS`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:52:30
+   │
+52 │     uint256 public immutable startsAt;
+   │                              ━━━━━━━━ help: consider using: `STARTS_AT`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[screaming-snake-case-immutable]: immutables should use SCREAMING_SNAKE_CASE
+   ╭▸ src/DianaPaymentAccount.sol:53:30
+   │
+53 │     uint256 public immutable endsAt;
+   │                              ━━━━━━ help: consider using: `ENDS_AT`
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/screaming-snake-case-immutable
+
+note[low-level-calls]: Low-level calls should be avoided
+    ╭▸ src/DianaPaymentAccount.sol:128:24
+    │
+128 │         (bool sent,) = recipient.call{value: amount}("");
+    │                        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/low-level-calls
+
+note[low-level-calls]: Low-level calls should be avoided
+    ╭▸ src/DianaPaymentAccount.sol:139:13
+    │
+139 │             PQC_KEY_STATUS.staticcall(abi.encodeCall(IQorePQC.pqcKeyStatus, (invoiceIssuer)));
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/low-level-calls
+
+note[low-level-calls]: Low-level calls should be avoided
+    ╭▸ src/DianaPaymentAccount.sol:149:13
+    │
+149 │             PQC_VERIFY.staticcall(abi.encodeCall(IQorePQC.pqcVerify, (publicKey, signature, abi.encodePacked(digest))));
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/low-level-calls
+
+note[multi-contract-file]: prefer having only one contract, interface or library per file
+  ╭▸ src/DianaPaymentAccount.sol:4:11
+  │
+4 │ interface IQorePQC {
+  │           ━━━━━━━━
+  │
+  ╰ help: https://getfoundry.sh/forge/linting/multi-contract-file
+
+note[multi-contract-file]: prefer having only one contract, interface or library per file
+   ╭▸ src/DianaPaymentAccount.sol:17:10
+   │
+17 │ contract DianaPaymentAccount {
+   │          ━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/multi-contract-file
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ src/DianaPaymentAccount.sol:141:47
+    │
+141 │         if (!keyOk || keyResult.length != 5 * 32 + PUBLIC_KEY_BYTES) revert PqcKeyUnavailable();
+    │                                               ━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[literal-instead-of-constant]: this literal appears multiple times in the contract; declare a named constant for it
+    ╭▸ src/DianaPaymentAccount.sol:150:49
+    │
+150 │         if (!verifyOk || verifyResult.length != 32 || !abi.decode(verifyResult, (bool))) {
+    │                                                 ━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/literal-instead-of-constant
+
+note[asm-keccak256]: use of inefficient hashing mechanism; consider using inline assembly
+   ╭▸ src/DianaPaymentAccount.sol:95:16
+   │
+95 │           return keccak256(
+   │ ┏━━━━━━━━━━━━━━━━┛
+96 │ ┃             abi.encode(INVOICE_TYPEHASH, block.chainid, address(this), invoiceIssuer, target, amount, invoiceId, nonce, validUntil)
+97 │ ┃         );
+   │ ┗━━━━━━━━━┛
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/asm-keccak256
+
+warning[reentrancy-eth]: uncapped ETH transfer can be reentered before `paying` is updated
+    ╭▸ src/DianaPaymentAccount.sol:128:24
+    │
+128 │         (bool sent,) = recipient.call{value: amount}("");
+    │                        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-eth
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/DianaPaymentAccount.sol:113:13
+    │
+113 │         if (block.timestamp < startsAt || block.timestamp >= endsAt) revert OutsidePaymentWindow();
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/DianaPaymentAccount.sol:113:43
+    │
+113 │         if (block.timestamp < startsAt || block.timestamp >= endsAt) revert OutsidePaymentWindow();
+    │                                           ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/DianaPaymentAccount.sol:114:40
+    │
+114 │         if (invoiceId == bytes32(0) || block.timestamp >= validUntil) revert InvalidInvoice();
+    │                                        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/DianaPaymentAccount.sol:132:9
+    │
+132 │         emit PaymentExecuted(nonce, recipient, invoiceId, amount);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+note[cyclomatic-complexity]: this function has a cyclomatic complexity above 11; consider splitting it into smaller functions
+    ╭▸ src/DianaPaymentAccount.sol:101:5
+    │
+101 │     function pay(
+    │     ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/cyclomatic-complexity
+

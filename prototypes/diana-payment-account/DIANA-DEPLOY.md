@@ -109,3 +109,7 @@ These ceilings are review guards, not chosen values. The test set (`testConstruc
    - the real deployment gas with the real arguments;
    - that Diana's `eth_call` for a creation returns the runtime code exactly as a standard EVM does (the dry run depends on it);
    - the window's `used_value` accounting after an EVM transaction.
+
+## 7I-2 continuation — 20 November 2026
+
+See [the current deployment package, decision table and pre/post checklist](../../docs/DIANA-DEPLOY-7I2.md). The null live-parameter guard remains. Default PREPARE no longer substitutes test arguments; no real gas/runtime pin is claimed while policy is missing. The existing CLI dispatch is complete behind null/TTY/approval guards; future broadcast saves a separate public PREPARE JSON with --prepare-report, and read-only VERIFY consumes that same file. Canonical compiler/bytecode/immutable pins and receipt/fee/hash validation are enforced. Earlier dated results above are retained.

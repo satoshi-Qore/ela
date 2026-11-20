@@ -1,0 +1,17 @@
+✔ artifact compiler, target, constructor ABI and immutable slot provenance fail closed (48.6085ms)
+✔ public package binds all eight arguments to runtime SHA256 and 7I1 policy without an execution permit (11.3443ms)
+✔ missing, test-only or unreviewed constructor parameters cannot produce a live runtime pin (10.652ms)
+✔ existing deployment CLI retains null and interactive gates without reading records or calling effects (3294.8944ms)
+✔ PREPARE with no approved policy reads current nonce/fees/window but never estimates placeholder deployment (33.7798ms)
+✔ reviewed fixture PREPARE retains all deployment window, gas, fee and policy guards (44.4444ms)
+✔ post-deployment verifier rejects wrong network before receipt/code reads (1.3022ms)
+✔ existing VERIFY CLI parses a retained public PREPARE report and dispatches only read verification (0.4242ms)
+✔ post-deployment VERIFY binds transaction hash, fees, access list and receipt inclusion to the prepared intent (25.153ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5120.8009

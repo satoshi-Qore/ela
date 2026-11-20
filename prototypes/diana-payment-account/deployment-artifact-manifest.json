@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "compiler": "0.8.28+commit.7893614a",
+  "evmVersion": "paris",
+  "sourceKeccak": "0x8e31d4f81d6bfa18c5452fd4715d5865426e217616c661e883f92ac032a8b0e7",
+  "sourceLfSha256": "6c624379080492ca5f9e390265dc1966df49a3dce431326700d78d4c520ea280",
+  "compilerBinarySha256": "76a71001309810aafd0462d9b2f2612bf19b89550c866140edca26e533de06bc",
+  "creationBytecodeSha256": "ce5de4e8fd8693d003e06fb33bbe7da6571f5309fe6c2cf3f911eec3421fc71d",
+  "runtimeTemplateSha256": "0d0c24776f6588c965bda965289697bfc871a1ceb26de750013fdf00d99f493e",
+  "immutableReferencesSha256": "6c86cf2ddf621b827ea25de1416bef312eacc5367c074eade044ea47d8ecaea0"
+}
