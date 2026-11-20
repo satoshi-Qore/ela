@@ -124,16 +124,13 @@ function approvedPolicyContext(params, plan) {
     approvalStatus:approved.approvalStatus,approvalSource:approved.approvalSource,executionAuthorized:false,
     values:Object.fromEntries(Object.entries(approved.parameters).map(([key,value])=>[key,typeof value==='bigint'?value.toString():value])),
     durationSeconds:approved.timing.durationSeconds.toString(),
+    startRule:approved.timing.startRule,startDelaySeconds:approved.timing.startDelaySeconds.toString(),
+    durationApprovalSource:approved.timing.durationApprovalSource,
     dateApprovalStatus:approved.timing.approvalStatus,dateApprovalSource:approved.timing.approvalSource,
     dateApprovalMatches,pendingFields:datesApproved?[]:['startsAt','endsAt'],
   };
 }
-function sameDeploymentDay(start,now) {
-  const maxTimestamp=253402300799n;
-  if(!isUint(start)||start>maxTimestamp||now<0n||now>maxTimestamp)return false;
-  const day=new Intl.DateTimeFormat('en-CA',{timeZone:APPROVED_PAYMENT_POLICY.timing.timeZone,year:'numeric',month:'2-digit',day:'2-digit'});
-  return day.format(Number(start)*1000)===day.format(Number(now)*1000);
-}
+
 const approvedPartialParams=()=>({...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:false,
   startsAt:APPROVED_PAYMENT_POLICY.timing.startsAt,endsAt:APPROVED_PAYMENT_POLICY.timing.endsAt});
 
@@ -159,8 +156,8 @@ export function constructorChecklist(params, { plan = DEPLOY_PLAN, nowSeconds, p
       isUint(p.maxPerPayment) && isUint(p.spendingLimit) && p.maxPerPayment > 0n && p.maxPerPayment <= p.spendingLimit
         && p.spendingLimit <= limits.maxSpendingLimitWei && p.maxPerPayment % WEI_PER_UQOR === 0n && p.spendingLimit % WEI_PER_UQOR === 0n],
     ['maxPayments', 'maxPayments between 1 and ' + limits.maxPayments, isUint(p.maxPayments) && p.maxPayments >= 1n && p.maxPayments <= limits.maxPayments],
-    ['dates', 'startsAt < endsAt; endsAt at least 1 day ahead; at most 1 year long; starts within 30 days',
-      isUint(p.startsAt) && isUint(p.endsAt) && (!policyApproval || (p.endsAt-p.startsAt===APPROVED_PAYMENT_POLICY.timing.durationSeconds && sameDeploymentDay(p.startsAt,now))) && p.startsAt < p.endsAt && p.endsAt >= now + BigInt(limits.minRemainingSeconds)
+    ['dates', policyApproval ? 'Future start; exactly 3600 seconds; at least 3600 seconds remaining; starts within 30 days' : 'startsAt < endsAt; endsAt at least 1 day ahead; at most 1 year long; starts within 30 days',
+      isUint(p.startsAt) && isUint(p.endsAt) && (!policyApproval || (p.endsAt-p.startsAt===APPROVED_PAYMENT_POLICY.timing.durationSeconds && p.startsAt>now && p.startsAt<=253402300799n && now>=0n && now<=253402300799n)) && p.startsAt < p.endsAt && p.endsAt >= now + BigInt(policyApproval ? Math.min(limits.minRemainingSeconds, Number(APPROVED_PAYMENT_POLICY.timing.durationSeconds)) : limits.minRemainingSeconds)
         && p.endsAt - p.startsAt <= BigInt(limits.maxDurationSeconds) && p.startsAt <= now + BigInt(limits.maxStartDelaySeconds)],
   ].map(([id, requirement, ok]) => ({ id, requirement, ok: ok === true }));
   return { items, ready: items.every(i => i.ok), failing: items.filter(i => !i.ok).map(i => i.id), ...(policyApproval ? {policyApproval} : {}) };
@@ -316,9 +313,10 @@ export function deploymentPackage({artifact,params,nonce,plan=DEPLOY_PLAN}) {
   const policyApproval=approvedPolicyContext(params,plan);
   const missing = policyApproval ? policyApproval.pendingFields : ['recipient','maxPerPayment','spendingLimit','maxPayments','startsAt','endsAt'];
   if(!params||params.testOnly===true||params.reviewed!==true) return {...base,status:'blocked',missingApprovals:missing,runtimeSha256:null,readinessConfig:null,...(policyApproval?{policyApproval}:{})};
-  // Structural approval guards stay reproducible even after the policy expires. Live date and
+  // Structural approval guards use a reference 15 minutes before the approved start, not a
+  // chosen deployment time, and stay reproducible after expiry. Live date and
   // recipient-code checks remain mandatory in PREPARE; this package never means readyToSign.
-  const checklist=constructorChecklist(params,{plan,nowSeconds:Number(params.startsAt),predictedAddress:base.predictedContractAddress});
+  const checklist=constructorChecklist(params,{plan,nowSeconds:Number(policyApproval ? params.startsAt-APPROVED_PAYMENT_POLICY.timing.startDelaySeconds : params.startsAt),predictedAddress:base.predictedContractAddress});
   if(checklist.failing.some(id=>id!=='recipient-code'))return {...base,status:'blocked',missingApprovals:policyApproval?policyApproval.pendingFields:checklist.failing.filter(id=>id!=='recipient-code'),runtimeSha256:null,readinessConfig:null,...(policyApproval?{policyApproval}:{})};
   const args=encodeConstructorArgs(params),initcode=artifact.bytecode+args.slice(2),runtime=expectedRuntimeCode(artifact,params);
   const runtimeSha256=hash(runtime);

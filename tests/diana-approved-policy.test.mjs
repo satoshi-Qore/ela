@@ -10,7 +10,7 @@ test('one frozen policy records the explicitly approved fields without authorizi
  assert.equal(p.approvalStatus,'approved');assert.equal(p.executionAuthorized,false);
  assert.deepEqual(p.parameters,{executor:OWNER,invoiceIssuer:OWNER,recipient:RECIPIENT,maxPerPayment:1000000000000000n,spendingLimit:3000000000000000n,maxPayments:3n});
  assert.equal(p.timing.approvalStatus,'pending');assert.equal(p.timing.approvalSource,null);
- assert.equal(p.timing.durationSeconds,604800n);assert.equal(p.timing.startsAt,null);assert.equal(p.timing.endsAt,null);
+ assert.equal(p.timing.durationSeconds,3600n);assert.equal(p.timing.startsAt,null);assert.equal(p.timing.endsAt,null);
  for(const value of [p,p.parameters,p.timing])assert.ok(Object.isFrozen(value));
  assert.throws(()=>{p.parameters.recipient=OWNER;},TypeError);
 });
@@ -26,10 +26,10 @@ test('default deployment package waits only for dates and does not produce a liv
  assert.equal(p.status,'blocked');assert.deepEqual(p.missingApprovals,['startsAt','endsAt']);assert.equal(p.runtimeSha256,null);assert.equal(p.readinessConfig,null);assert.equal(p.executionAuthorized,false);
  assert.equal(p.policyApproval.approvalStatus,'approved');assert.equal(p.policyApproval.values.maxPerPayment,'1000000000000000');
 });
-test('approved seven-day duration is enforced by existing date checks without choosing actual dates',()=>{
+test('approved one-hour duration is enforced by existing date checks without choosing actual dates',()=>{
  // Local fixture dates exercise the rule only; they are never stored in the approved policy.
- const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:1796000000n,endsAt:1796604800n};
- const options={nowSeconds:1796000000,recipientCode:'0x'};
+ const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:1796000000n,endsAt:1796003600n};
+ const options={nowSeconds:1795999100,recipientCode:'0x'};
  assert.equal(constructorChecklist(p,options).items.find(x=>x.id==='dates').ok,true);
  assert.equal(constructorChecklist(p,options).ready,false,'fixture dates are not user-approved exact dates');
  assert.equal(constructorChecklist({...p,endsAt:p.endsAt+1n},options).items.find(x=>x.id==='dates').ok,false);
@@ -85,15 +85,29 @@ test('another network or an unrelated supplied policy cannot inherit the Diana a
  assert.equal(constructorChecklist({...APPROVED_PAYMENT_POLICY.parameters,recipient:OWNER,reviewed:false},options).policyApproval,undefined);
 });
 test('caller reviewed flags cannot attribute exact-date approval to the 7I-3 policy approval',()=>{
- const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:1796000000n,endsAt:1796604800n};
+ const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:1796000000n,endsAt:1796003600n};
  const r=constructorChecklist(p,{nowSeconds:1796000000,recipientCode:'0x'});
  assert.deepEqual(r.policyApproval.pendingFields,['startsAt','endsAt']);assert.equal(r.items.find(x=>x.id==='reviewed').ok,false);
  const pack=deploymentPackage({artifact:artifact(),params:p,nonce:2n});assert.equal(pack.status,'blocked');assert.equal(pack.runtimeSha256,null);
 });
-test('deployment-day eligibility rejects matching seven-day windows starting on another day',()=>{
- for(const offset of [-86400n,86400n]){
+test('future-start requirement rejects matching windows already begun',()=>{
+ for(const offset of [-86400n,0n]){
   const startsAt=1796000000n+offset;
-  const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt,endsAt:startsAt+604800n};
+  const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt,endsAt:startsAt+3600n};
   assert.equal(constructorChecklist(p,{nowSeconds:1796000000,recipientCode:'0x'}).items.find(x=>x.id==='dates').ok,false);
  }
+});
+
+test('one-hour policy can be prepared 15 minutes before start but rejects begun or expired windows',()=>{
+ const start=1796000000n;
+ const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:start,endsAt:start+3600n};
+ const dates=(params,now)=>constructorChecklist(params,{nowSeconds:now,recipientCode:'0x'}).items.find(x=>x.id==='dates').ok;
+ assert.equal(APPROVED_PAYMENT_POLICY.timing.startDelaySeconds,900n);
+ assert.equal(dates(p,Number(start-900n)),true);
+ assert.equal(dates({...p,recipient:'0x4444444444444444444444444444444444444444'},Number(start-900n)),false,'generic policies retain the one-day guard');
+ assert.equal(dates(p,Number(start)),false);
+ assert.equal(dates(p,Number(start+3601n)),false);
+ assert.equal(dates({...p,endsAt:start+604800n},Number(start-900n)),false);
+ assert.equal(dates({...p,endsAt:start+3599n},Number(start-900n)),false);
+ assert.equal(dates({...p,startsAt:start+86400n,endsAt:start+90000n},Number(start-900n)),true,'no obsolete same-calendar-day restriction');
 });

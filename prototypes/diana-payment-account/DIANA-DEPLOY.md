@@ -117,3 +117,7 @@ See [the current deployment package, decision table and pre/post checklist](../.
 ## 7I-3 approval update
 
 The fixed recipient, roles, amounts, count and seven-day duration are now approved in the single trusted [policy configuration](approved-payment-policy.mjs). Earlier pending-policy statements above are historical. Only exact dates remain pending as policy inputs; transaction execution requires separate authority and the live null guard remains. See [7I-3](../../docs/DIANA-POLICY-7I3.md).
+
+### Current one-hour competition policy (supersedes seven-day approval)
+
+The latest explicit user decision replaces the approved duration with 3600 seconds and sets the start rule to 900 seconds after planned deployment. Exact timestamps remain null and need explicit approval. For this matching policy only, the CLI requires a future start, exactly 3600 seconds duration, and at least 3600 seconds remaining instead of the generic one-day guard. Generic policies and historical seven-day fixtures retain their previous limits. The contract is unchanged. See [current policy report](../../docs/DIANA-POLICY-ONE-HOUR.md).
