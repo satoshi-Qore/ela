@@ -429,10 +429,10 @@ test('the web interface runs every command through the session and has no path a
   // verifies signatures locally and has no command path into the session.
   // Changed in 7C-27: web.ts also loads ELA Core (themes and the three Core views) as its own chunk.
   // Like the panel, the Core has no command path: it only reads what web.ts rendered (checked below).
-  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts', './payment/archive.ts']);
+  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts', './payment/archive.ts', './decision/view.ts']);
   // Changed in 7C-36: also the Koherens and Okta views and their shared materials (quantum.ts).
   // Changed in 7C-37: also the restored original Core visual (trace.ts).
-  for (const file of ['src/payment/archive.ts', 'src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
+  for (const file of ['src/decision/view.ts', 'src/decision/history.ts', 'src/payment/archive.ts', 'src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
     const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     for (const name of ['session', 'handleCommand', 'interpretCommand', 'runQuery', 'invokeTool', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'sign(', 'keygen', 'secretKey', 'privateKey']) {
       assert.equal(source.includes(name), false, file + ': ' + name);

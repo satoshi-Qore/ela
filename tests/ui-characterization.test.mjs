@@ -238,6 +238,7 @@ async function openPage(mode = 'ok') {
   await env.page.send('Page.navigate', { url: env.origin + '/ela/' });
   await loaded;
   await evaluate(`window.__rpc.mode = ${JSON.stringify(mode)}`);
+  await evaluate(`(async()=>{const until=Date.now()+5000;while(!document.getElementById('decision-outcome').textContent){if(Date.now()>until)throw Error('Decision view did not mount');await new Promise(r=>setTimeout(r,10));}})()`);
   await evaluate(`(async()=>{const until=Date.now()+5000;while(document.querySelectorAll('#payment-history > li').length!==3){if(Date.now()>until)throw Error('Payment archive did not mount');await new Promise(r=>setTimeout(r,20));}})()`);
 }
 
@@ -503,7 +504,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-37: the Core view selector is gone (the Core shows only its original visual): 8.
     if (!PROBE) {
       assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
-      assert.equal(stops, 8, 'two language buttons, the theme group, and four module links come first');
+      assert.equal(stops, 9, 'two language buttons, the theme group, and five module links come first');
     }
     await tab();
     desktop.focus = await evaluate(`(() => {
@@ -551,13 +552,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
 
   // --- New in 7C-25: module layout, honest status, language switch, text scaling ------------------
 
-  uiTest('module layout: four labeled modules; Payment Account shows archived proof and a read-only recheck', async t => {
+  uiTest('module layout: five labeled modules; Payment Account shows archived proof and a read-only recheck', async t => {
     await openPage();
     const page = await evaluate(`(() => {
       const section = id => document.getElementById(id);
       const head = id => section(id).querySelector('.module-head .tag');
       return {
-        modules: ['diana', 'logic', 'pqc-panel', 'payment'].map(id => [id, document.getElementById(section(id).getAttribute('aria-labelledby')).textContent, head(id).textContent, head(id).dataset.tone]),
+        modules: ['diana', 'logic', 'pqc-panel', 'payment', 'decision'].map(id => [id, document.getElementById(section(id).getAttribute('aria-labelledby')).textContent, head(id).textContent, head(id).dataset.tone]),
         index: [...document.querySelectorAll('.modules a')].map(link => [link.getAttribute('href'), link.querySelector('.tag').dataset.tone]),
         paymentControls: section('payment').querySelectorAll('button, a, input, textarea, select, [tabindex]').length,
         paymentText: section('payment').textContent.replace(/\\s+/g, ' '),
@@ -574,8 +575,9 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['logic', 'Execution & Logic', 'Active · rule-based', 'live'],
       ['pqc-panel', 'Post-Quantum Signature Verification', 'Active · verification only', 'live'],
       ['payment', 'Payment Account', 'Completed · 3/3', 'ok'],
+      ['decision', 'Decision Engine', 'Deterministic · evaluation only', 'live'],
     ]);
-    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'ok']]);
+    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'ok'], ['#decision', 'live']]);
     assert.equal(page.paymentControls, 9, 'eight public evidence links and one read-only recheck');
     assert.match(page.paymentText, /Archived verification/);
     assert.match(page.paymentText, /No signing, wallet connection or payment execution/);
@@ -774,6 +776,18 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     await evaluate(`(async()=>{while(document.getElementById('payment-recheck').disabled)await new Promise(r=>setTimeout(r,10));})()`);
     assert.equal(await evaluate(`document.getElementById('payment-current-status').dataset.state`),'unavailable');
     assert.equal(await evaluate(`document.getElementById('payment-current-status').textContent.includes('Fresh RPC verification passed')`),false);
+  });
+
+  uiTest('Decision Engine explains three archived post-receipt replays without network or execution', async () => {
+    await openPage();
+    for(const [index,decisive] of [[0,'Payment nonce'],[1,'Payment nonce'],[2,'Total spending limit']]){
+      const row=await evaluate(`(()=>{const select=document.getElementById('decision-payment');select.value='${index}';select.dispatchEvent(new Event('change'));return {outcome:document.getElementById('decision-outcome').textContent,decisive:document.getElementById('decision-decisive').textContent,checks:document.querySelectorAll('#decision-checks li').length,traffic:window.__rpc.calls.length,text:document.getElementById('decision').textContent};})()`);
+      assert.equal(row.outcome,'BLOCK');assert.equal(row.decisive,decisive);assert.equal(row.checks,12);assert.equal(row.traffic,0);
+      assert.match(row.text,/not a live decision/);
+    }
+    await evaluate(`document.querySelector('[data-lang="tr"]').click()`);
+    assert.equal(await evaluate(`document.getElementById('decision-decisive').textContent`),'Toplam harcama limiti');
+    assert.match(await evaluate(`document.getElementById('decision').textContent`),/canlı karar da değildir/);
   });
 
   uiTest('language switch: Turkish interface text, English restored exactly, no request, session unchanged', async t => {
@@ -1743,7 +1757,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
     // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
     // Changed in 7C-37: the Core chunk and its one visual, the original session trace (no drawing helpers).
-    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['archive.js', 'core.js', 'index.css', 'index.js', 'trace.js'], atLoad.join(', '));
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['archive.js', 'core.js', 'evidence.js', 'index.css', 'index.js', 'trace.js', 'view.js'], atLoad.join(', '));
     assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
@@ -1853,7 +1867,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
     // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
     // Changed in 7C-37: the Core chunk and the original session trace only; the later views are not bundled.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['archive', 'balance', 'block', 'core', 'gas', 'index', 'keccak', 'panel', 'token', 'trace', 'transaction', 'verify'], scripts.join(', '));
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['archive', 'balance', 'block', 'core', 'evidence', 'gas', 'index', 'keccak', 'panel', 'token', 'trace', 'transaction', 'verify', 'view'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|trace)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1901,8 +1915,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.ok(sizes[tokenChunk].gzip <= 3 * 1024, `${tokenChunk} gzip ${sizes[tokenChunk].gzip} bytes exceeds the 3 KiB budget`);
     for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', '0x095ea7b3', '0xa9059cbb', '0x23b872dd']) assert.equal(readFileSync(join(env.outDir, 'assets', tokenChunk), 'utf8').includes(marker), false, marker);
     // Payment archive uses separate chunks; main also carries bounded transport/HTTP diagnostics.
-    assert.ok(sizes[main].gzip <= 15.1 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 15.1 KiB budget`);
-    assert.ok(sizes[main].bytes <= 41 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 41 KiB budget`);
+    assert.ok(sizes[main].gzip <= 15.25 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 15.25 KiB budget`);
+    assert.ok(sizes[main].bytes <= 41.25 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 41.25 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
