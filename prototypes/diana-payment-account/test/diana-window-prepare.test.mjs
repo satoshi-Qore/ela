@@ -223,6 +223,9 @@ test('the tool cannot touch the vault, a key, or a broadcast route', () => {
     assert.equal(source.includes(forbidden), false, forbidden);
   }
   const imports = [...source.matchAll(/^import [^;]*? from '([^']+)';$/gms)].map(m => m[1]).sort();
-  assert.deepEqual(imports, ['./diana-hybrid-prepare.mjs', '@qorechain/sdk', 'node:crypto', 'node:fs', 'node:path', 'node:url', 'viem']);
+  assert.deepEqual(imports, ['./diana-hybrid-prepare.mjs', './diana-read-retry.mjs', '@qorechain/sdk', 'node:crypto', 'node:fs', 'node:path', 'node:url', 'viem']);
+  const retrySource=readFileSync(new URL('../diana-read-retry.mjs',import.meta.url),'utf8');
+  assert.doesNotMatch(retrySource,/^import\s/m);
+  for(const forbidden of ['ELA-PRIVATE-VAULT','readRecordBytes','privateKey','secretKey','signTransaction','eth_sendRawTransaction','writeFile'])assert.equal(retrySource.includes(forbidden),false,forbidden);
   assert.equal(failureMessage(new Error('HTTP 500 ' + PUBLIC_TEST_MNEMONIC)), 'Prepare stopped');
 });

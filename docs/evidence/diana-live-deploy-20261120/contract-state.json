@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-11-20T19:07:10.957Z",
+  "scope": "read_only",
+  "snapshot": {
+    "number": "10449516",
+    "hash": "0x102b07c2b171bbddd1bab1a3e9e3c3ed16621bf2ed58196c82f90e6cd0bdea08",
+    "timestamp": "1795201625"
+  },
+  "contractAddress": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+  "balanceWei": "0",
+  "policy": {
+    "executor": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "recipient": "0xc9ab55fec7c1fee27f3afc5df99e6a09b4b2d875",
+    "invoiceIssuer": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "maxPerPayment": "1000000000000000",
+    "spendingLimit": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795203000",
+    "endsAt": "1795206600",
+    "totalSpent": "0",
+    "nextNonce": "0"
+  },
+  "runtimeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3",
+  "runtimeBytes": 6039,
+  "windowTransactionHash": "FF3B878096D7F5A73C5D7A5AC733F0AC91CCD50965894ACCED33BC42512A1EB5",
+  "fundingPerformed": false,
+  "paymentsPerformed": false
+}

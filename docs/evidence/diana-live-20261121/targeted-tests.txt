@@ -1,0 +1,70 @@
+✔ one frozen policy records the explicitly approved fields without authorizing execution (2.9938ms)
+✔ default constructor remains disabled despite recorded date approval (2.0964ms)
+✔ null constructor produces no live runtime pin even with approved dates (13.5704ms)
+✔ approved exact one-hour dates pass and incorrect intervals fail (6.2801ms)
+✔ policy approval and even fixture dates cannot unlock the default live constructor or execute effects (2.0921ms)
+✔ default PREPARE reports approved dates and expired schedule without activating constructor (37.3246ms)
+✔ another network or an unrelated supplied policy cannot inherit the Diana approval (0.2028ms)
+✔ caller reviewed flags cannot substitute different dates for the recorded approval (7.6747ms)
+✔ future-start requirement rejects matching windows already begun (0.3157ms)
+✔ one-hour policy can be prepared 15 minutes before start but rejects begun or expired windows (0.573ms)
+✖ approved exact schedule produces public package data without live execution authority (12.2698ms)
+✔ autopay window is three transactions restricted to one contract without raising monetary ceiling (3.7057ms)
+✔ invoice digest is bound to unique invoice, nonce, contract and validity (2.4832ms)
+✔ signed payment envelope cannot change target, value, chain, calldata or gas budget (0.3029ms)
+✔ receipt event must prove exact nonce, invoice, recipient and amount (2.4337ms)
+✔ durable journal survives stale state file and exclusive lock rejects a second worker (14.5916ms)
+✔ indexing lag only permits bounded read-only reconciliation, never a resend (0.2634ms)
+✔ three-use window needs explicit bounded limits and cannot inherit the one-use default (0.6581ms)
+✔ restart preserves a torn journal tail and can durably continue without corruption (13.5601ms)
+✔ canonical zero-value EIP1559 decoding omits value and remains a zero-value call (1.4187ms)
+✔ funding is restricted to the exact contract, value, network, nonce, empty call and fee bounds (1.083ms)
+✔ integer uqor plus independently read aqor fraction must exactly equal EVM wei (0.2902ms)
+✔ 503 read retries are bounded; read success proceeds; no write is retried (19.2206ms)
+✔ JSON RPC read retries do not apply to unknown methods or validation errors (1.5935ms)
+✔ explicit window sequence remains a checked constructor input, not a nonce bypass (1.0625ms)
+✔ creates exactly three stable unique invoices sixty seconds apart (4.5714ms)
+✔ executes only at targets and restart never resends confirmed payments (4.2822ms)
+✔ crash after durable checkpoint reconciles without sending twice (1.4088ms)
+✔ unknown reconciliation blocks later payments (0.6822ms)
+✔ failed reconciliation blocks later payments (0.4719ms)
+✔ expiry and unexpected nonce prevent send (0.6111ms)
+✔ pending confirmation delays next payment without losing sequential order (1.4847ms)
+✔ restart audits confirmed history before any new send (0.4864ms)
+✔ durable uncertain intent is reconciled without rebroadcast (0.5667ms)
+✔ failed durable write prevents broadcast (1.2049ms)
+✔ invalid schedule mutation is rejected before any adapter call (0.3925ms)
+✔ persisted invoice and identity changes cannot silently alter approved plan (0.6701ms)
+✔ late initial preparation cannot compress subsequent sends below sixty seconds (0.9875ms)
+✔ insufficient remaining lifetime for all sixty-second intervals blocks before sending (0.4768ms)
+ℹ tests 39
+ℹ suites 0
+ℹ pass 38
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2019.2033
+
+✖ failing tests:
+
+test at tests\diana-approved-policy.test.mjs:119:1
+✖ approved exact schedule produces public package data without live execution authority (12.2698ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'VALID' !== 'EXPIRED'
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/tests/diana-approved-policy.test.mjs:130:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'VALID',
+    expected: 'EXPIRED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

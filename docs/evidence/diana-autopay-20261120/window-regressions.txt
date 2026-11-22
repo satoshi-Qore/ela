@@ -1,0 +1,12 @@
+✔ missing or wrong confirmations: nothing read or signed without the first, nothing sent without the second (312.7229ms)
+✔ a tampered window, a MsgSend, or wrong keys, fee or sequence are never simulated or sent (619.1639ms)
+✔ BUILD: the intent is the fixed plan within the signing limits, or nothing (5.6644ms)
+✔ the guard: reads, simulation and read-only EVM methods; the broadcast route only when opened, and once (0.9006ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2676.0647

@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-11-20T19:23:19.726Z",
+  "snapshot": {
+    "number": "10450196",
+    "hash": "0x0ce699c2a1677f521d6dcca285ee46e824468112fa0bbb35b921760d89856f6c",
+    "timestamp": "1795202594"
+  },
+  "contract": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+  "balanceWei": "3000000000000000",
+  "policy": {
+    "executor": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "recipient": "0xc9ab55fec7c1fee27f3afc5df99e6a09b4b2d875",
+    "invoiceIssuer": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "maxPerPayment": "1000000000000000",
+    "spendingLimit": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795203000",
+    "endsAt": "1795206600",
+    "totalSpent": "0",
+    "nextNonce": "0"
+  },
+  "receiptBlock": "10450170",
+  "gasUsed": "21055",
+  "fundingFeeWei": "2368687500000000",
+  "windowFeeWei": "52500000000000000",
+  "totalFeesWei": "54868687500000000",
+  "fundingValueWei": "3000000000000000",
+  "fundingBroadcasts": 1,
+  "paymentsExecuted": 0
+}

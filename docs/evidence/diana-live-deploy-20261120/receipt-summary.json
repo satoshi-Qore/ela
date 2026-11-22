@@ -1,0 +1,17 @@
+{
+  "chainId": 9800,
+  "transactionHash": "0xb13841710fac84cb1bbb286707387eca1ae7456a1f21864905cdfd734a7a4fc1",
+  "blockHash": "0x550119af74f104dce2157f89a2bf7a8c8836ce0bef3fed9996130819f925f27a",
+  "blockNumber": "10449464",
+  "status": "0x1",
+  "contractAddress": "0x8a278cf5b0d34cf844cf19c74116e9ddfb7aba9d",
+  "gasUsed": "1365431",
+  "effectiveGasPriceWei": "112500000000",
+  "deploymentFeeWei": "153610987500000000",
+  "deploymentGasLimit": "1710000",
+  "feeCapWei": "150000000000",
+  "windowFeeUqor": "52500",
+  "windowTransactionHash": "FF3B878096D7F5A73C5D7A5AC733F0AC91CCD50965894ACCED33BC42512A1EB5",
+  "windowVerifiedBeforeDeployment": true,
+  "repeatBroadcasts": 0
+}

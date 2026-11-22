@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-11-21T03:31:10.946Z",
+  "active": true,
+  "contract": "0x127dd577174e8829a38AE6885bfe058855C04601",
+  "workerStatus": "running",
+  "snapshot": {
+    "number": "10470664",
+    "hash": "0x87b0ae7877c76411a4e6d600e10ce358a8f158f980e8bd2a4afedf74b2bb362c",
+    "timestamp": "1795231865"
+  },
+  "startsAt": "1795231800",
+  "endsAt": "1795235400",
+  "nextNonce": "0",
+  "totalSpent": "0",
+  "balanceWei": "3000000000000000"
+}

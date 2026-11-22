@@ -1,3 +1,4 @@
+import {withDianaReadRetries} from './diana-read-retry.mjs';
 // Diana Invoice Owner: PREPARE the deployment EVM window (`MsgOpenEVMWindow`) for DianaPaymentAccount.
 // PREPARE ONLY: no key, no recovery record, no vault, no signing code, no broadcast route. It never
 // opens or closes a window and never deploys.
@@ -16,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import { win32 as path } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sdk from '@qorechain/sdk';
-import { encodeAbiParameters, getContractAddress, keccak256, toHex } from 'viem';
+import { encodeAbiParameters, getContractAddress, keccak256, toHex, isAddress } from 'viem';
 import {
   CheckError, PLAN as SELF_SEND_PLAN, PREPARE_FAILURES, classicalKeyHex, feeFor, fetchLiveState, placeholderSimulationTx,
   prepareFailures, simulate, unsignedHybridParts,
@@ -90,7 +91,7 @@ export function guardedFetch(endpoints, fetchImpl = globalThis.fetch) {
 
 export function dianaNetwork(fetchImpl = globalThis.fetch) {
   const { rest, evmRpc } = sdk.NETWORKS.testnet.endpoints;
-  return { rest, evmRpc, fetch: guardedFetch({ rest, evmRpc }, fetchImpl) };
+  return { rest, evmRpc, fetch: guardedFetch({ rest, evmRpc }, withDianaReadRetries(fetchImpl)) };
 }
 
 async function evmCall(network, method, params) {
@@ -152,6 +153,24 @@ function decimalToWei(dec) {
 
 export const weiToUqorCeil = wei => (wei + WEI_PER_UQOR - 1n) / WEI_PER_UQOR;
 
+// Cosmos EVM precisebank keeps sub-uqor units separately. Require an exact sum,
+// never a tolerance or rounded balance comparison (cosmos/evm v0.6.0 query.proto).
+export function preciseBalanceMatches(wei, uqor, fraction) {
+  if(typeof wei!=='bigint'||wei<0n||!/^\d+$/.test(uqor??'')||fraction?.denom!=='aqor'||!/^\d+$/.test(fraction?.amount??''))return false;
+  const remainder=BigInt(fraction.amount);
+  return remainder<WEI_PER_UQOR&&wei===BigInt(uqor)*WEI_PER_UQOR+remainder;
+}
+export async function verifiedBankBalance(network,plan,evm,uqor) {
+  let fraction={denom:'aqor',amount:'0'};
+  if(evm.balanceWei!==BigInt(uqor)*WEI_PER_UQOR){
+    const response=await getJson(network,'/cosmos/evm/precisebank/v1/fractional_balance/'+plan.native);
+    if(response.status!==200)throw new Error('Chain state unreadable');
+    fraction=response.body?.fractional_balance;
+  }
+  if(evm.evmDenom!=='uqor'||evm.extendedDenom!=='aqor'||!preciseBalanceMatches(evm.balanceWei,uqor,fraction))throw new Error('Chain state unreadable');
+  return {wei:evm.balanceWei,fractionWei:fraction.amount};
+}
+
 /** The deployment artifact, refused unless it was compiled from the source in this folder. */
 export function loadArtifact({ artifactPath = ARTIFACT_PATH, sourcePath = SOURCE_PATH, read = readFileSync } = {}) {
   let artifact;
@@ -189,7 +208,11 @@ export function placeholderConstructorArgs(plan, nowSeconds) {
 export function windowParameterFailures(plan, live) {
   const failures = [];
   const integer = n => Number.isSafeInteger(n);
-  if (plan.maxTxs !== 1 || plan.allowedTargets.length !== 0 || plan.nativeOnly !== false
+  const scopeOK=(plan.maxTxs===1&&plan.allowedTargets.length===0)
+    ||(plan.paymentRun===true&&plan.maxTxs===3&&plan.allowedTargets.length===1&&isAddress(plan.paymentContract??'',{strict:false})
+      &&BigInt(plan.paymentContract)>65535n&&plan.allowedTargets[0].toLowerCase()===plan.paymentContract.toLowerCase()
+      &&typeof plan.maxValueUqor==='bigint'&&plan.maxValueUqor<=256500n);
+  if (!scopeOK || plan.nativeOnly !== false
     || !integer(plan.windowBlocks) || plan.windowBlocks <= 0 || BigInt(plan.windowBlocks) > sdk.MAX_EVM_WINDOW_BLOCKS
     || typeof plan.maxValueUqor !== 'bigint' || plan.maxValueUqor <= 0n) {
     failures.push('Invalid window parameters');
@@ -205,6 +228,7 @@ export async function prepareDeploymentWindow({ network, plan = WINDOW_PLAN, wri
   // Cosmos side: chain, account, sequence, classical key, PQC key, sign bytes, gas price.
   const state = await fetchLiveState(plan.native, network);
   const evm = await fetchEvmState(plan, network);
+  const bankBalance = await verifiedBankBalance(network,plan,evm,state.uqor);
 
   // Deployment estimate: the artifact's creation code with placeholder constructor arguments.
   const initcode = artifact.bytecode + placeholderConstructorArgs(plan, now()).slice(2);
@@ -251,7 +275,7 @@ export async function prepareDeploymentWindow({ network, plan = WINDOW_PLAN, wri
     mode: 'prepare', signed: false, broadcast: false, windowOpened: false, deployed: false,
     chainId: plan.chainId, evmChainId: state.evmChainId, account: plan.native, evmAccount: plan.evm,
     accountNumber: state.account.accountNumber, sequence: state.account.sequence, evmNonce: evm.nonce,
-    uqorBalance: state.uqor, unitsConsistent: evm.balanceWei === BigInt(state.uqor) * WEI_PER_UQOR && evm.evmDenom === 'uqor',
+    uqorBalance: state.uqor, fractionalBalanceWei: bankBalance.fractionWei, unitsConsistent: bankBalance.wei === evm.balanceWei,
     pqcAlgorithmId: state.pqc.algorithmId, pqcPublicKeySha256: sha(state.pqc.publicKey), signBytesVersion: state.signBytesVersion,
     existingWindow: { found: evm.window?.found === true, live: evm.window?.live === true },
     window: {

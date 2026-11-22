@@ -1,0 +1,39 @@
+{
+  "txHash": "0x660e22e2ab8e94196cba2d1375feaa982ae81a329353953c9c7014d7b0f55128",
+  "prepared": {
+    "mode": "prepare_funding",
+    "signed": false,
+    "broadcast": false,
+    "approvalSource": "Explicit user funding approval, 2026-11-20: 0.003 QOR to this contract only",
+    "from": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "tx": {
+      "type": "eip1559",
+      "chainId": 9800,
+      "nonce": 5,
+      "to": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+      "value": "3000000000000000",
+      "gas": "27000",
+      "maxFeePerGas": "150000000000",
+      "maxPriorityFeePerGas": "12500000000",
+      "data": "0x",
+      "accessList": []
+    },
+    "balanceBeforeWei": "0",
+    "senderBalanceWei": "99598889012500000000",
+    "classicalPublicKey": "0x02dd7dc82115f566c58b9d756d59cfba54f7b606a2334c63d13850e809195e6d6a",
+    "pqcSha256": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a",
+    "estimate": "21055",
+    "maxCostWei": "7050000000000000",
+    "codeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3",
+    "window": {
+      "found": true,
+      "live": true,
+      "usedTxs": "0",
+      "usedValue": "0",
+      "maxValue": "256500"
+    },
+    "sequence": "5"
+  },
+  "attemptedAt": "2026-11-20T19:22:37.505Z",
+  "note": "Saved before the single attempt. Never automatically retry."
+}

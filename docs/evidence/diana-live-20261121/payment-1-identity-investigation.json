@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-11-21T03:43:14.956Z",
+  "expected": "0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9",
+  "receipt": {
+    "transactionHash": "0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9",
+    "status": "0x1",
+    "blockHash": "0x8abd82ddb82202dffbad78c62406d2fe70eb94854a0e0a83efc77151b1965b44",
+    "blockNumber": "0x9fc6c5"
+  },
+  "tx": {
+    "hash": "0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9",
+    "blockHash": "0x8abd82ddb82202dffbad78c62406d2fe70eb94854a0e0a83efc77151b1965b44",
+    "from": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "to": "0x127dd577174e8829a38ae6885bfe058855c04601",
+    "nonce": "0xd"
+  },
+  "comparisons": {
+    "txExists": true,
+    "receiptHash": true,
+    "txHash": true,
+    "blockHash": true,
+    "from": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "to": "0x127dd577174e8829a38ae6885bfe058855c04601"
+  }
+}

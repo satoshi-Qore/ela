@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-11-21T03:41:20.941Z",
+  "index": 0,
+  "invoiceId": "0x56d0f484240ec532f98142a7d48a84e7e502c7caab1b99bb820308c415ceda80",
+  "txHash": "0x93ad86e777f5afef32f607336586d927c3ecda4d198c3ce3405ae2e5e624569b",
+  "receiptStatus": "0x1",
+  "blockHash": "0x5dc18cb18a32b2f38617061b393140fc15d05f53c5558b3eabf2f62eff93ee7a",
+  "blockNumber": "10471053",
+  "targetAt": 1795232400,
+  "sentAt": 1795232421,
+  "confirmedAt": 1795232421,
+  "balanceWei": "2000000000000000",
+  "nextNonce": "1",
+  "totalSpent": "1000000000000000",
+  "event": {
+    "nonce": "0",
+    "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+    "invoiceId": "0x56d0f484240ec532f98142a7d48a84e7e502c7caab1b99bb820308c415ceda80",
+    "amount": "1000000000000000"
+  }
+}

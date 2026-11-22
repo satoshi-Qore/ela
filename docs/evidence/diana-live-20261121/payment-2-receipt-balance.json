@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-11-21T03:46:21.535Z",
+  "index": 2,
+  "txHash": "0xdc549e462e1946f129d3e8dc800b857a22808f588afc464149827dec8ecb1e4b",
+  "invoiceId": "0x2d42f624d3e366de57092269116e9955f52d633e8ae8972417455262a1f9b720",
+  "targetAt": 1795232520,
+  "sentAt": 1795232698,
+  "confirmedAt": 1795232698,
+  "latenessSeconds": 178,
+  "receiptStatus": "0x1",
+  "blockNumber": "10471247",
+  "blockHash": "0xe8add7ab7dd2beba66dcde1f9c378ce69730d026cb441cca8de4b47b6f80d9d6",
+  "gasUsed": "278783",
+  "gasLimit": "380000",
+  "effectiveGasPriceWei": "112500000000",
+  "feeWei": "31363087500000000",
+  "balanceWei": "0",
+  "nextNonce": "3",
+  "totalSpent": "3000000000000000",
+  "event": {
+    "nonce": "2",
+    "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+    "invoiceId": "0x2d42f624d3e366de57092269116e9955f52d633e8ae8972417455262a1f9b720",
+    "amount": "1000000000000000"
+  }
+}

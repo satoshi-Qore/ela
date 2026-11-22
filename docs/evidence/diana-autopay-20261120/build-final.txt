@@ -1,0 +1,22 @@
+
+> ela@0.1.0 build
+> tsc --noEmit && vite build --outDir .policy-hour-build --emptyOutDir false
+
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+.policy-hour-build/index.html                      62.21 kB │ gzip: 15.74 kB
+.policy-hour-build/assets/index-C4IaQun2.css       53.75 kB │ gzip: 12.52 kB
+.policy-hour-build/assets/trace-uRGNvVHh.js         2.66 kB │ gzip:  1.21 kB
+.policy-hour-build/assets/core-W5WBUR_d.js          3.34 kB │ gzip:  1.60 kB
+.policy-hour-build/assets/gas-QsWkgoHc.js           3.63 kB │ gzip:  1.80 kB
+.policy-hour-build/assets/balance-CuXGFjyy.js       3.69 kB │ gzip:  1.84 kB
+.policy-hour-build/assets/block-CMk-IGNk.js         4.11 kB │ gzip:  1.93 kB
+.policy-hour-build/assets/transaction-BQB8YPGo.js   4.51 kB │ gzip:  1.97 kB
+.policy-hour-build/assets/token-CyeEdSS1.js         6.14 kB │ gzip:  2.93 kB
+.policy-hour-build/assets/index-qR0wPPto.js        40.83 kB │ gzip: 15.05 kB
+.policy-hour-build/assets/panel-BLBP1R-T.js        49.09 kB │ gzip: 21.93 kB
+
+✓ built in 119ms

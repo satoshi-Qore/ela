@@ -9,11 +9,11 @@ test('one frozen policy records the explicitly approved fields without authorizi
  const p=APPROVED_PAYMENT_POLICY;
  assert.equal(p.approvalStatus,'approved');assert.equal(p.executionAuthorized,false);
  assert.deepEqual(p.parameters,{executor:OWNER,invoiceIssuer:OWNER,recipient:RECIPIENT,maxPerPayment:1000000000000000n,spendingLimit:3000000000000000n,maxPayments:3n});
- assert.equal(p.timing.approvalStatus,'approved');assert.match(p.timing.approvalSource,/2026-11-20/);
- assert.equal(p.timing.plannedDeploymentAt,1795199400n);assert.equal(p.timing.startsAt-p.timing.plannedDeploymentAt,900n);
+ assert.equal(p.timing.approvalStatus,'approved');assert.match(p.timing.approvalSource,/2026-11-21/);
+ assert.equal(p.timing.plannedDeploymentAt,1795230900n);assert.equal(p.timing.startsAt-p.timing.plannedDeploymentAt,900n);
  assert.equal(p.timing.endsAt-p.timing.startsAt,3600n);
- for(const [value,iso] of [[p.timing.plannedDeploymentAt,'2026-11-20T18:30:00.000Z'],[p.timing.startsAt,'2026-11-20T18:45:00.000Z'],[p.timing.endsAt,'2026-11-20T19:45:00.000Z']])assert.equal(new Date(Number(value)*1000).toISOString(),iso);
- assert.equal(p.timing.durationSeconds,3600n);assert.equal(p.timing.startsAt,1795200300n);assert.equal(p.timing.endsAt,1795203900n);
+ for(const [value,iso] of [[p.timing.plannedDeploymentAt,'2026-11-21T03:15:00.000Z'],[p.timing.startsAt,'2026-11-21T03:30:00.000Z'],[p.timing.endsAt,'2026-11-21T04:30:00.000Z']])assert.equal(new Date(Number(value)*1000).toISOString(),iso);
+ assert.equal(p.timing.durationSeconds,3600n);assert.equal(p.timing.startsAt,1795231800n);assert.equal(p.timing.endsAt,1795235400n);
  for(const value of [p,p.parameters,p.timing])assert.ok(Object.isFrozen(value));
  assert.throws(()=>{p.parameters.recipient=OWNER;},TypeError);
 });
@@ -31,13 +31,13 @@ test('null constructor produces no live runtime pin even with approved dates',()
 });
 test('approved exact one-hour dates pass and incorrect intervals fail',()=>{
  // Use the exact user-approved schedule; the CLI execution lock remains separate.
- const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:1795200300n,endsAt:1795203900n};
- const options={nowSeconds:1795199300,recipientCode:'0x'};
+ const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:1795231800n,endsAt:1795235400n};
+ const options={nowSeconds:1795230800,recipientCode:'0x'};
  assert.equal(constructorChecklist(p,options).items.find(x=>x.id==='dates').ok,true);
  assert.equal(constructorChecklist(p,options).ready,true,'only the recorded approved dates match');
  assert.equal(constructorChecklist({...p,endsAt:p.endsAt+1n},options).items.find(x=>x.id==='dates').ok,false);
  assert.equal(deploymentPackage({artifact:artifact(),params:{...p,endsAt:p.endsAt+1n},nonce:2n}).status,'blocked');
- assert.equal(APPROVED_PAYMENT_POLICY.timing.startsAt,1795200300n);
+ assert.equal(APPROVED_PAYMENT_POLICY.timing.startsAt,1795231800n);
 });
 test('policy approval and even fixture dates cannot unlock the default live constructor or execute effects',async()=>{
  assert.equal(LIVE_CONSTRUCTOR_PARAMS,null);let calls=0;
@@ -75,7 +75,7 @@ test('default PREPARE reports approved dates and expired schedule without activa
  const r=await prepareDeployment({network,params:LIVE_CONSTRUCTOR_PARAMS,artifact:artifact(),now:()=>{assert.ok(calls.some(x=>x.method==='eth_getCode'),'clock checked after network reads');return 1796000000;}});
  assert.equal(r.readyToSign,false);assert.equal(r.scheduleStatus,'EXPIRED');assert.equal(r.executionAuthorized,false);assert.equal(r.constructor.policyApproval.approvalStatus,'approved');
  assert.equal(r.constructor.values.recipient,RECIPIENT);assert.equal(r.constructor.values.maxPerPayment,'1000000000000000');
- assert.equal(r.constructor.values.startsAt,'1795200300');assert.equal(r.constructor.values.endsAt,'1795203900');
+ assert.equal(r.constructor.values.startsAt,'1795231800');assert.equal(r.constructor.values.endsAt,'1795235400');
  assert.deepEqual(r.constructor.failing,['reviewed','dates']);assert.deepEqual(r.deploymentPackage.missingApprovals,[]);
  assert.equal(r.tx.initcodeKeccak,null);assert.equal(r.tx.gasEstimate,null);
  assert.equal(calls.some(x=>x.method==='eth_estimateGas'),false);
@@ -102,7 +102,7 @@ test('future-start requirement rejects matching windows already begun',()=>{
 });
 
 test('one-hour policy can be prepared 15 minutes before start but rejects begun or expired windows',()=>{
- const start=1795200300n;
+ const start=1795231800n;
  const p={...APPROVED_PAYMENT_POLICY.parameters,testOnly:false,reviewed:true,startsAt:start,endsAt:start+3600n};
  const dates=(params,now)=>constructorChecklist(params,{nowSeconds:now,recipientCode:'0x'}).items.find(x=>x.id==='dates').ok;
  assert.equal(APPROVED_PAYMENT_POLICY.timing.startDelaySeconds,900n);
@@ -123,11 +123,11 @@ test('approved exact schedule produces public package data without live executio
  assert.equal(pack.status,'public_data_only');assert.match(pack.runtimeSha256,/^[a-f0-9]{64}$/);
  assert.equal(pack.executionAuthorized,false);assert.equal(LIVE_CONSTRUCTOR_PARAMS,null);
  const wrongDelay={...params,startsAt:t.startsAt+1n,endsAt:t.endsAt+1n};
- assert.equal(constructorChecklist(wrongDelay,{nowSeconds:1795199300,recipientCode:'0x'}).items.find(x=>x.id==='dates').ok,false);
+ assert.equal(constructorChecklist(wrongDelay,{nowSeconds:1795230800,recipientCode:'0x'}).items.find(x=>x.id==='dates').ok,false);
  assert.equal(deploymentPackage({artifact:artifact(),params:wrongDelay,nonce:2n}).status,'blocked');
- for(const nowSeconds of [1795199400,1795200300,1795203901]){
+ for(const nowSeconds of [Number(t.plannedDeploymentAt),Number(t.startsAt),Number(t.endsAt+1n)]){
   const c=constructorChecklist(params,{nowSeconds,recipientCode:'0x'});
   assert.equal(c.scheduleStatus,'EXPIRED');assert.equal(c.ready,false);
  }
- assert.equal(constructorChecklist(params,{nowSeconds:1795199399,recipientCode:'0x'}).scheduleStatus,'VALID');
+ assert.equal(constructorChecklist(params,{nowSeconds:1795230899,recipientCode:'0x'}).scheduleStatus,'VALID');
 });

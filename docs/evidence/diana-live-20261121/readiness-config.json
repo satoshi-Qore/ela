@@ -1,0 +1,18 @@
+{
+  "contractAddress": "0x127dd577174e8829a38AE6885bfe058855C04601",
+  "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+  "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+  "expectedRuntimeSha256": "dde7b91ee1570fc0b22b323f956058d3cc35e182a176c45b837d549ca0478c19",
+  "pqcKeySha256": {
+    "executor": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a",
+    "invoiceIssuer": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a"
+  },
+  "policy": {
+    "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+    "maxPerPaymentWei": "1000000000000000",
+    "spendingLimitWei": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795231800",
+    "endsAt": "1795235400"
+  }
+}

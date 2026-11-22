@@ -1,3 +1,4 @@
+import {withDianaReadRetries} from './diana-read-retry.mjs';
 // Diana Invoice Owner: hybrid-signed (classical ECDSA + ML-DSA-87, v2) `MsgOpenEVMWindow` for the
 // one-transaction deployment window PREPAREd in 7C-22 (diana-window-prepare.mjs).
 //
@@ -42,7 +43,7 @@ import {
 } from './diana-hybrid-sign.mjs';
 import { INVOICE_OWNER, RECORD_PATH, readRecordBytes } from './diana-verify-recovery.mjs';
 import {
-  WINDOW_PLAN, WindowCheckError, dianaNetwork as prepareNetwork, failureMessage as prepareFailureMessage, loadArtifact, prepareDeploymentWindow,
+  WINDOW_PLAN, WindowCheckError, dianaNetwork as prepareNetwork, failureMessage as prepareFailureMessage, loadArtifact, prepareDeploymentWindow, windowParameterFailures,
 } from './diana-window-prepare.mjs';
 
 const { PQCHybridSignature } = sdk.qorechainTypes.pqcHybrid;
@@ -146,7 +147,7 @@ export function windowGuardedFetch(endpoints, { allowBroadcast = () => false, fe
 export function dianaWindowNetwork(fetchImpl = globalThis.fetch) {
   const { rest, evmRpc } = sdk.NETWORKS.testnet.endpoints;
   const allowBroadcast = { value: false };
-  return { rest, evmRpc, allowBroadcast, fetch: windowGuardedFetch({ rest, evmRpc }, { allowBroadcast: () => allowBroadcast.value, fetchImpl }) };
+  return { rest, evmRpc, allowBroadcast, fetch: windowGuardedFetch({ rest, evmRpc }, { allowBroadcast: () => allowBroadcast.value, fetchImpl:withDianaReadRetries(fetchImpl) }) };
 }
 
 /**
@@ -160,7 +161,7 @@ export function stateFingerprint(report) {
   const d = report.deployment ?? {};
   return JSON.stringify([
     report.chainId, report.evmChainId, report.account, report.evmAccount, report.accountNumber, report.sequence, report.evmNonce,
-    report.uqorBalance, report.unitsConsistent, report.pqcAlgorithmId, report.pqcPublicKeySha256, report.signBytesVersion,
+    report.uqorBalance, report.fractionalBalanceWei, report.unitsConsistent, report.pqcAlgorithmId, report.pqcPublicKeySha256, report.signBytesVersion,
     report.existingWindow?.found, report.existingWindow?.live,
     w.typeUrl, w.sender, w.blocks, w.maxTxs, w.maxValueUqor, w.nativeOnly, w.allowedTargets,
     c.b0Sha256, c.authInfoSha256, c.pqcSignBytesSha256, c.gasLimit, c.gasPrice, c.feeCeiling,
@@ -177,7 +178,7 @@ export function windowMessage(plan) {
 export function expectedWindowValue(plan) {
   return {
     sender: plan.native, blocks: String(plan.windowBlocks), maxTxs: String(plan.maxTxs), maxValue: String(plan.maxValueUqor),
-    nativeOnly: false, allowedTargets: [], validators: [], stakingValidators: [], ibcReceivers: [],
+    nativeOnly: false, allowedTargets: [...plan.allowedTargets], validators: [], stakingValidators: [], ibcReceivers: [],
   };
 }
 
@@ -196,7 +197,8 @@ export function windowIntent(prepared, plan = WINDOW_PLAN, limits = SIGNING_LIMI
     && plan.windowBlocks === limits.windowBlocks && w.blocks === String(limits.windowBlocks)
     && plan.maxTxs === limits.maxTxs && w.maxTxs === String(limits.maxTxs)
     && plan.nativeOnly === false && w.nativeOnly === false
-    && plan.allowedTargets.length === 0 && Array.isArray(w.allowedTargets) && w.allowedTargets.length === 0
+    && scopeMatches(w.allowedTargets,plan.allowedTargets)
+    && windowParameterFailures({...plan,maxValueUqor:1n},{secondsPerBlock:1}).length===0
     && prepared.chainId === plan.chainId && prepared.evmChainId === plan.evmChainId
     && prepared.account === plan.native && prepared.evmAccount === plan.evm
     && prepared.accountNumber === plan.accountNumber && prepared.sequence === plan.sequence && prepared.evmNonce === plan.sequence
@@ -204,7 +206,7 @@ export function windowIntent(prepared, plan = WINDOW_PLAN, limits = SIGNING_LIMI
     && prepared.unitsConsistent === true && prepared.existingWindow?.live === false
     && prepared.cosmosTx?.gasFitsWithHeadroom === true && prepared.cosmosTx.feeCeiling === fee + plan.denom;
   if (!matches) throw new Error('Window intent does not match the plan');
-  if (maxValue <= 0n || maxValue > limits.maxWindowValueUqor || maxValue * WEI_PER_UQOR < BigInt(prepared.deployment?.maxCostWei ?? -1)) {
+  if (maxValue <= 0n || (plan.paymentRun===true&&maxValue>256500n) || maxValue > limits.maxWindowValueUqor || maxValue * WEI_PER_UQOR < BigInt(prepared.deployment?.maxCostWei ?? -1)) {
     throw new Error('Window value above the signing limit');
   }
   if (plan.gasLimit > limits.maxGasLimit || fee > limits.maxFeeUqor) throw new Error('Fee above the signing limit');
@@ -224,7 +226,7 @@ export function windowMessageFailures(messages, plan, registry = sdk.qorechainRe
   const expected = expectedWindowValue(plan);
   if (decoded.sender !== expected.sender) failures.push('Wrong window sender');
   if (decoded.blocks !== expected.blocks || decoded.maxTxs !== expected.maxTxs || decoded.maxValue !== expected.maxValue) failures.push('Wrong window bounds');
-  if (decoded.nativeOnly !== false || decoded.allowedTargets.length || decoded.validators.length || decoded.stakingValidators.length || decoded.ibcReceivers.length) {
+  if (decoded.nativeOnly !== false || !scopeMatches(decoded.allowedTargets,plan.allowedTargets) || decoded.validators.length || decoded.stakingValidators.length || decoded.ibcReceivers.length) {
     failures.push('Wrong window scope');
   }
   if (!failures.length && !sameBytes(messages[0].value, registry.encodeAsAny(windowMessage(plan)).value)) failures.push('Wrong window encoding');
@@ -480,6 +482,7 @@ async function getJson(network, route) {
     throw new Error('Chain state unreadable');
   }
 }
+const scopeMatches=(actual,expected=[])=>JSON.stringify((actual??[]).map(x=>x.toLowerCase()))===JSON.stringify(expected.map(x=>x.toLowerCase()));
 const isEmpty = v => v === undefined || v === null || (Array.isArray(v) && v.length === 0);
 
 /**
@@ -504,7 +507,7 @@ export async function verifyOpenedWindow({ network, txHash, plan = WINDOW_PLAN, 
   if (msgs.length !== 1 || m['@type'] !== OPEN_WINDOW_TYPE_URL || m.sender !== plan.native || String(m.blocks) !== String(plan.windowBlocks)
     || String(m.max_txs) !== String(plan.maxTxs) || maxValue <= 0n || maxValue > limits.maxWindowValueUqor
     || (plan.maxValueUqor !== undefined && maxValue !== BigInt(plan.maxValueUqor))
-    || m.native_only === true || !isEmpty(m.allowed_targets) || !isEmpty(m.validators) || !isEmpty(m.staking_validators) || !isEmpty(m.ibc_receivers)
+    || m.native_only === true || !scopeMatches(m.allowed_targets,plan.allowedTargets) || !isEmpty(m.validators) || !isEmpty(m.staking_validators) || !isEmpty(m.ibc_receivers)
     || (body?.extension_options ?? []).length !== 1 || body.extension_options[0]['@type'] !== sdk.HYBRID_SIG_TYPE_URL) {
     fail('Transaction is not the planned window');
   }
@@ -541,7 +544,7 @@ export async function verifyOpenedWindow({ network, txHash, plan = WINDOW_PLAN, 
     if (big(w.expiry_height) - big(w.opened_height) !== BigInt(plan.windowBlocks)) fail('Window length differs from the plan');
     if (big(w.max_txs) !== BigInt(plan.maxTxs) || big(w.max_value) !== maxValue) fail('Window bounds differ from the plan');
     if (big(w.used_txs) !== 0n || big(w.used_value) !== 0n || big(w.remaining_txs) !== BigInt(plan.maxTxs) || big(w.remaining_value) !== maxValue) fail('Window already used');
-    if (w.native_only === true || !isEmpty(w.allowed_targets)) fail('Window scope differs from the plan');
+    if (w.native_only === true || !scopeMatches(w.allowed_targets,plan.allowedTargets)) fail('Window scope differs from the plan');
   }
   let balanceAfter;
   if (before !== undefined) {
@@ -567,6 +570,11 @@ export function failureMessage(error) {
 }
 
 export function parseArgs(args) {
+  if(args.includes('--sequence')){
+    const index=args.indexOf('--sequence'),value=args[index+1];
+    if(index!==args.length-2||!/^\d+$/.test(value??'')||BigInt(value)>BigInt(Number.MAX_SAFE_INTEGER))throw new Error('Unknown option');
+    return {...parseArgs(args.slice(0,index)),sequence:BigInt(value).toString()};
+  }
   if (args.length === 0) return { mode: 'prepare' };
   if (args.length === 1 && args[0] === '--sign-and-verify-local') return { mode: 'local' };
   if (args.length === 1 && args[0] === '--broadcast') return { mode: 'broadcast' };
@@ -577,14 +585,15 @@ export function parseArgs(args) {
 const writeReport = report => process.stdout.write(JSON.stringify(report, (k, v) => typeof v === 'bigint' ? v.toString() : v, 2) + '\n');
 
 async function main() {
-  const { mode, txHash } = parseArgs(process.argv.slice(2));
+  const { mode, txHash, sequence } = parseArgs(process.argv.slice(2));
+  const plan=sequence===undefined?WINDOW_PLAN:Object.freeze({...WINDOW_PLAN,sequence});
   if (mode === 'prepare') {
     // PREPARE: the 7C-22 guard, which has no broadcast route at all.
-    await prepareDeploymentWindow({ network: prepareNetwork(), write: writeReport });
+    await prepareDeploymentWindow({ network: prepareNetwork(), plan, write: writeReport });
     return;
   }
   if (mode === 'verify') {
-    const result = await verifyOpenedWindow({ network: prepareNetwork(), txHash });
+    const result = await verifyOpenedWindow({ network: prepareNetwork(), txHash, plan });
     writeReport(result);
     if (!result.verified) process.exitCode = 1;
     return;
@@ -600,7 +609,7 @@ async function main() {
         : 'Two typed confirmations: one naming the window, before signing; one naming the transaction hash, before the single broadcast.\n')
       + 'Only public values are shown.\n');
     await (mode === 'local' ? runWindowSignLocal : runWindowBroadcast)({
-      network: mode === 'local' ? prepareNetwork() : dianaWindowNetwork(),
+      network: mode === 'local' ? prepareNetwork() : dianaWindowNetwork(), plan,
       readRecord: () => readRecordBytes(RECORD_PATH),
       confirm: async phrase => (await prompt.question('\n*** Type ' + phrase + ' to continue, anything else stops: ')).trim(),
       write: writeReport,

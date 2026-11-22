@@ -238,6 +238,7 @@ async function openPage(mode = 'ok') {
   await env.page.send('Page.navigate', { url: env.origin + '/ela/' });
   await loaded;
   await evaluate(`window.__rpc.mode = ${JSON.stringify(mode)}`);
+  await evaluate(`(async()=>{const until=Date.now()+5000;while(document.querySelectorAll('#payment-history > li').length!==3){if(Date.now()>until)throw Error('Payment archive did not mount');await new Promise(r=>setTimeout(r,20));}})()`);
 }
 
 const setMode = mode => evaluate(`window.__rpc.mode = ${JSON.stringify(mode)}`);
@@ -550,7 +551,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
 
   // --- New in 7C-25: module layout, honest status, language switch, text scaling ------------------
 
-  uiTest('module layout: four labeled modules; Payment Account is preparation only and has no controls', async t => {
+  uiTest('module layout: four labeled modules; Payment Account shows archived proof and a read-only recheck', async t => {
     await openPage();
     const page = await evaluate(`(() => {
       const section = id => document.getElementById(id);
@@ -572,13 +573,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['diana', 'Diana Network', 'On-demand read', 'live'],
       ['logic', 'Execution & Logic', 'Active · rule-based', 'live'],
       ['pqc-panel', 'Post-Quantum Signature Verification', 'Active · verification only', 'live'],
-      ['payment', 'Payment Account', 'Preparation · not connected', 'prep'],
+      ['payment', 'Payment Account', 'Completed · 3/3', 'ok'],
     ]);
-    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'prep']]);
-    assert.equal(page.paymentControls, 0, 'the unconnected module offers no control that could look working');
-    assert.match(page.paymentText, /Not in this interface/);
-    assert.match(page.paymentText, /No payment, signature, or deployment can be started from this page\./);
-    assert.deepEqual(page.links, []);
+    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'ok']]);
+    assert.equal(page.paymentControls, 9, 'eight public evidence links and one read-only recheck');
+    assert.match(page.paymentText, /Archived verification/);
+    assert.match(page.paymentText, /No signing, wallet connection or payment execution/);
+    assert.equal(page.links.length, 8); assert.ok(page.links.every(([href,target]) => href.startsWith('https://') && target === '_blank'));
     // No value is shown before a query runs: no placeholder numbers and no assumed network state.
     assert.deepEqual(page.readout, ['—', '—', '—', '—']);
     assert.equal(page.endpoint, 'evm-testnet.qore.host');
@@ -696,20 +697,27 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.deepEqual(seen.longSignature, { result: 'invalid', gauges: ['exact', 'over'], seal: red });
   });
 
-  uiTest('Payment Account diagram: preparation only, no amounts, no address, no control', async t => {
+  uiTest('Payment Account completed evidence: ordered hashes, times, bilingual proof and no activity animation', async () => {
     await openPage();
-    const schema = await evaluate(`(() => {
-      const figure = document.querySelector('#payment .schema');
-      return {
-        caption: figure.querySelector('figcaption').textContent,
-        rules: figure.querySelectorAll('.rules li').length,
-        numbers: (figure.textContent.match(/\\d+/g) || []),
-        addresses: /0x[0-9a-f]{6,}|qor1/i.test(document.getElementById('payment').textContent),
-        controls: figure.querySelectorAll('button, a, input, select, textarea, [tabindex]').length,
-      };
-    })()`);
-    if (PROBE) { t.diagnostic(JSON.stringify(schema)); return; }
-    assert.deepEqual(schema, { caption: 'Planned contract architecture · preparation', rules: 6, numbers: ['9800'], addresses: false, controls: 0 });
+    const archive = await evaluate(`(() => ({
+      rows:[...document.querySelectorAll('#payment-history > li')].map(li=>({nonce:li.dataset.nonce,hash:li.querySelector('a').textContent,times:[...li.querySelectorAll('time')].map(t=>t.textContent),proof:li.querySelector('.payment-proof').textContent})),
+      current:document.getElementById('payment-current-status').textContent,
+      moving:[...document.querySelectorAll('#payment *')].filter(e=>getComputedStyle(e).animationName!=='none').length
+    }))()`);
+    const evidence=JSON.parse(readFileSync(join(ROOT,'src/payment/evidence.json'),'utf8'));
+    assert.deepEqual(archive.rows.map(r=>r.hash),evidence.payments.map(p=>p.txHash));
+    assert.deepEqual(archive.rows.map(r=>r.nonce),['0','1','2']);
+    assert.deepEqual(archive.rows.map(r=>r.times),[['06:40:00','06:40:21','06:40:21'],['06:41:00','06:41:42','06:41:41'],['06:42:00','06:44:58','06:44:58']]);
+    assert.ok(archive.rows.every(r=>r.proof==='Receipt 0x1 · PaymentExecuted verified'));
+    assert.match(archive.current,/Not checked/);assert.equal(archive.moving,0);
+    await evaluate(`document.querySelector('[data-lang="tr"]').click()`);
+    assert.match(await evaluate(`document.getElementById('payment-history').textContent`),/PaymentExecuted doğrulandı/);
+    assert.equal(await evaluate(`document.getElementById('payment-total').textContent`),'0,003 QOR');
+    await evaluate(`document.querySelector('[data-lang="en"]').click()`);
+    await evaluate(`window.fetch=async()=>new Response('',{status:503});document.getElementById('payment-recheck').click()`);
+    await evaluate(`(async()=>{while(document.getElementById('payment-recheck').disabled)await new Promise(r=>setTimeout(r,20));})()`);
+    assert.equal(await evaluate(`document.getElementById('payment-current-status').dataset.state`),'unavailable');
+    assert.equal(await evaluate(`document.querySelectorAll('.payment-proof').length`),3);
   });
 
   uiTest('language switch: Turkish interface text, English restored exactly, no request, session unchanged', async t => {
@@ -1679,7 +1687,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
     // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
     // Changed in 7C-37: the Core chunk and its one visual, the original session trace (no drawing helpers).
-    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['core.js', 'index.css', 'index.js', 'trace.js'], atLoad.join(', '));
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['archive.js', 'core.js', 'index.css', 'index.js', 'trace.js'], atLoad.join(', '));
     assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
@@ -1789,7 +1797,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
     // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
     // Changed in 7C-37: the Core chunk and the original session trace only; the later views are not bundled.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['balance', 'block', 'core', 'gas', 'index', 'panel', 'token', 'trace', 'transaction'], scripts.join(', '));
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['archive', 'balance', 'block', 'core', 'gas', 'index', 'keccak', 'panel', 'token', 'trace', 'transaction', 'verify'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|trace)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1836,8 +1844,9 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const tokenChunk = scripts.find(name => name.startsWith('token-'));
     assert.ok(sizes[tokenChunk].gzip <= 3 * 1024, `${tokenChunk} gzip ${sizes[tokenChunk].gzip} bytes exceeds the 3 KiB budget`);
     for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', '0x095ea7b3', '0xa9059cbb', '0x23b872dd']) assert.equal(readFileSync(join(env.outDir, 'assets', tokenChunk), 'utf8').includes(marker), false, marker);
-    assert.ok(sizes[main].gzip <= 14.75 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.75 KiB budget`);
-    assert.ok(sizes[main].bytes <= 40 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 40 KiB budget`);
+    // Payment archive uses separate chunks; only its lazy mount adds to the main budget.
+    assert.ok(sizes[main].gzip <= 14.9 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.9 KiB budget`);
+    assert.ok(sizes[main].bytes <= 40.25 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 40.25 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');

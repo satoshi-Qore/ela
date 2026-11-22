@@ -1,0 +1,299 @@
+{
+  "mode": "prepare",
+  "signed": false,
+  "broadcast": false,
+  "deployed": false,
+  "executionAuthorized": false,
+  "scheduleStatus": "VALID",
+  "readyToSign": true,
+  "blockers": [],
+  "checks": [
+    {
+      "id": "chain",
+      "requirement": "Cosmos chain qorechain-diana, EVM chain ID 9800",
+      "ok": true
+    },
+    {
+      "id": "deployer",
+      "requirement": "Deployer is the Invoice Owner (account 16046, on-chain eth_secp256k1 key of 0x6a5d4D7B3357df968b2A3004071eCe98f015C794)",
+      "ok": true
+    },
+    {
+      "id": "pqc",
+      "requirement": "Registered ML-DSA-87 key is the expected key",
+      "ok": true
+    },
+    {
+      "id": "window-live",
+      "requirement": "Window found and live, at least 30 blocks left",
+      "ok": true
+    },
+    {
+      "id": "window-unused",
+      "requirement": "Window unused (0 transactions, 0 value)",
+      "ok": true
+    },
+    {
+      "id": "window-untargeted",
+      "requirement": "Window has no allowedTargets and is not native-only (contract creation allowed)",
+      "ok": true
+    },
+    {
+      "id": "window-bounds",
+      "requirement": "Window maxTxs 1; maxValue at most 300000 uqor and covering the deployment",
+      "ok": true
+    },
+    {
+      "id": "nonce",
+      "requirement": "EVM nonce read live: latest = pending = Cosmos sequence",
+      "ok": true
+    },
+    {
+      "id": "gas",
+      "requirement": "Deployment estimate succeeded; gas limit within 1710000 and the chain EVM cap",
+      "ok": true
+    },
+    {
+      "id": "fee-cap",
+      "requirement": "maxFeePerGas 150000000000 wei >= live gas price and base fee; priority fee <= fee cap",
+      "ok": true
+    },
+    {
+      "id": "balance",
+      "requirement": "Balance covers value + gas limit x fee cap",
+      "ok": true
+    },
+    {
+      "id": "units",
+      "requirement": "EVM denom uqor, 1 uqor = 10^12 wei (balances agree)",
+      "ok": true
+    },
+    {
+      "id": "artifact",
+      "requirement": "Artifact compiled from src/DianaPaymentAccount.sol (source hash 0x8e31d4f8...)",
+      "ok": true
+    },
+    {
+      "id": "address-free",
+      "requirement": "No code at the predicted contract address",
+      "ok": true
+    },
+    {
+      "id": "constructor",
+      "requirement": "Live constructor parameters chosen and every checklist item passes",
+      "ok": true
+    }
+  ],
+  "signingFormat": "EVM EIP-1559 (type 2), secp256k1 over keccak256(0x02 || rlp(fields)), chain ID 9800. Not a Cosmos SignDoc; no PQC signature in the EVM transaction.",
+  "tx": {
+    "type": "eip1559",
+    "chainId": 9800,
+    "from": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "to": null,
+    "nonce": "3",
+    "value": "0",
+    "gasEstimate": "1365431",
+    "gas": "1710000",
+    "maxFeePerGas": "150000000000",
+    "maxPriorityFeePerGas": "12500000000",
+    "initcodeBytes": 7444,
+    "initcodeKeccak": "0x2f4f44fa09350695a68fa631f58d971f75b14de8d3372a4ec33453269246ab1f",
+    "maxCostWei": "256500000000000000",
+    "windowCostUqor": "256500"
+  },
+  "predictedContractAddress": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+  "live": {
+    "sequence": "3",
+    "evmNonce": "3",
+    "pendingNonce": "3",
+    "uqorBalance": "99805000",
+    "gasPriceWei": "112500000000",
+    "baseFeeWei": "100000000000",
+    "evmTxMaxGas": "30000000",
+    "height": "10449438",
+    "pqcPublicKeySha256": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a"
+  },
+  "window": {
+    "found": true,
+    "live": true,
+    "openedHeight": "10449422",
+    "expiryHeight": "10449822",
+    "maxTxs": "1",
+    "usedTxs": "0",
+    "maxValue": "256500",
+    "usedValue": "0",
+    "remainingBlocks": "384",
+    "remainingTxs": "1",
+    "remainingValue": "256500",
+    "nativeOnly": false,
+    "allowedTargets": []
+  },
+  "constructor": {
+    "testOnly": false,
+    "policyApproval": {
+      "approvalStatus": "approved",
+      "approvalSource": "Explicit user instruction ELA 7I-3, 2026-11-20",
+      "executionAuthorized": false,
+      "values": {
+        "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+        "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+        "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+        "maxPerPayment": "1000000000000000",
+        "spendingLimit": "3000000000000000",
+        "maxPayments": "3"
+      },
+      "durationSeconds": "3600",
+      "plannedDeploymentAt": "1795202100",
+      "startRule": "planned-deployment-plus-delay",
+      "startDelaySeconds": "900",
+      "durationApprovalSource": "Explicit user one-hour test policy decision, 2026-11-20; supersedes seven-day duration",
+      "dateApprovalStatus": "approved",
+      "dateApprovalSource": "Explicit user replacement schedule approval, 2026-11-20, 22:15/22:30/23:30 Europe/Istanbul (UTC+03:00)",
+      "dateApprovalMatches": true,
+      "pendingFields": []
+    },
+    "values": {
+      "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+      "maxPerPayment": "1000000000000000",
+      "spendingLimit": "3000000000000000",
+      "maxPayments": "3",
+      "startsAt": "1795203000",
+      "endsAt": "1795206600",
+      "reviewed": true,
+      "testOnly": false
+    },
+    "argsKeccak": "0x673b90e6344a34b3863be29278ef960cb418b0abfdf5ed7124c412cde12fdb5b",
+    "checklist": [
+      {
+        "id": "chosen",
+        "requirement": "Parameters chosen for the live deployment (not the test set)",
+        "ok": true
+      },
+      {
+        "id": "reviewed",
+        "requirement": "Explicit constructor selected with the approved exact dates; default live constructor remains disabled",
+        "ok": true
+      },
+      {
+        "id": "executor",
+        "requirement": "executor is the Invoice Owner EVM address 0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+        "ok": true
+      },
+      {
+        "id": "invoiceIssuer",
+        "requirement": "invoiceIssuer is the Invoice Owner EVM address (7C-21), which holds the registered ML-DSA-87 key",
+        "ok": true
+      },
+      {
+        "id": "recipient-address",
+        "requirement": "recipient is a checksummed address, not zero, not a precompile, not the placeholder",
+        "ok": true
+      },
+      {
+        "id": "recipient-distinct",
+        "requirement": "recipient is not the executor, the issuer, or the contract itself",
+        "ok": true
+      },
+      {
+        "id": "recipient-code",
+        "requirement": "recipient has no contract code on Diana (a plain account that can receive native QOR)",
+        "ok": true
+      },
+      {
+        "id": "amounts",
+        "requirement": "maxPerPayment > 0, maxPerPayment <= spendingLimit <= 1000000000000000000 wei, both whole uqor (multiples of 10^12 wei)",
+        "ok": true
+      },
+      {
+        "id": "maxPayments",
+        "requirement": "maxPayments between 1 and 100",
+        "ok": true
+      },
+      {
+        "id": "dates",
+        "requirement": "Future start; exactly 3600 seconds; at least 3600 seconds remaining; starts within 30 days",
+        "ok": true
+      }
+    ],
+    "failing": []
+  },
+  "deploymentPackage": {
+    "version": 1,
+    "executionAuthorized": false,
+    "compiler": "0.8.28+commit.7893614a",
+    "evmVersion": "paris",
+    "sourceKeccak": "0x8e31d4f81d6bfa18c5452fd4715d5865426e217616c661e883f92ac032a8b0e7",
+    "sourceSha256": "6c624379080492ca5f9e390265dc1966df49a3dce431326700d78d4c520ea280",
+    "creationBytecodeSha256": "ce5de4e8fd8693d003e06fb33bbe7da6571f5309fe6c2cf3f911eec3421fc71d",
+    "runtimeTemplateSha256": "0d0c24776f6588c965bda965289697bfc871a1ceb26de750013fdf00d99f493e",
+    "nonce": "3",
+    "predictedContractAddress": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+    "status": "public_data_only",
+    "policyApproval": {
+      "approvalStatus": "approved",
+      "approvalSource": "Explicit user instruction ELA 7I-3, 2026-11-20",
+      "executionAuthorized": false,
+      "values": {
+        "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+        "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+        "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+        "maxPerPayment": "1000000000000000",
+        "spendingLimit": "3000000000000000",
+        "maxPayments": "3"
+      },
+      "durationSeconds": "3600",
+      "plannedDeploymentAt": "1795202100",
+      "startRule": "planned-deployment-plus-delay",
+      "startDelaySeconds": "900",
+      "durationApprovalSource": "Explicit user one-hour test policy decision, 2026-11-20; supersedes seven-day duration",
+      "dateApprovalStatus": "approved",
+      "dateApprovalSource": "Explicit user replacement schedule approval, 2026-11-20, 22:15/22:30/23:30 Europe/Istanbul (UTC+03:00)",
+      "dateApprovalMatches": true,
+      "pendingFields": []
+    },
+    "constructor": {
+      "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+      "maxPerPayment": "1000000000000000",
+      "spendingLimit": "3000000000000000",
+      "maxPayments": "3",
+      "startsAt": "1795203000",
+      "endsAt": "1795206600",
+      "reviewed": true,
+      "testOnly": false
+    },
+    "constructorArgs": "0x0000000000000000000000006a5d4d7b3357df968b2a3004071ece98f015c794000000000000000000000000c9ab55fec7c1fee27f3afc5df99e6a09b4b2d87500000000000000000000000000000000000000000000000000038d7ea4c68000000000000000000000000000000000000000000000000000000aa87bee5380000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000006b009fb8000000000000000000000000000000000000000000000000000000006b00adc80000000000000000000000006a5d4d7b3357df968b2a3004071ece98f015c794",
+    "initcodeSha256": "8fb9ef886dafe6be58035e9f088941263b72ca3fed2bb5482610a679aaf95973",
+    "initcodeKeccak": "0x2f4f44fa09350695a68fa631f58d971f75b14de8d3372a4ec33453269246ab1f",
+    "runtimeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3",
+    "runtimeKeccak": "0xb8d62bd36bb26be3da3337d4dd08002ca65e9a604d3ea0acb2683b6056b39d90",
+    "readinessConfig": {
+      "contractAddress": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+      "executor": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "invoiceIssuer": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+      "expectedRuntimeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3",
+      "pqcKeySha256": {
+        "executor": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a",
+        "invoiceIssuer": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a"
+      },
+      "policy": {
+        "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+        "maxPerPaymentWei": "1000000000000000",
+        "spendingLimitWei": "3000000000000000",
+        "maxPayments": "3",
+        "startsAt": "1795203000",
+        "endsAt": "1795206600"
+      }
+    }
+  },
+  "artifact": {
+    "compiler": "0.8.28+commit.7893614a",
+    "evmVersion": "paris",
+    "sourceKeccak": "0x8e31d4f81d6bfa18c5452fd4715d5865426e217616c661e883f92ac032a8b0e7",
+    "runtimeKeccak": "0xb8d62bd36bb26be3da3337d4dd08002ca65e9a604d3ea0acb2683b6056b39d90",
+    "runtimeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3"
+  }
+}

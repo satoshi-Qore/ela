@@ -28,3 +28,6 @@ node_modules/
 /docs/evidence/diana-policy-7i3/production-build*/
 
 /.policy-hour-build/
+
+# Durable local autonomous payment journal (public data; archive evidence separately).
+/.diana-autopay/
