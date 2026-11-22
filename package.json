@@ -12,8 +12,10 @@
     "preview": "vite preview",
     "payment:readiness": "node scripts/check-diana-payment-readiness.mjs",
     "pretest": "node scripts/check-test-environment.mjs",
-    "test": "node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs tests/pqc-browser.test.mjs tests/qorechain-sdk.test.mjs tests/ui-characterization.test.mjs tests/agent-session.test.mjs tests/agent-balance.test.mjs tests/agent-transaction.test.mjs tests/agent-block.test.mjs tests/agent-gas.test.mjs tests/agent-token.test.mjs tests/model-contract.test.mjs tests/safety-gate.test.mjs tests/diana-payment-readiness.test.mjs tests/diana-deployment-package.test.mjs tests/diana-approved-policy.test.mjs tests/diana-scheduler.test.mjs tests/diana-autopay-live.test.mjs tests/diana-read-retry.test.mjs tests/payment-evidence.test.mjs tests/decision-engine.test.mjs tests/local-ai.test.mjs",
-    "payment:autopay": "node prototypes/diana-payment-account/diana-autopay.mjs"
+    "test": "node --test tests/router.test.mjs tests/qorechain.test.mjs tests/qorechain-evm.test.mjs tests/agent-planner.test.mjs tests/pqc-ml-dsa-87.test.mjs tests/pqc-browser.test.mjs tests/qorechain-sdk.test.mjs tests/ui-characterization.test.mjs tests/agent-session.test.mjs tests/agent-balance.test.mjs tests/agent-transaction.test.mjs tests/agent-block.test.mjs tests/agent-gas.test.mjs tests/agent-token.test.mjs tests/model-contract.test.mjs tests/safety-gate.test.mjs tests/diana-payment-readiness.test.mjs tests/diana-deployment-package.test.mjs tests/diana-approved-policy.test.mjs tests/diana-scheduler.test.mjs tests/diana-autopay-live.test.mjs tests/diana-read-retry.test.mjs tests/payment-evidence.test.mjs tests/decision-engine.test.mjs tests/local-ai.test.mjs tests/ai-accuracy.test.mjs",
+    "payment:autopay": "node prototypes/diana-payment-account/diana-autopay.mjs",
+    "ai:study:train": "node scripts/accuracy/train.mjs",
+    "ai:study:evaluate": "node scripts/accuracy/evaluate.mjs"
   },
   "devDependencies": {
     "typescript": "7.0.2",

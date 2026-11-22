@@ -69,6 +69,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const env = { work: undefined, outDir: undefined, server: undefined, origin: undefined, chrome: undefined, page: undefined, startMs: undefined };
 const networkLog = [];
 const problems = [];
+let accuracyStudy;
 
 async function connect(url) {
   const socket = new WebSocket(url);
@@ -172,10 +173,19 @@ async function startBrowser() {
   // The production build: the project's own vite.config.ts (base /ela/).
   await build({ configFile: join(ROOT, 'vite.config.ts'), root: ROOT, logLevel: 'silent', build: { outDir: env.outDir, emptyOutDir: true } });
 
+  // Isolated research bundle and generated weights are served only by this temporary test server.
+  // The production site and pinned model are not modified or rebuilt with candidate weights.
+  const {selectCandidate}=await import('../scripts/accuracy/train.mjs');
+  const studyDir=join(env.work,'accuracy');
+  const selected=await selectCandidate(studyDir);
+  const studyBuild=await build({configFile:false,root:ROOT,logLevel:'silent',build:{write:false,minify:false,lib:{entry:join(ROOT,'tests/fixtures/accuracy-browser.mjs'),name:'ELAAccuracy',formats:['iife']}}});
+  accuracyStudy={...selected,bundle:(Array.isArray(studyBuild)?studyBuild[0]:studyBuild).output.find(x=>x.type==='chunk').code,bytes:readFileSync(join(studyDir,'candidate.json'))};
+
   env.server = createServer((request, response) => {
     let pathname = decodeURIComponent(new URL(request.url, 'http://x').pathname);
     if (pathname === '/ela' || pathname === '/ela/') pathname = '/index.html';
     else if (pathname.startsWith('/ela/')) pathname = pathname.slice(4);
+    if(pathname==='/models/accuracy-candidate.json') { response.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'}).end(accuracyStudy.bytes);return; }
     const path = normalize(join(env.outDir, pathname));
     if (!path.startsWith(env.outDir + sep) || !existsSync(path)) { response.writeHead(404).end(); return; }
     response.writeHead(200, { 'Content-Type': TYPES[extname(path)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' }).end(readFileSync(path));
@@ -2650,6 +2660,28 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     await submit('could you determine whether Diana responds');
     assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'fallback');
     const stillWorks=await submit('Diana ağını kontrol et.');assert.equal(stillWorks.state,'Success');
+  }, {timeout:180000});
+
+  uiTest('06B frozen candidate and independent set run in real Chrome without deployment', async t => {
+    const {modelEvalSet}=await import('./model-eval-set.mjs');
+    const {accuracyFinal}=await import('./fixtures/accuracy-final.mjs');
+    const manifest=JSON.parse(readFileSync(join(ROOT,'src/ai/manifest.json'),'utf8'));
+    await openPage();
+    assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'disabled');
+    await env.page.send('HeapProfiler.collectGarbage');
+    await evaluate(accuracyStudy.bundle);
+    const measured=await evaluate(`ELAAccuracy.runStudy(${JSON.stringify({datasets:{legacy:modelEvalSet,independent:accuracyFinal},before:{url:env.origin+'/ela/'+manifest.file,sha256:manifest.sha256},candidate:{url:env.origin+'/ela/models/accuracy-candidate.json',sha256:accuracyStudy.record.artifactSha256}})})`);
+    t.diagnostic('ELA_ACCURACY_06B_CHROME '+JSON.stringify({candidate:accuracyStudy.record.artifactSha256,...measured}));
+    for(const timing of Object.values(measured.timings)){
+      assert.ok(timing.loadMs<=15000);assert.ok(timing.maxInferenceMs<=1500);assert.ok(timing.artifactBytes<=40*1024*1024);assert.equal(timing.fallbackCalls,0);
+    }
+    assert.notEqual(measured.sampledExtraHeapBytes,null,'Chrome heap measurement is required');
+    assert.ok(measured.sampledExtraHeapBytes<=300*1024*1024);
+    // Research results must match the frozen Node evidence, including failures. No promotion.
+    const evidence=JSON.parse(readFileSync(join(ROOT,'docs/evidence/ai-accuracy-06b/node-summary.json'),'utf8'));
+    assert.equal(accuracyStudy.record.artifactSha256,evidence.selection.artifactSha256,'candidate must reproduce before any final scoring');
+    for(const [set,results]of Object.entries(measured.results))for(const [name,result]of Object.entries(results))assert.deepEqual(result.overall,evidence.datasets[set][name].overall);
+    assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'disabled');
   }, {timeout:180000});
 
   uiTest('no request reached any qore.host endpoint, no favicon was requested, and the console stayed clean', async t => {
