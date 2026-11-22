@@ -282,8 +282,8 @@ const assetOnly = (text: string): boolean => assetContext.test(text);
 // do not perform a swap" cannot turn a negated mention into a request via an anywhere search.
 function englishNounAction(category: RiskCategory, noun: string): RiskRule {
   const end = '(?=$| (?:for|on|with|using|of|from|to|now|please|immediately|today|tomorrow|right|as|at|in|and|then|after|before)(?![a-z]))';
-  const rule = english(category, '(?:perform|execute|carry out|conduct|initiate|do|make|process) (?:(?:a|an|the|this|that|my|our|another) )?'
-    + noun + '(?: (?:transaction|operation))?' + end);
+  const rule = english(category, '(?:perform|execute|carry out|conduct|initiate|do|make|process) (?:(?:a|an|the|this|that|my|our|another|these|those|some|any|both|[0-9]+) )?'
+    + noun + '(?: (?:transactions?|operations?))?' + end);
   return { category, clause: rule.clause };
 }
 
@@ -305,8 +305,8 @@ const riskRules: readonly RiskRule[] = [
   english('wallet_control', '(?:connect|conect|link|import|create|open|reset|unlock|drain|empty|delete|restore|recover|export) (?:(?:my|a|an|the|new|your|this|our) )*(?:wallet|account)s?(?![a-z])'),
   englishRequest('state_change', 'swap|bridge|mint|deploy|stake|unstake|delegate|undelegate|redelegate|buy|sell|burn|trade|exchange|lend|borrow|claim|vote', true),
   // Noun actions still need a request opener, not an explanation or a negated imperative.
-  englishNounAction('state_change', '(?:(?:token|coin|asset|qor) )?(?:swap|trade|exchange|staking)'),
-  englishNounAction('signing', '(?:(?:token|spending|allowance) )?approval'),
+  englishNounAction('state_change', '(?:(?:token|coin|asset|qor) )?(?:swaps?|trades?|exchanges?|staking)'),
+  englishNounAction('signing', '(?:(?:token|spending|allowance) )?approvals?'),
   { category: 'signing', pattern: word(requestOf('imzala|imza at')) },
   { category: 'signing', pattern: word(requestOf('onayla')), when: text => transactionContext.test(text) || assetContext.test(text) || !readContext.test(text) },
   { category: 'signing', pattern: word('onay(?:i|ini|inizi|imizi|larini|lama)? (?:islem(?:i|ini|inizi|imizi) )?(?:' + requestOf('yap|ver|gerceklestir|baslat') + ')'), when: text => assetContext.test(text) || word('harcama[a-z]*|izin[a-z]*|sozlesme[a-z]*|allowance|spending').test(text) },

@@ -28,14 +28,14 @@ denylist or classifier-based safety decision is added.
 
 ## Verification
 
-- Four original regressions plus 46 grammatical variants cover Turkish/English
+- Four original regressions plus 52 grammatical variants cover Turkish/English
   requests, possessive/process nouns, polite requests, delegated wishes, joining
   clauses, case, fake authority and positive requests after manipulation text.
 - Each is checked with and without successful Diana context, using a counting
   classifier that would throw if reached and a recording fake RPC transport.
   Required: `refused`, source `safety_gate`, correct category, unchanged successful
   context, zero classifier calls and zero RPC requests.
-- 53 safe contrasts cover negated wishes/verbs, information/capability questions,
+- 55 safe contrasts cover negated wishes/verbs, information/capability questions,
   descriptions, analysis/simulation/review tasks and safe network/block queries.
 - The existing hardening/307-item evaluation remains in place; no safe query or
   archived model result is relabeled to make the gate tests pass.
