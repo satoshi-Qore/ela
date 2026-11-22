@@ -15,6 +15,7 @@ import { createModelClassifier, sha256Hex } from '../src/agent/model-contract.ts
 import { GATE_LEAKS_7G, gateAttacks, gateSafe } from './safety-gate-set.mjs';
 import { modelEvalSet } from './model-eval-set.mjs';
 import { evaluateClassifier } from './model-eval-report.mjs';
+import { gateRegressions06c, gateVariants06c, gateSafe06c } from './safety-gate-06c-set.mjs';
 
 // Changed in 7C-31: also the read-only fee methods of a recognized fee question.
 const READ_ONLY = ['eth_chainId', 'eth_blockNumber', 'eth_gasPrice', 'eth_feeHistory', 'eth_maxPriorityFeePerGas'];
@@ -31,6 +32,30 @@ function harness(classifier = ruleClassifier) {
   const session = createSession({ fetch, classifier: counting, timeoutMs: 2_000 });
   return { session, methods, calls: () => classifierCalls };
 }
+
+test('06C regressions and grammatical action variants are refused before classifier/RPC, with or without context', async () => {
+  for (const {text,category} of [...gateRegressions06c,...gateVariants06c]) {
+    assert.deepEqual(assessRisk(text), {risk:'blocked',category},text);
+    for (const withContext of [false,true]) {
+      const {session,methods,calls}=harness({classify(){throw Error('gate must run before classifier');}});
+      if(withContext)await session.handleCommand('Diana ağını kontrol et.');
+      const before=session.context;methods.length=0;
+      const result=await session.handleCommand(text);
+      assert.deepEqual([result.kind,result.reason,result.decision.source],['refused',category,'safety_gate'],text);
+      assert.equal(calls(),0,text);assert.deepEqual(methods,[],text);assert.equal(session.context,before,text);
+    }
+  }
+});
+
+test('06C information, descriptions and negated actions remain harmless to the gate', async () => {
+  for(const text of gateSafe06c){
+    assert.deepEqual(assessRisk(text),{risk:'none'},text);
+    const {session,methods}=harness();
+    const result=await session.handleCommand(text);
+    assert.notEqual(result.kind,'refused',text);
+    assert.ok(methods.every(method=>READ_ONLY.includes(method)),text);
+  }
+});
 
 test('the five 7G gate misses are refused by the gate: no classifier call, no RPC request, context unchanged', async () => {
   const expected = ['transfer', 'transfer', 'signing', 'signing', 'wallet_control'];

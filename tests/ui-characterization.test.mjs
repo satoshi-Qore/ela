@@ -2662,6 +2662,22 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const stillWorks=await submit('Diana ağını kontrol et.');assert.equal(stillWorks.state,'Success');
   }, {timeout:180000});
 
+  uiTest('06C four gate regressions refuse before optional model load or RPC', async () => {
+    const {gateRegressions06c}=await import('./safety-gate-06c-set.mjs');
+    await openPage();
+    const downloads=networkLog.filter(url=>url.includes('/models/')).length;
+    await evaluate(`document.getElementById('ai-enable').click()`);
+    for(const {text} of gateRegressions06c){
+      const result=await submit(text);
+      assert.equal(result.state,'Refused',text);assert.deepEqual(result.rpc,[],text);
+    }
+    assert.equal(networkLog.filter(url=>url.includes('/models/')).length,downloads);
+    assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'not_loaded');
+    const safe=await submit('Diana ağını kontrol et.');
+    assert.equal(safe.state,'Success');
+    assert.equal(networkLog.filter(url=>url.includes('/models/')).length,downloads);
+  });
+
   uiTest('06B frozen candidate and independent set run in real Chrome without deployment', async t => {
     const {modelEvalSet}=await import('./model-eval-set.mjs');
     const {accuracyFinal}=await import('./fixtures/accuracy-final.mjs');
@@ -2671,7 +2687,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     await env.page.send('HeapProfiler.collectGarbage');
     await evaluate(accuracyStudy.bundle);
     const measured=await evaluate(`ELAAccuracy.runStudy(${JSON.stringify({datasets:{legacy:modelEvalSet,independent:accuracyFinal},before:{url:env.origin+'/ela/'+manifest.file,sha256:manifest.sha256},candidate:{url:env.origin+'/ela/models/accuracy-candidate.json',sha256:accuracyStudy.record.artifactSha256}})})`);
-    t.diagnostic('ELA_ACCURACY_06B_CHROME '+JSON.stringify({candidate:accuracyStudy.record.artifactSha256,...measured}));
+    t.diagnostic('ELA_ACCURACY_06B_CHROME '+JSON.stringify({gateRevision:'06C; historical 06B model evidence unchanged',candidate:accuracyStudy.record.artifactSha256,...measured}));
     for(const timing of Object.values(measured.timings)){
       assert.ok(timing.loadMs<=15000);assert.ok(timing.maxInferenceMs<=1500);assert.ok(timing.artifactBytes<=40*1024*1024);assert.equal(timing.fallbackCalls,0);
     }
@@ -2680,7 +2696,12 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Research results must match the frozen Node evidence, including failures. No promotion.
     const evidence=JSON.parse(readFileSync(join(ROOT,'docs/evidence/ai-accuracy-06b/node-summary.json'),'utf8'));
     assert.equal(accuracyStudy.record.artifactSha256,evidence.selection.artifactSha256,'candidate must reproduce before any final scoring');
-    for(const [set,results]of Object.entries(measured.results))for(const [name,result]of Object.entries(results))assert.deepEqual(result.overall,evidence.datasets[set][name].overall);
+    // Only the four previously documented gate misses now become correct refusals. Do not
+    // rewrite archived model-quality measurements or attribute these gate repairs to learning.
+    for(const [set,results]of Object.entries(measured.results))for(const [name,result]of Object.entries(results)){
+      const archived=evidence.datasets[set][name].overall;
+      assert.deepEqual(result.overall,set==='independent'?{...archived,correct:archived.correct+4,gateMisses:0}:archived);
+    }
     assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'disabled');
   }, {timeout:180000});
 
