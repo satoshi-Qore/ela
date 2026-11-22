@@ -421,7 +421,7 @@ test('the web interface runs every command through the session and has no path a
   for (const name of ['routeCommand', 'planCommand', 'resolveFollowUp', 'runQuery', 'executePlan', 'invokeTool', 'queryLatestBlock', 'interpretCommand', 'understandCommand', 'actOnDecision', 'decideIntent', 'getEvmBlockNumber', 'getBlockNumber', 'getBalance', 'verifyMlDsa87', 'WithSdk', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_']) {
     assert.equal(code.includes(name), false, name);
   }
-  assert.equal((code.match(/createSession\(\)/g) ?? []).length, 1, 'one session per page');
+  assert.equal((code.match(/createSession\(/g) ?? []).length, 1, 'one session per page');
   assert.match(code, /session\.handleCommand\(command\.value\)/);
   assert.match(code, /session\.clear\(\)/);
   assert.equal(/session|handleCommand/.test(read('index.html')), false, 'index.html is unchanged');
@@ -429,10 +429,10 @@ test('the web interface runs every command through the session and has no path a
   // verifies signatures locally and has no command path into the session.
   // Changed in 7C-27: web.ts also loads ELA Core (themes and the three Core views) as its own chunk.
   // Like the panel, the Core has no command path: it only reads what web.ts rendered (checked below).
-  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts', './payment/archive.ts', './decision/view.ts']);
+  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts', './payment/archive.ts', './decision/view.ts', './ai/intelligence.ts']);
   // Changed in 7C-36: also the Koherens and Okta views and their shared materials (quantum.ts).
   // Changed in 7C-37: also the restored original Core visual (trace.ts).
-  for (const file of ['src/decision/view.ts', 'src/decision/history.ts', 'src/payment/archive.ts', 'src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
+  for (const file of ['src/ai/intelligence.ts', 'src/decision/view.ts', 'src/decision/history.ts', 'src/payment/archive.ts', 'src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
     const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     for (const name of ['session', 'handleCommand', 'interpretCommand', 'runQuery', 'invokeTool', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'sign(', 'keygen', 'secretKey', 'privateKey']) {
       assert.equal(source.includes(name), false, file + ': ' + name);
@@ -443,4 +443,26 @@ test('the web interface runs every command through the session and has no path a
     const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     for (const match of source.matchAll(/(?:from\s+|import\()'([^']+)'/g)) assert.match(match[1], /^\.\/(draw|karot|koherens|okta|quantum|trace)\.ts$/, file + ' imports ' + match[1]);
   }
+});
+
+// Connecting the runtime does not opt the user into inference.
+test('session owns optional model selection with disabled deterministic fallback', async () => {
+  const { stats } = await import('../src/ai/controller.ts');
+  assert.equal(stats().enabled, false);
+  const rpc = fakeRpc();
+  const session = createSession({ optionalLocalModel: true, fetch: rpc.fetch });
+  const result = await session.handleCommand('Diana is online?');
+  assert.equal(result.kind, 'answered');
+  assert.equal(result.query, 'network_check');
+  assert.deepEqual(rpc.methods, BOTH);
+  assert.equal(stats().enabled, false);
+  assert.equal((await session.handleCommand('send 1 QOR to my wallet')).kind, 'refused');
+  assert.deepEqual(rpc.methods, BOTH);
+});
+
+test('explicit session classifier takes precedence and inference failure does not run tools', async () => {
+  let calls = 0;
+  const session = createSession({ optionalLocalModel: true, classifier: { classify() { calls++; throw Error('inference failed'); } }, fetch: () => { throw Error('no RPC allowed'); } });
+  assert.equal((await session.handleCommand('Diana is online?')).kind, 'clarify');
+  assert.equal(calls, 1);
 });

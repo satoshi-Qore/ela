@@ -1102,7 +1102,12 @@ test('English other networks are never selected', () => {
 // Changed in 7C (name only): the interface now uses the lexicon, but only inside the agent session.
 test('the live interface reaches the rule-based lexicon only through the agent session', () => {
   const web = readFileSync(new URL('../src/web.ts', import.meta.url), 'utf8');
-  for (const name of ['lexicon', 'understandCommand', 'ruleClassifier']) assert.equal(web.includes(name), false, name);
+  for (const name of ['lexicon', 'ruleClassifier', 'classifier:', 'ai/controller', 'understandCommand', 'actOnDecision', 'runQuery']) assert.equal(web.includes(name), false, name);
+  assert.match(web, /createSession\(\{ optionalLocalModel: true \}\)/);
+  assert.match(web, /session\.handleCommand\(command\.value\)/);
   const session = readFileSync(new URL('../src/agent/session.ts', import.meta.url), 'utf8');
   assert.match(session, /import \{ ruleClassifier \} from '\.\/lexicon\.ts';/);
+  assert.match(session, /const classifier = options\.classifier \?\? \(options\.optionalLocalModel/);
+  assert.match(session, /await import\('\.\.\/ai\/controller\.ts'\)\.catch\(\(\) => undefined\)/);
+  assert.match(session, /return ai \? ai\.classify\(text\) : ruleClassifier\.classify\(text\)/);
 });

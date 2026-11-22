@@ -102,7 +102,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-l
 // --- Agent session ----------------------------------------------------------------------------
 
 // In-memory only: a page reload starts a new session with no context.
-const session = createSession();
+const session = createSession({ optionalLocalModel: true });
 
 function showStatus(next: QueryState, ...detail: Part[]): void {
   state.dataset.state = next.toLowerCase();
@@ -418,3 +418,7 @@ import('./core/core.ts');
 // The completed payment archive is independent of the command flow and CORE animation.
 import('./payment/archive.ts').then(panel => panel.mountPayment(put, F));
 import('./decision/view.ts').then(panel => panel.mountDecision(put, F));
+import('./ai/intelligence.ts').then(panel => panel.mountIntelligence(put, F)).catch(()=>{
+  put($('#ai-panel-state'),'ai.state.fallback');
+  $<HTMLButtonElement>('#ai-enable').disabled=true;
+});

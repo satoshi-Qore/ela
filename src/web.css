@@ -1383,3 +1383,11 @@ body { font-family: "Segoe UI", Arial, sans-serif; }
 .decision-checks p { color:var(--muted); font-size:.75rem; line-height:1.6; margin-top:.3rem; overflow-wrap:anywhere; }
 .decision-check-state { display:block; color:var(--platinum); font:600 .7rem/1.6 var(--mono); }
 #decision, #decision * { min-width:0; }
+/* 06 local intent classification, isolated from execution and existing module styles. */
+.module-ai { grid-column:1 / -1; }
+.ai-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:.85rem; margin:1rem 0; }
+.ai-facts dt { color:var(--muted); font-size:.75rem; }
+.ai-facts dd { margin:.3rem 0; color:var(--platinum); font:.75rem/1.6 var(--mono); overflow-wrap:anywhere; }
+#ai-panel-state { color:var(--ice); font-size:.85rem; line-height:1.6; margin-top:.8rem; }
+#ai-enable { max-width:100%; white-space:normal; font:inherit; color:var(--ice); background:var(--well); border:1px solid var(--border-strong); border-radius:.4rem; padding:.6rem .8rem; cursor:pointer; }
+#ai-intelligence, #ai-intelligence * { min-width:0; }

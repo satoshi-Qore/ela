@@ -3,9 +3,9 @@ import type { IntentClassifier, IntentLabel } from './intent.ts';
 import { ruleClassifier } from './lexicon.ts';
 
 /**
- * Contract for a future in-browser AI intent model. No model is bundled or downloaded; this module
- * only defines what a model may see and return, and wraps one so that it can never decide more than
- * a closed intent label.
+ * Boundary for an in-browser intent model. The optional learned model and its lazy artifact loader
+ * live in src/ai; this module defines what a model may see and return, and wraps one so that it can
+ * never decide more than a closed intent label.
  *
  * Where a model sits (unchanged pipeline, see intent.ts and session.ts):
  *   command → input checks → safety gate → other-network and parameter checks → deterministic routes
@@ -41,8 +41,8 @@ export const MODEL_CONTRACT = Object.freeze({
 });
 
 /**
- * Proposed browser budgets for a real model. They are limits to enforce and measure, not results:
- * no model has been measured yet.
+ * Browser budgets to enforce and measure. These limits remain unchanged; measurement results and
+ * the decision not to promote a candidate belong in its model card, not in these constants.
  */
 export const MODEL_BUDGET = Object.freeze({
   /** Largest model artifact accepted (quantized weights plus tokenizer). */

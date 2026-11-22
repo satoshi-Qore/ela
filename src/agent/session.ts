@@ -31,6 +31,8 @@ import { ruleClassifier } from './lexicon.ts';
 export interface SessionOptions {
   /** Intent classifier used after the deterministic routes. Defaults to the rule-based lexicon. */
   readonly classifier?: IntentClassifier;
+  /** Connect the optional runtime; its separate user opt-in remains disabled by default. */
+  readonly optionalLocalModel?: boolean;
   readonly thresholds?: DecisionThresholds;
   /** Transport and timeout for the read-only tools (tests pass a fake fetch). */
   readonly fetch?: ReadOptions['fetch'];
@@ -86,7 +88,13 @@ const NOTHING_TO_CONFIRM: IntentDecision = Object.freeze({ kind: 'clarify', reas
 /** Creates an in-memory agent session with its own conversation context. */
 export function createSession(options: SessionOptions = {}): AgentSession {
   const conversation = createConversation();
-  const classifier = options.classifier ?? ruleClassifier;
+  const classifier = options.classifier ?? (options.optionalLocalModel ? {
+    async classify(text: string): Promise<unknown> {
+      // Only runtime unavailability falls back here. Inference errors reach the intent validator.
+      const ai = await import('../ai/controller.ts').catch(() => undefined);
+      return ai ? ai.classify(text) : ruleClassifier.classify(text);
+    },
+  } : ruleClassifier);
   const interpretOptions = { classifier, ...(options.thresholds ? { thresholds: options.thresholds } : {}) };
   const readOptions: ReadOptions = {
     ...(options.fetch ? { fetch: options.fetch } : {}),

@@ -378,7 +378,7 @@ test('a wrapped honest model is measured with the same harness (false accepts an
   assert.ok(result.rows.filter(row => row.falseAccept).every(row => row.rpcMethods.every(method => BOTH.includes(method))));
 });
 
-test('no model or model weights are part of the project', () => {
+test('the learned local model adds no external ML dependency', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['@qorechain/pqc', '@qorechain/sdk']);
   assert.deepEqual(Object.keys(pkg.devDependencies).sort(), ['typescript', 'vite']);

@@ -116,12 +116,15 @@ async function evaluate(expression) {
 
 // Scripted EVM JSON-RPC, installed before the page's own scripts. Every call is recorded.
 const RPC_STUB = `(() => {
+  const nativeFetch=window.fetch.bind(window);
   const rpc = { mode: 'ok', height: '0x97e6b0', balance: '0x89e4a6bb0179a0000', tx: null, receipt: null, block: null, earliest: null, calls: [],
     code: '0x6080604052', erc20: {},
     gasPrice: '0x1a3185c500', feeHistory: { oldestBlock: '0x9d0be2', baseFeePerGas: ['0x174876e800', '0x174876e800'], gasUsedRatio: [0] }, priorityFee: '0x2e90edd00' };
   Object.defineProperty(window, '__rpc', { value: rpc });
   const reply = (id, result) => new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), { headers: { 'content-type': 'application/json' } });
   window.fetch = (input, init = {}) => {
+    const url=new URL(String(input),location.href);
+    if(url.origin===location.origin && url.pathname.includes('/models/'))return nativeFetch(input,init);
     let body = null;
     try { body = JSON.parse(init.body); } catch {}
     rpc.calls.push({ url: String(input), httpMethod: init.method, credentials: init.credentials, redirect: init.redirect, method: body && body.method });
@@ -181,7 +184,7 @@ async function startBrowser() {
   env.origin = 'http://127.0.0.1:' + env.server.address().port;
 
   env.chrome = spawn(CHROME, [
-    '--headless', '--remote-debugging-port=0', '--user-data-dir=' + join(env.work, 'profile'),
+    '--headless', '--enable-precise-memory-info', '--remote-debugging-port=0', '--user-data-dir=' + join(env.work, 'profile'),
     '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-sync',
     '--disable-background-networking', '--disable-component-update', '--disable-default-apps',
     ...(process.env.ELA_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []), 'about:blank',
@@ -238,6 +241,7 @@ async function openPage(mode = 'ok') {
   await env.page.send('Page.navigate', { url: env.origin + '/ela/' });
   await loaded;
   await evaluate(`window.__rpc.mode = ${JSON.stringify(mode)}`);
+  await evaluate(`(async()=>{const until=Date.now()+5000;while(!document.getElementById('ai-model').textContent){if(Date.now()>until)throw Error('AI panel did not mount');await new Promise(r=>setTimeout(r,10));}})()`);
   await evaluate(`(async()=>{const until=Date.now()+5000;while(!document.getElementById('decision-outcome').textContent){if(Date.now()>until)throw Error('Decision view did not mount');await new Promise(r=>setTimeout(r,10));}})()`);
   await evaluate(`(async()=>{const until=Date.now()+5000;while(document.querySelectorAll('#payment-history > li').length!==3){if(Date.now()>until)throw Error('Payment archive did not mount');await new Promise(r=>setTimeout(r,20));}})()`);
 }
@@ -425,7 +429,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         // Changed in 7F: the post-quantum panel is a separate card; the claim check covers the rest.
         // Changed in 7C-25: the module index names that card too ([data-pqc-ref]); it is excluded the
         // same way. The rest of the page, including the Payment Account card, is still checked.
-        text: (() => { const copy = document.body.cloneNode(true); for (const node of copy.querySelectorAll('#pqc-panel, [data-pqc-ref]')) node.remove(); return copy.textContent; })(),
+        text: (() => { const copy = document.body.cloneNode(true); for (const node of copy.querySelectorAll('#pqc-panel, [data-pqc-ref], #ai-intelligence')) node.remove(); return copy.textContent; })(),
       };
     })()`);
     if (PROBE) { t.diagnostic(JSON.stringify({ ...page, text: undefined })); return; }
@@ -504,7 +508,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-37: the Core view selector is gone (the Core shows only its original visual): 8.
     if (!PROBE) {
       assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
-      assert.equal(stops, 9, 'two language buttons, the theme group, and five module links come first');
+      assert.equal(stops, 10, 'two language buttons, the theme group, and six module links come first');
     }
     await tab();
     desktop.focus = await evaluate(`(() => {
@@ -552,13 +556,13 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
 
   // --- New in 7C-25: module layout, honest status, language switch, text scaling ------------------
 
-  uiTest('module layout: five labeled modules; Payment Account shows archived proof and a read-only recheck', async t => {
+  uiTest('module layout: six labeled modules; Payment Account shows archived proof and a read-only recheck', async t => {
     await openPage();
     const page = await evaluate(`(() => {
       const section = id => document.getElementById(id);
       const head = id => section(id).querySelector('.module-head .tag');
       return {
-        modules: ['diana', 'logic', 'pqc-panel', 'payment', 'decision'].map(id => [id, document.getElementById(section(id).getAttribute('aria-labelledby')).textContent, head(id).textContent, head(id).dataset.tone]),
+        modules: ['diana', 'logic', 'pqc-panel', 'payment', 'decision', 'ai-intelligence'].map(id => [id, document.getElementById(section(id).getAttribute('aria-labelledby')).textContent, head(id).textContent, head(id).dataset.tone]),
         index: [...document.querySelectorAll('.modules a')].map(link => [link.getAttribute('href'), link.querySelector('.tag').dataset.tone]),
         paymentControls: section('payment').querySelectorAll('button, a, input, textarea, select, [tabindex]').length,
         paymentText: section('payment').textContent.replace(/\\s+/g, ' '),
@@ -576,8 +580,9 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
       ['pqc-panel', 'Post-Quantum Signature Verification', 'Active · verification only', 'live'],
       ['payment', 'Payment Account', 'Completed · 3/3', 'ok'],
       ['decision', 'Decision Engine', 'Deterministic · evaluation only', 'live'],
+      ['ai-intelligence', 'AI Intelligence', 'Local learned model · experimental', 'prep'],
     ]);
-    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'ok'], ['#decision', 'live']]);
+    assert.deepEqual(page.index, [['#diana', 'live'], ['#logic', 'live'], ['#pqc-panel', 'live'], ['#payment', 'ok'], ['#decision', 'live'], ['#ai-intelligence', 'prep']]);
     assert.equal(page.paymentControls, 9, 'eight public evidence links and one read-only recheck');
     assert.match(page.paymentText, /Archived verification/);
     assert.match(page.paymentText, /No signing, wallet connection or payment execution/);
@@ -1757,7 +1762,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
     // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
     // Changed in 7C-37: the Core chunk and its one visual, the original session trace (no drawing helpers).
-    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]+\.(js|css)$/, '.$1')).sort(), ['archive.js', 'core.js', 'evidence.js', 'index.css', 'index.js', 'trace.js', 'view.js'], atLoad.join(', '));
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]{8}\.(js|css)$/, '.$1')).sort(), ['archive.js', 'controller.js', 'core.js', 'evidence.js', 'get-evm-block-number.js', 'index.css', 'index.js', 'intelligence.js', 'preload-helper.js', 'trace.js', 'view.js'], atLoad.join(', '));
     assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
@@ -1867,7 +1872,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
     // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
     // Changed in 7C-37: the Core chunk and the original session trace only; the later views are not bundled.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]+\.js$/, '')).sort(), ['archive', 'balance', 'block', 'core', 'evidence', 'gas', 'index', 'keccak', 'panel', 'token', 'trace', 'transaction', 'verify', 'view'], scripts.join(', '));
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]{8}\.js$/, '')).sort(), ['archive', 'balance', 'block', 'controller', 'core', 'evidence', 'gas', 'get-evm-block-number', 'index', 'intelligence', 'keccak', 'panel', 'preload-helper', 'token', 'trace', 'transaction', 'verify', 'view'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|trace)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
@@ -1916,8 +1921,8 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', '0x095ea7b3', '0xa9059cbb', '0x23b872dd']) assert.equal(readFileSync(join(env.outDir, 'assets', tokenChunk), 'utf8').includes(marker), false, marker);
     // Payment archive uses separate chunks; main also carries bounded transport/HTTP diagnostics.
     assert.ok(sizes[main].gzip <= 15.25 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 15.25 KiB budget`);
-    assert.ok(sizes[main].bytes <= 41.25 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 41.25 KiB budget`);
-    assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
+    assert.ok(sizes[main].bytes <= 41.5 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 41.5 KiB budget`);
+    assert.ok((html.match(/<link\b[^>]*>/g) ?? []).every(tag => !tag.includes(panel)), 'index.html does not preload the PQC panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');
     assert.ok(panelCode.includes(vectorStart), 'the test vector ships with the panel');
@@ -2582,6 +2587,71 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
 
   // Changed in 7D: index.html declared no icon, so Chrome requested /favicon.ico and logged a 404.
   // It now declares an empty data URI icon: no favicon request and a clean console.
+  uiTest('real learned model: Chrome artifact load, inference, privacy, fallback and bilingual evaluation', async t => {
+    const {modelEvalSet}=await import('./model-eval-set.mjs');
+    const results={};let peakHeap=0,baseHeap=0,maxInference=0,loadMs=0,firstReadyMs=0;
+    await env.page.send('Performance.enable');
+    const heap=async()=>{const m=await env.page.send('Performance.getMetrics');return m.metrics.find(x=>x.name==='JSHeapUsedSize').value;};
+    const modelTraffic=()=>networkLog.filter(url=>url.includes('/models/ela-intent-linear-v1.json')).length;
+    for(const mode of ['rules','model']){
+      await openPage();
+      const downloads=modelTraffic();
+      assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'disabled');
+      if(mode==='model'){
+        await env.page.send('HeapProfiler.collectGarbage');baseHeap=await heap();peakHeap=baseHeap;
+        await evaluate(`document.getElementById('ai-enable').click()`);
+        assert.equal(modelTraffic(),downloads,'toggle alone must not download weights');
+        await submit('Send all QOR now');assert.equal(modelTraffic(),downloads,'gate refusal must not load model');
+        await submit('email person@example.org');assert.equal(modelTraffic(),downloads,'private-looking input must not load model');
+      }
+      const rows=[];
+      for(const item of modelEvalSet){
+        await evaluate(`document.getElementById('clear-context').click()`);
+        if(item.context!=='none')await submit(item.context==='network_check'?'Diana ağını kontrol et.':'QoreChain son blok numarasını öğren.');
+        const priorDownloads=modelTraffic(),started=performance.now();
+        const observed=await submit(item.text);
+        if(mode==='model' && modelTraffic()>priorDownloads)firstReadyMs=performance.now()-started;
+        const visible=await evaluate(`({plan:document.getElementById('plan').hidden,timing:document.getElementById('ai-latency').textContent})`);
+        const actual=observed.state==='Success'?(visible.plan?'run:block_number':'run:network_check'):observed.state==='Refused'?'refuse':'no_run';
+        rows.push({lang:item.lang,group:item.group,correct:item.expect==='no_run'?!actual.startsWith('run:'):item.expect===actual,
+          falseAccept:actual.startsWith('run:')&&item.expect!==actual,falseReject:item.expect.startsWith('run:')&&!actual.startsWith('run:'),gateMiss:item.expect==='refuse'&&actual!=='refuse'});
+        if(mode==='model'){
+          peakHeap=Math.max(peakHeap,await heap());
+          const timing=/load: (\d+) ms.*inference: (\d+) ms/.exec(visible.timing);
+          if(timing){loadMs=Number(timing[1]);maxInference=Math.max(maxInference,Number(timing[2]));}
+        }
+      }
+      const summarize=rs=>({total:rs.length,correct:rs.filter(x=>x.correct).length,falseAccepts:rs.filter(x=>x.falseAccept).length,falseRejects:rs.filter(x=>x.falseReject).length,gateMisses:rs.filter(x=>x.gateMiss).length});
+      results[mode]={overall:summarize(rows),tr:summarize(rows.filter(x=>x.lang==='tr')),en:summarize(rows.filter(x=>x.lang==='en')),groups:Object.fromEntries([...new Set(rows.map(x=>x.group))].map(g=>[g,summarize(rows.filter(x=>x.group===g))]))};
+      if(mode==='rules')assert.equal(modelTraffic(),downloads,'default rules must never download weights');
+      else{
+        assert.equal(modelTraffic(),downloads+1,'real pinned artifact must be fetched exactly once');
+        assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'ready');
+      }
+    }
+    const measured={results,loadMs,firstReadyMs,maxInferenceMs:maxInference,extraHeapBytes:peakHeap-baseHeap,defaultEnabled:false};
+    t.diagnostic('ELA_REAL_MODEL_CHROME '+JSON.stringify(measured));
+    assert.equal(results.rules.overall.correct,287);assert.equal(results.rules.overall.falseAccepts,0);
+    assert.equal(results.model.overall.gateMisses,0);
+    assert.ok(loadMs>0 && loadMs<=15000);assert.ok(firstReadyMs>0 && firstReadyMs<=15000);assert.ok(maxInference<=1500);assert.ok(peakHeap-baseHeap<=300*1024*1024);
+    // Candidate accuracy is reported, never hidden by lowering the promotion bar.
+    assert.ok(results.model.overall.correct<results.rules.overall.correct);
+    await evaluate(`document.querySelector('[data-lang="tr"]').click()`);
+    assert.match(await evaluate(`document.getElementById('ai-intelligence').textContent`),/gerçek model çıkarımı|giriş tutuldu/);
+    // Inject a local arithmetic failure after real inference; stale model success must disappear.
+    await evaluate(`document.querySelector('[data-lang="en"]').click();window.__aiOriginalExp=Math.exp;Math.exp=()=>{throw new Error('injected model arithmetic failure');};`);
+    const failedInference=await submit('could you determine whether Diana responds');
+    await evaluate(`Math.exp=window.__aiOriginalExp;delete window.__aiOriginalExp;`);
+    assert.equal(failedInference.state,'Needs clarification');assert.deepEqual(failedInference.rpc,[]);
+    assert.match(await evaluate(`document.getElementById('ai-result').textContent`),/inference failed; no model output accepted/);
+    // A fresh visit with an unavailable artifact falls back without remote inference or a crash.
+    await openPage();
+    await evaluate(`{const original=window.fetch;window.fetch=(u,o)=>String(u).includes('/models/')?Promise.resolve(new Response('',{status:503})):original(u,o);document.getElementById('ai-enable').click();}`);
+    await submit('could you determine whether Diana responds');
+    assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'fallback');
+    const stillWorks=await submit('Diana ağını kontrol et.');assert.equal(stillWorks.state,'Success');
+  }, {timeout:180000});
+
   uiTest('no request reached any qore.host endpoint, no favicon was requested, and the console stayed clean', async t => {
     const live = networkLog.filter(url => /qore\.host/.test(url));
     if (PROBE) { t.diagnostic(JSON.stringify({ live, problems, favicon: networkLog.filter(url => /favicon/.test(url)) })); return; }

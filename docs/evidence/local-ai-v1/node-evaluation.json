@@ -1,0 +1,402 @@
+{
+  "runtime": "Node (not Chrome)",
+  "model": {
+    "id": "ELA Intent Linear",
+    "version": "1.0.0",
+    "license": "MIT",
+    "architecture": "learned hashed word/character n-gram softmax",
+    "file": "models/ela-intent-linear-v1.json",
+    "sha256": "296c79b3b2fa7e7238a08ea33643945d5a16c8d95cd2e762e6e81b660ffd5e18",
+    "artifactBytes": 185233,
+    "trainingRows": 120,
+    "trainingSha256": "67d2e6b6d6737e37c6abb2ad133c4f76e73cf7c229a0d87c6b0bef9d175ee34d",
+    "trainingSource": "scripts/ai-training-data.mjs",
+    "evaluationExcluded": true,
+    "defaultEnabled": false
+  },
+  "result": {
+    "all": {
+      "before": {
+        "total": 307,
+        "correct": 287,
+        "expectedRuns": 154,
+        "expectedNonRuns": 153,
+        "falseAccepts": 0,
+        "falseRejects": 20,
+        "gateMisses": 0,
+        "overRefusals": 0,
+        "falseAcceptRate": 0,
+        "falseRejectRate": 0.1299
+      },
+      "after": {
+        "total": 307,
+        "correct": 266,
+        "expectedRuns": 154,
+        "expectedNonRuns": 153,
+        "falseAccepts": 10,
+        "falseRejects": 31,
+        "gateMisses": 0,
+        "overRefusals": 0,
+        "falseAcceptRate": 0.0654,
+        "falseRejectRate": 0.2013
+      },
+      "groups": {
+        "safe": {
+          "total": 125,
+          "correct": 98,
+          "expectedRuns": 125,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 27,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.216
+        },
+        "risky": {
+          "total": 107,
+          "correct": 107,
+          "expectedRuns": 0,
+          "expectedNonRuns": 107,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        },
+        "unknown": {
+          "total": 14,
+          "correct": 9,
+          "expectedRuns": 0,
+          "expectedNonRuns": 14,
+          "falseAccepts": 5,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.3571,
+          "falseRejectRate": 0
+        },
+        "unsupported": {
+          "total": 12,
+          "correct": 9,
+          "expectedRuns": 0,
+          "expectedNonRuns": 12,
+          "falseAccepts": 3,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.25,
+          "falseRejectRate": 0
+        },
+        "follow_up": {
+          "total": 13,
+          "correct": 11,
+          "expectedRuns": 9,
+          "expectedNonRuns": 4,
+          "falseAccepts": 1,
+          "falseRejects": 1,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.25,
+          "falseRejectRate": 0.1111
+        },
+        "typo": {
+          "total": 12,
+          "correct": 10,
+          "expectedRuns": 12,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 2,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.1667
+        },
+        "adversarial": {
+          "total": 16,
+          "correct": 15,
+          "expectedRuns": 0,
+          "expectedNonRuns": 16,
+          "falseAccepts": 1,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.0625,
+          "falseRejectRate": 0
+        },
+        "mixed": {
+          "total": 8,
+          "correct": 7,
+          "expectedRuns": 8,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 1,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.125
+        }
+      }
+    },
+    "tr": {
+      "before": {
+        "total": 152,
+        "correct": 140,
+        "expectedRuns": 75,
+        "expectedNonRuns": 77,
+        "falseAccepts": 0,
+        "falseRejects": 12,
+        "gateMisses": 0,
+        "overRefusals": 0,
+        "falseAcceptRate": 0,
+        "falseRejectRate": 0.16
+      },
+      "after": {
+        "total": 152,
+        "correct": 131,
+        "expectedRuns": 75,
+        "expectedNonRuns": 77,
+        "falseAccepts": 4,
+        "falseRejects": 17,
+        "gateMisses": 0,
+        "overRefusals": 0,
+        "falseAcceptRate": 0.0519,
+        "falseRejectRate": 0.2267
+      },
+      "groups": {
+        "safe": {
+          "total": 65,
+          "correct": 49,
+          "expectedRuns": 65,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 16,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.2462
+        },
+        "risky": {
+          "total": 62,
+          "correct": 62,
+          "expectedRuns": 0,
+          "expectedNonRuns": 62,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        },
+        "unknown": {
+          "total": 5,
+          "correct": 3,
+          "expectedRuns": 0,
+          "expectedNonRuns": 5,
+          "falseAccepts": 2,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.4,
+          "falseRejectRate": 0
+        },
+        "unsupported": {
+          "total": 5,
+          "correct": 3,
+          "expectedRuns": 0,
+          "expectedNonRuns": 5,
+          "falseAccepts": 2,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.4,
+          "falseRejectRate": 0
+        },
+        "follow_up": {
+          "total": 6,
+          "correct": 6,
+          "expectedRuns": 4,
+          "expectedNonRuns": 2,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        },
+        "typo": {
+          "total": 6,
+          "correct": 5,
+          "expectedRuns": 6,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 1,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.1667
+        },
+        "adversarial": {
+          "total": 3,
+          "correct": 3,
+          "expectedRuns": 0,
+          "expectedNonRuns": 3,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        },
+        "mixed": {
+          "total": 0,
+          "correct": 0,
+          "expectedRuns": 0,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        }
+      }
+    },
+    "en": {
+      "before": {
+        "total": 147,
+        "correct": 141,
+        "expectedRuns": 71,
+        "expectedNonRuns": 76,
+        "falseAccepts": 0,
+        "falseRejects": 6,
+        "gateMisses": 0,
+        "overRefusals": 0,
+        "falseAcceptRate": 0,
+        "falseRejectRate": 0.0845
+      },
+      "after": {
+        "total": 147,
+        "correct": 128,
+        "expectedRuns": 71,
+        "expectedNonRuns": 76,
+        "falseAccepts": 6,
+        "falseRejects": 13,
+        "gateMisses": 0,
+        "overRefusals": 0,
+        "falseAcceptRate": 0.0789,
+        "falseRejectRate": 0.1831
+      },
+      "groups": {
+        "safe": {
+          "total": 60,
+          "correct": 49,
+          "expectedRuns": 60,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 11,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.1833
+        },
+        "risky": {
+          "total": 45,
+          "correct": 45,
+          "expectedRuns": 0,
+          "expectedNonRuns": 45,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        },
+        "unknown": {
+          "total": 9,
+          "correct": 6,
+          "expectedRuns": 0,
+          "expectedNonRuns": 9,
+          "falseAccepts": 3,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.3333,
+          "falseRejectRate": 0
+        },
+        "unsupported": {
+          "total": 7,
+          "correct": 6,
+          "expectedRuns": 0,
+          "expectedNonRuns": 7,
+          "falseAccepts": 1,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.1429,
+          "falseRejectRate": 0
+        },
+        "follow_up": {
+          "total": 7,
+          "correct": 5,
+          "expectedRuns": 5,
+          "expectedNonRuns": 2,
+          "falseAccepts": 1,
+          "falseRejects": 1,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.5,
+          "falseRejectRate": 0.2
+        },
+        "typo": {
+          "total": 6,
+          "correct": 5,
+          "expectedRuns": 6,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 1,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0.1667
+        },
+        "adversarial": {
+          "total": 13,
+          "correct": 12,
+          "expectedRuns": 0,
+          "expectedNonRuns": 13,
+          "falseAccepts": 1,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0.0769,
+          "falseRejectRate": 0
+        },
+        "mixed": {
+          "total": 0,
+          "correct": 0,
+          "expectedRuns": 0,
+          "expectedNonRuns": 0,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0,
+          "overRefusals": 0,
+          "falseAcceptRate": 0,
+          "falseRejectRate": 0
+        }
+      }
+    }
+  },
+  "stats": {
+    "state": "ready",
+    "artifactBytes": 185233,
+    "loadMs": 2,
+    "calls": 338,
+    "withheld": 20,
+    "failures": 0,
+    "timeouts": 0,
+    "fallbackCalls": 0,
+    "lastInferenceMs": 0
+  }
+}
