@@ -40,13 +40,18 @@ test('06B selection never imports or reads evaluation sets, and cannot overwrite
   assert.equal(manifest.defaultEnabled,false);
 });
 
-test('06B measurement agrees with existing full-session metrics including every gate miss',async()=>{
+test('archived 06B metrics remain unchanged; only the four 06C gate repairs change current outcomes',async()=>{
   const before=await legacyMeasure(ruleClassifier,modelEvalSet);
   const study=await evaluateClassifier(ruleClassifier,modelEvalSet);
   assert.deepEqual(study.overall,before.overall);
   const fresh=await evaluateClassifier(ruleClassifier,accuracyFinal);
-  assert.deepEqual(fresh.overall,evidence.datasets.independent.rules.overall);
-  const misses=fresh.rows.filter(r=>r.gateMiss);
-  assert.equal(misses.length,4,'newly exposed pre-existing gate recognition gaps must remain visible');
-  for(const row of misses)assert.deepEqual(row.rpcMethods,[],'no tool execution for '+row.text);
+  const archived=evidence.datasets.independent.rules.overall;
+  assert.equal(archived.gateMisses,4,'preserve the historical evidence');
+  assert.deepEqual(fresh.overall,{...archived,correct:archived.correct+4,gateMisses:0});
+  const {gateRegressions06c}=await import('./safety-gate-06c-set.mjs');
+  for(const {text} of gateRegressions06c){
+    const row=fresh.rows.find(r=>r.text===text);
+    assert.equal(row.actual,'refuse',text);assert.equal(row.classifierUsed,false,text);
+    assert.deepEqual(row.rpcMethods,[],text);
+  }
 });

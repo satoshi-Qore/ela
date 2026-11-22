@@ -187,6 +187,9 @@ function requestOf(stem: string): string {
     s + '(?:ir|ur|er|ar|r) m[iu]s[iu]n(?:[iu]z)?',
     s + '(?:y?e|y?a)bil(?:ir|ecek) m[iu]s[iu]n(?:[iu]z)?',
     s + '(?:mek|mak) (?:ist[a-z]*|lazim|gerek[a-z]*)',
+    // Delegated requests: "etmeni istiyorum", "yapmanızı rica ediyorum".
+    // Do not include negative wishes ("etmeni istemiyorum") or negative verbs ("etmemeni").
+    s + '(?:meni|mani|menizi|manizi|memi|mami|memizi|mamizi) (?:ist(?:iyorum|iyoruz|erim|eriz)|rica ed(?:iyorum|iyoruz|erim|eriz)|talep ed(?:iyorum|iyoruz)|bekl(?:iyorum|iyoruz|erim|eriz))',
     s + '(?:mem|mam|memiz|mamiz|men|man|meniz|maniz) (?:lazim|gerek[a-z]*)',
     s + '(?:meli|mali)(?:yim|yiz|sin|siniz)?',
     s + '(?:y?ecegim|y?acagim|y?ecegiz|y?acagiz)',
@@ -274,6 +277,16 @@ function englishRequest(category: RiskCategory, verbs: string, indirect = false,
 const fundsOrNoRead =(text: string): boolean => assetContext.test(text) || !readContext.test(text);
 const assetOnly = (text: string): boolean => assetContext.test(text);
 
+// A noun action must be the requested object, not a modifier ("perform a token swap analysis").
+// Keep these new forms clause-anchored even under manipulation, so "ignore that suggestion,
+// do not perform a swap" cannot turn a negated mention into a request via an anywhere search.
+function englishNounAction(category: RiskCategory, noun: string): RiskRule {
+  const end = '(?=$| (?:for|on|with|using|of|from|to|now|please|immediately|today|tomorrow|right|as|at|in|and|then|after|before)(?![a-z]))';
+  const rule = english(category, '(?:perform|execute|carry out|conduct|initiate|do|make|process) (?:(?:a|an|the|this|that|my|our|another|these|those|some|any|both|[0-9]+) )?'
+    + noun + '(?: (?:transactions?|operations?))?' + end);
+  return { category, clause: rule.clause };
+}
+
 const riskRules: readonly RiskRule[] = [
   // Secrets are never handled, whatever the phrasing.
   { category: 'key_material', pattern: word('ozel anahtar[a-z]*|gizli anahtar[a-z]*|private key[a-z]*|seed[a-z]*|mnemonic[a-z]*|kurtarma (?:ifade|cumle|kelime|anahtar)[a-z]*|gizli (?:ifade|cumle|kelime)[a-z]*|(?:12|24) kelime[a-z]*|sifre[a-z]*|parola[a-z]*'
@@ -291,10 +304,15 @@ const riskRules: readonly RiskRule[] = [
   englishRequest('signing', 'confirm', false, text => transactionContext.test(text) || assetContext.test(text) || !readContext.test(text)),
   english('wallet_control', '(?:connect|conect|link|import|create|open|reset|unlock|drain|empty|delete|restore|recover|export) (?:(?:my|a|an|the|new|your|this|our) )*(?:wallet|account)s?(?![a-z])'),
   englishRequest('state_change', 'swap|bridge|mint|deploy|stake|unstake|delegate|undelegate|redelegate|buy|sell|burn|trade|exchange|lend|borrow|claim|vote', true),
+  // Noun actions still need a request opener, not an explanation or a negated imperative.
+  englishNounAction('state_change', '(?:(?:token|coin|asset|qor) )?(?:swaps?|trades?|exchanges?|staking)'),
+  englishNounAction('signing', '(?:(?:token|spending|allowance) )?approvals?'),
   { category: 'signing', pattern: word(requestOf('imzala|imza at')) },
   { category: 'signing', pattern: word(requestOf('onayla')), when: text => transactionContext.test(text) || assetContext.test(text) || !readContext.test(text) },
+  { category: 'signing', pattern: word('onay(?:i|ini|inizi|imizi|larini|lama)? (?:islem(?:i|ini|inizi|imizi) )?(?:' + requestOf('yap|ver|gerceklestir|baslat') + ')'), when: text => assetContext.test(text) || word('harcama[a-z]*|izin[a-z]*|sozlesme[a-z]*|allowance|spending').test(text) },
   { category: 'wallet_control', pattern: word('(?:cuzdan|wallet)[a-z]* (?:' + requestOf('bagla|ac|olustur|kur|ice aktar|sil|bosalt|sifirla|import et|import ed') + ')') },
   { category: 'state_change', pattern: word(requestOf('stake (?:et|ed|yap)|stakele|unstake (?:et|ed|yap)?|delege (?:et|ed)|swap (?:et|ed|yap)|swapla|takas (?:et|ed|yap)|koprule|mint (?:et|ed|le)|nft bas|deploy (?:et|ed)|satin al')) },
+  { category: 'state_change', pattern: word('(?:takas|swap)(?:i|ini|inizi|imizi|larini)? (?:islem(?:i|ini|inizi|imizi) )?(?:' + requestOf('yap|gerceklestir|baslat') + ')') },
   { category: 'state_change', pattern: word('sozlesme[a-z]* (?:' + requestOf('dagit|yayinla|deploy et|deploy ed') + ')') },
   { category: 'state_change', pattern: word(requestOf('sat|yak|bas')), when: assetOnly },
 ];
