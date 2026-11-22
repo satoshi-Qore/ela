@@ -1,0 +1,14 @@
+{
+  "id": "ELA Intent Linear",
+  "version": "1.0.0",
+  "license": "MIT",
+  "architecture": "learned hashed word/character n-gram softmax",
+  "file": "models/ela-intent-linear-v1.json",
+  "sha256": "296c79b3b2fa7e7238a08ea33643945d5a16c8d95cd2e762e6e81b660ffd5e18",
+  "artifactBytes": 185233,
+  "trainingRows": 120,
+  "trainingSha256": "67d2e6b6d6737e37c6abb2ad133c4f76e73cf7c229a0d87c6b0bef9d175ee34d",
+  "trainingSource": "scripts/ai-training-data.mjs",
+  "evaluationExcluded": true,
+  "defaultEnabled": false
+}

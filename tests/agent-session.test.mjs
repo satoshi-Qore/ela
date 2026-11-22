@@ -415,13 +415,13 @@ test('the session composes the existing pipeline and adds no network or decision
 test('the web interface runs every command through the session and has no path around the safety gate', () => {
   const code = read('src/web.ts').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   const runtimeImports = [...code.matchAll(/^import\s+(?!type\b)(?:[^'"]*from\s+)?'([^']+)'/gm)].map(match => match[1]);
-  assert.deepEqual(runtimeImports.sort(), ['./agent/session.ts', './web.css']);
+  assert.deepEqual(runtimeImports.sort(), ['./agent/lexicon.ts', './agent/session.ts', './web.css']);
   const typeImports = [...code.matchAll(/^import\s+type\s+[^;]+from\s+'([^']+)'/gm)].map(match => match[1]);
   assert.ok(typeImports.length > 0);
   for (const name of ['routeCommand', 'planCommand', 'resolveFollowUp', 'runQuery', 'executePlan', 'invokeTool', 'queryLatestBlock', 'interpretCommand', 'understandCommand', 'actOnDecision', 'decideIntent', 'getEvmBlockNumber', 'getBlockNumber', 'getBalance', 'verifyMlDsa87', 'WithSdk', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_']) {
     assert.equal(code.includes(name), false, name);
   }
-  assert.equal((code.match(/createSession\(\)/g) ?? []).length, 1, 'one session per page');
+  assert.equal((code.match(/createSession\(/g) ?? []).length, 1, 'one session per page');
   assert.match(code, /session\.handleCommand\(command\.value\)/);
   assert.match(code, /session\.clear\(\)/);
   assert.equal(/session|handleCommand/.test(read('index.html')), false, 'index.html is unchanged');
@@ -429,10 +429,10 @@ test('the web interface runs every command through the session and has no path a
   // verifies signatures locally and has no command path into the session.
   // Changed in 7C-27: web.ts also loads ELA Core (themes and the three Core views) as its own chunk.
   // Like the panel, the Core has no command path: it only reads what web.ts rendered (checked below).
-  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts', './payment/archive.ts', './decision/view.ts']);
+  assert.deepEqual([...code.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./ai/controller.ts', './pqc/panel.ts', './core/core.ts', './payment/archive.ts', './decision/view.ts', './ai/intelligence.ts']);
   // Changed in 7C-36: also the Koherens and Okta views and their shared materials (quantum.ts).
   // Changed in 7C-37: also the restored original Core visual (trace.ts).
-  for (const file of ['src/decision/view.ts', 'src/decision/history.ts', 'src/payment/archive.ts', 'src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
+  for (const file of ['src/ai/intelligence.ts', 'src/decision/view.ts', 'src/decision/history.ts', 'src/payment/archive.ts', 'src/pqc/panel.ts', 'src/core/core.ts', 'src/core/draw.ts', 'src/core/karot.ts', 'src/core/optik.ts', 'src/core/gravur.ts', 'src/core/koherens.ts', 'src/core/okta.ts', 'src/core/quantum.ts', 'src/core/trace.ts']) {
     const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     for (const name of ['session', 'handleCommand', 'interpretCommand', 'runQuery', 'invokeTool', 'fetch(', 'XMLHttpRequest', 'WebSocket', 'eth_', 'sign(', 'keygen', 'secretKey', 'privateKey']) {
       assert.equal(source.includes(name), false, file + ': ' + name);

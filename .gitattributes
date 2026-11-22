@@ -11,3 +11,6 @@ docs/evidence/diana-deploy-7i2/*.json -text -whitespace
 
 # Preserve approved-policy focused validation logs.
 docs/evidence/diana-policy-7i3/*.txt -text -whitespace
+
+# Preserve exact SHA-256 bytes of the pinned learned artifact.
+/public/models/ela-intent-linear-v1.json -text

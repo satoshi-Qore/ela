@@ -1,0 +1,177 @@
+{
+  "runtime": "Real headless Chrome, GitHub Actions Linux runner; cold loopback transfer",
+  "run": "https://github.com/satoshi-Qore/ela/actions/runs/45026049008",
+  "artifactSha256": "296c79b3b2fa7e7238a08ea33643945d5a16c8d95cd2e762e6e81b660ffd5e18",
+  "results": {
+    "rules": {
+      "overall": {
+        "total": 307,
+        "correct": 287,
+        "falseAccepts": 0,
+        "falseRejects": 20,
+        "gateMisses": 0
+      },
+      "tr": {
+        "total": 152,
+        "correct": 140,
+        "falseAccepts": 0,
+        "falseRejects": 12,
+        "gateMisses": 0
+      },
+      "en": {
+        "total": 147,
+        "correct": 141,
+        "falseAccepts": 0,
+        "falseRejects": 6,
+        "gateMisses": 0
+      },
+      "groups": {
+        "safe": {
+          "total": 125,
+          "correct": 113,
+          "falseAccepts": 0,
+          "falseRejects": 12,
+          "gateMisses": 0
+        },
+        "risky": {
+          "total": 107,
+          "correct": 107,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "unknown": {
+          "total": 14,
+          "correct": 14,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "unsupported": {
+          "total": 12,
+          "correct": 12,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "follow_up": {
+          "total": 13,
+          "correct": 13,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "typo": {
+          "total": 12,
+          "correct": 6,
+          "falseAccepts": 0,
+          "falseRejects": 6,
+          "gateMisses": 0
+        },
+        "adversarial": {
+          "total": 16,
+          "correct": 16,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "mixed": {
+          "total": 8,
+          "correct": 6,
+          "falseAccepts": 0,
+          "falseRejects": 2,
+          "gateMisses": 0
+        }
+      }
+    },
+    "model": {
+      "overall": {
+        "total": 307,
+        "correct": 266,
+        "falseAccepts": 10,
+        "falseRejects": 31,
+        "gateMisses": 0
+      },
+      "tr": {
+        "total": 152,
+        "correct": 131,
+        "falseAccepts": 4,
+        "falseRejects": 17,
+        "gateMisses": 0
+      },
+      "en": {
+        "total": 147,
+        "correct": 128,
+        "falseAccepts": 6,
+        "falseRejects": 13,
+        "gateMisses": 0
+      },
+      "groups": {
+        "safe": {
+          "total": 125,
+          "correct": 98,
+          "falseAccepts": 0,
+          "falseRejects": 27,
+          "gateMisses": 0
+        },
+        "risky": {
+          "total": 107,
+          "correct": 107,
+          "falseAccepts": 0,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "unknown": {
+          "total": 14,
+          "correct": 9,
+          "falseAccepts": 5,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "unsupported": {
+          "total": 12,
+          "correct": 9,
+          "falseAccepts": 3,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "follow_up": {
+          "total": 13,
+          "correct": 11,
+          "falseAccepts": 1,
+          "falseRejects": 1,
+          "gateMisses": 0
+        },
+        "typo": {
+          "total": 12,
+          "correct": 10,
+          "falseAccepts": 0,
+          "falseRejects": 2,
+          "gateMisses": 0
+        },
+        "adversarial": {
+          "total": 16,
+          "correct": 15,
+          "falseAccepts": 1,
+          "falseRejects": 0,
+          "gateMisses": 0
+        },
+        "mixed": {
+          "total": 8,
+          "correct": 7,
+          "falseAccepts": 0,
+          "falseRejects": 1,
+          "gateMisses": 0
+        }
+      }
+    }
+  },
+  "loadMs": 7,
+  "firstReadyMs": 25.14016299999639,
+  "maxInferenceMs": 1,
+  "extraHeapBytes": 5455640,
+  "defaultEnabled": false,
+  "chromeVersion": "157.0.8103.78",
+  "mainJsGzipBytes": 13872,
+  "mainJsReferenceBytes": 13312
+}
