@@ -518,7 +518,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-37: the Core view selector is gone (the Core shows only its original visual): 8.
     if (!PROBE) {
       assert.equal(await evaluate(`document.activeElement.id`), 'command', 'the command field is reachable with Tab');
-      assert.equal(stops, 10, 'two language buttons, the theme group, and six module links come first');
+      assert.equal(stops, 11, 'language/theme controls, six module links and the collapsed guide come first');
     }
     await tab();
     desktop.focus = await evaluate(`(() => {
@@ -2661,6 +2661,31 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.equal(await evaluate(`document.getElementById('ai-panel-state').dataset.state`),'fallback');
     const stillWorks=await submit('Diana ağını kontrol et.');assert.equal(stillWorks.state,'Success');
   }, {timeout:180000});
+
+  uiTest('07 guided demo: keyboard, evidence links, TR/EN, three themes and mobile 200% without automatic actions', async () => {
+    await openPage();
+    const downloads=networkLog.filter(url=>url.includes('/models/')).length;
+    assert.equal(await evaluate(`document.getElementById('guided-demo').open`),false);
+    await evaluate(`document.querySelector('#guided-demo>summary').focus()`);
+    for(const type of ['keyDown','keyUp'])await env.page.send('Input.dispatchKeyEvent',{type,key:' ',code:'Space',windowsVirtualKeyCode:32});
+    assert.equal(await evaluate(`document.getElementById('guided-demo').open`),true);
+    const steps=await evaluate(`[...document.querySelectorAll('.guided-steps>li')].map(x=>({title:x.querySelector('h2').textContent,links:[...x.querySelectorAll('a')].map(a=>a.getAttribute('href'))}))`);
+    assert.equal(steps.length,7);assert.match(steps[0].title,/Execution/);
+    for(const step of steps)assert.ok(step.links.some(x=>x.startsWith('https://github.com/satoshi-Qore/ela/')),'each step links technical proof');
+    assert.equal(await evaluate(`[...document.querySelectorAll('#guided-demo a[href^="#"]')].every(a=>document.querySelector(a.getAttribute('href')))`),true);
+    try{
+      for(const lang of ['en','tr'])for(const theme of ['blue','dark','light'])for(const width of [1280,320]){
+        await env.page.send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width===320});
+        await evaluate(`document.querySelector('[data-lang="${lang}"]').click();document.querySelector('[data-theme="${theme}"]').click();document.documentElement.style.fontSize='32px'`);
+        const view=await evaluate(`({lang:document.documentElement.lang,title:document.querySelector('#guided-demo>summary').textContent,overflow:document.documentElement.scrollWidth>innerWidth+1,ai:document.getElementById('ai-panel-state').dataset.state,rpc:window.__rpc.calls})`);
+        assert.equal(view.lang,lang);assert.match(view.title,lang==='tr'?/Rehberli demo/:/Guided demo/);
+        assert.equal(view.overflow,false,lang+' '+theme+' '+width+' 200%');
+        assert.equal(view.ai,'disabled');assert.deepEqual(view.rpc,[]);
+      }
+    }finally{await evaluate(`document.documentElement.style.fontSize='';document.querySelector('[data-lang="en"]').click();document.querySelector('[data-theme="blue"]').click()`);await env.page.send('Emulation.clearDeviceMetricsOverride');}
+    assert.equal(networkLog.filter(url=>url.includes('/models/')).length,downloads);
+    await evaluate(`document.getElementById('guided-demo').open=false`);
+  });
 
   uiTest('06C four gate regressions refuse before optional model load or RPC', async () => {
     const {gateRegressions06c}=await import('./safety-gate-06c-set.mjs');

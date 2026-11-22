@@ -310,7 +310,32 @@
     "ai.result": "Classification provenance",
     "ai.latency": "Runtime measurements",
     "ai.source.failed": "inference failed; no model output accepted",
-    "ai.not_evaluated": "not evaluated"
+    "ai.not_evaluated": "not evaluated",
+    "demo.title": "Guided demo · about 3 minutes",
+    "demo.intro": "Live reads, dated payment evidence and an opt-in experiment stay distinct. Opening this guide sends no requests.",
+    "demo.purpose.title": "ELA — Execution & Logic Agent",
+    "demo.purpose": "Understand a request, verify its evidence and explain its limits before considering an action. The browser reads Diana; the completed payment worker is separate.",
+    "demo.architecture": "Architecture & scope",
+    "demo.core.title": "CORE · fresh Diana reads",
+    "demo.core": "In Execution & Logic, try either command below. A successful read must show chain 9800, its source and a fresh timestamp. If RPC fails, show the error.",
+    "demo.open.core": "Open command panel",
+    "demo.proof": "Technical proof",
+    "demo.pqc.title": "PQC · verify, then tamper",
+    "demo.pqc": "Open the verifier, load the official ML-DSA-87 vector and verify it. Change one message byte and verify again: the same signature must fail. Local verification is not a hybrid chain transaction.",
+    "demo.open.pqc": "Open verifier",
+    "demo.payment.title": "Payment Account · 3 real receipts",
+    "demo.payment": "Inspect the 21 November 2026 archive: 3/3 payments, 0.003 QOR, contract and three hashes. Recheck on Diana reads receipts, events and state; a failed live read never refreshes the archived success. Explorer indexing is separate.",
+    "demo.open.payment": "Open payment evidence",
+    "demo.decision.title": "Decision Engine · explain the policy",
+    "demo.decision": "ALLOW means verified checks pass; BLOCK means a known violation; WAIT means a temporary condition; UNKNOWN means missing or conflicting facts. The card explains historical replay BLOCK results. Linked tests demonstrate all four outcomes, not live payment permission.",
+    "demo.open.decision": "Open historical explanation",
+    "demo.ai.title": "AI Intelligence · explicit experiment",
+    "demo.ai": "ELA Intent Linear 1.0.0 runs locally with learned weights. It stays OFF: the historical evaluation scored 266/307 with 10 false accepts, below the rules. Only opt in deliberately; try the phrase below, inspect the actual source and latency, then disable it. Published Chrome measurements are linked.",
+    "demo.open.ai": "Open local experiment",
+    "demo.safety.title": "Safety Gate · refuse before inference",
+    "demo.safety": "Enter the request below in the command panel. Expect Refused and stages not run. Linked regression tests prove zero classifier calls and zero RPC calls, including when AI is opted in. The demo never executes this request.",
+    "demo.pack": "Submission text, checklist & video script",
+    "demo.pending": "Prepared materials only. No video recording or final submission is claimed."
   },
   "tr": {
     "result.boundary": "Sınırları belirli yürütme ortamı",
@@ -695,10 +720,35 @@
     "ai.result": "Sınıflandırmanın kaynağı",
     "ai.latency": "Çalışma zamanı ölçümleri",
     "ai.source.failed": "çıkarım başarısız; model çıktısı kabul edilmedi",
-    "ai.not_evaluated": "değerlendirilmedi"
+    "ai.not_evaluated": "değerlendirilmedi",
+    "demo.title": "Rehberli demo · yaklaşık 3 dakika",
+    "demo.intro": "Canlı okumalar, tarihli ödeme kanıtları ve açık onaylı deney birbirinden ayrıdır. Bu rehberi açmak istek göndermez.",
+    "demo.purpose.title": "ELA — Execution & Logic Agent",
+    "demo.purpose": "Bir eylemi değerlendirmeden önce isteği anla, kanıtını doğrula ve sınırlarını açıkla. Tarayıcı Diana verilerini okur; tamamlanmış ödeme yürütücüsü ayrıdır.",
+    "demo.architecture": "Mimari ve kapsam",
+    "demo.core.title": "CORE · güncel Diana okumaları",
+    "demo.core": "Yürütme ve Mantık bölümünde aşağıdaki komutlardan birini deneyin. Başarılı okumada zincir 9800, kaynak ve yeni zaman damgası görünmelidir. RPC başarısızsa hatayı gösterin.",
+    "demo.open.core": "Komut panelini aç",
+    "demo.proof": "Teknik kanıt",
+    "demo.pqc.title": "PQC · doğrula, sonra değiştir",
+    "demo.pqc": "Doğrulayıcıyı açın, resmî ML-DSA-87 vektörünü yükleyip doğrulayın. Mesajın bir baytını değiştirip tekrar doğrulayın: aynı imza geçersiz olmalıdır. Yerel doğrulama, hibrit zincir işlemi değildir.",
+    "demo.open.pqc": "Doğrulayıcıyı aç",
+    "demo.payment.title": "Ödeme Hesabı · 3 gerçek receipt",
+    "demo.payment": "21 Kasım 2026 arşivini inceleyin: 3/3 ödeme, 0,003 QOR, sözleşme ve üç hash. Diana kontrolü receipt, olay ve durumu okur; başarısız canlı okuma arşiv başarısını yenilemez. Explorer indekslemesi ayrıdır.",
+    "demo.open.payment": "Ödeme kanıtlarını aç",
+    "demo.decision.title": "Karar Motoru · politikayı açıkla",
+    "demo.decision": "ALLOW doğrulanmış kontrollerin geçtiğini, BLOCK bilinen ihlali, WAIT geçici koşulu, UNKNOWN eksik veya çelişkili veriyi belirtir. Kart geçmiş tekrar değerlendirmelerindeki BLOCK sonuçlarını açıklar. Bağlı testler dört sonucu gösterir; canlı ödeme izni vermez.",
+    "demo.open.decision": "Geçmiş açıklamayı aç",
+    "demo.ai.title": "Yapay Zekâ · açık onaylı deney",
+    "demo.ai": "ELA Intent Linear 1.0.0 öğrenilmiş ağırlıklarla yerel çalışır. KAPALI kalır: tarihli değerlendirmede 266/307 doğru ve 10 yanlış kabul üreterek kuralların gerisinde kaldı. Yalnızca bilinçli deneme için açın; aşağıdaki ifadeyi deneyip gerçek kaynak ve gecikmeyi inceleyin, sonra kapatın. Yayımlanmış Chrome ölçümleri bağlantıdadır.",
+    "demo.open.ai": "Yerel deneyi aç",
+    "demo.safety.title": "Güvenlik Kapısı · çıkarımdan önce reddet",
+    "demo.safety": "Aşağıdaki isteği komut paneline girin. Reddedildi sonucunu ve çalışmayan aşamaları görün. Bağlı regresyon testleri, AI için onay verilmişken de sıfır sınıflandırıcı ve sıfır RPC çağrısını kanıtlar. Demo bu isteği yürütmez.",
+    "demo.pack": "Başvuru metni, kontrol listesi ve video senaryosu",
+    "demo.pending": "Yalnızca hazırlanmış materyaller. Video kaydı veya kesinleşmiş başvuru iddiası yoktur."
   }
 }
-  </script>
+</script>
   </head>
   <body>
     <header class="topbar">
@@ -751,6 +801,21 @@
           </ol>
         </nav>
       </section>
+
+      <details id="guided-demo" class="guided-demo">
+        <summary data-i18n="demo.title">Guided demo · about 3 minutes</summary>
+        <p class="guided-intro" data-i18n="demo.intro">Live reads, dated payment evidence and an opt-in experiment stay distinct. Opening this guide sends no requests.</p>
+        <ol class="guided-steps">
+          <li><h2 data-i18n="demo.purpose.title">ELA — Execution &amp; Logic Agent</h2><p data-i18n="demo.purpose">Understand a request, verify its evidence and explain its limits before considering an action. The browser reads Diana; the completed payment worker is separate.</p><a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/docs/DEVELOPER-FEST.md#architecture" data-i18n="demo.architecture">Architecture &amp; scope</a></li>
+          <li><h2 data-i18n="demo.core.title">CORE · fresh Diana reads</h2><p data-i18n="demo.core">In Execution &amp; Logic, try either command below. A successful read must show chain 9800, its source and a fresh timestamp. If RPC fails, show the error.</p><p><code lang="en">Check Diana network.</code><br><code lang="tr">Diana ağını kontrol et.</code></p><a href="#logic" data-i18n="demo.open.core">Open command panel</a> · <a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/src/agent/registry.ts" data-i18n="demo.proof">Technical proof</a></li>
+          <li data-pqc-ref><h2 data-i18n="demo.pqc.title">PQC · verify, then tamper</h2><p data-i18n="demo.pqc">Open the verifier, load the official ML-DSA-87 vector and verify it. Change one message byte and verify again: the same signature must fail. Local verification is not a hybrid chain transaction.</p><a href="#pqc-panel" data-i18n="demo.open.pqc">Open verifier</a> · <a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/tests/vectors/qorechain-pqc/SOURCE.md" data-i18n="demo.proof">Technical proof</a></li>
+          <li><h2 data-i18n="demo.payment.title">Payment Account · 3 real receipts</h2><p data-i18n="demo.payment">Inspect the 21 November 2026 archive: 3/3 payments, 0.003 QOR, contract and three hashes. Recheck on Diana reads receipts, events and state; a failed live read never refreshes the archived success. Explorer indexing is separate.</p><a href="#payment" data-i18n="demo.open.payment">Open payment evidence</a> · <a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/docs/DIANA-LIVE-20261121.md" data-i18n="demo.proof">Technical proof</a></li>
+          <li><h2 data-i18n="demo.decision.title">Decision Engine · explain the policy</h2><p data-i18n="demo.decision">ALLOW means verified checks pass; BLOCK means a known violation; WAIT means a temporary condition; UNKNOWN means missing or conflicting facts. The card explains historical replay BLOCK results. Linked tests demonstrate all four outcomes, not live payment permission.</p><a href="#decision" data-i18n="demo.open.decision">Open historical explanation</a> · <a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/tests/decision-engine.test.mjs" data-i18n="demo.proof">Technical proof</a></li>
+          <li><h2 data-i18n="demo.ai.title">AI Intelligence · explicit experiment</h2><p data-i18n="demo.ai">ELA Intent Linear 1.0.0 runs locally with learned weights. It stays OFF: the historical evaluation scored 266/307 with 10 false accepts, below the rules. Only opt in deliberately; try the phrase below, inspect the actual source and latency, then disable it. Published Chrome measurements are linked.</p><p><code lang="en">could you determine whether Diana responds</code></p><a href="#ai-intelligence" data-i18n="demo.open.ai">Open local experiment</a> · <a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/docs/AI-ACCURACY-06B.md" data-i18n="demo.proof">Technical proof</a></li>
+          <li><h2 data-i18n="demo.safety.title">Safety Gate · refuse before inference</h2><p data-i18n="demo.safety">Enter the request below in the command panel. Expect Refused and stages not run. Linked regression tests prove zero classifier calls and zero RPC calls, including when AI is opted in. The demo never executes this request.</p><p><code lang="en">Perform a token swap on my behalf.</code></p><a href="#logic" data-i18n="demo.open.core">Open command panel</a> · <a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/tests/safety-gate.test.mjs" data-i18n="demo.proof">Technical proof</a></li>
+        </ol>
+        <p class="guided-footer"><a target="_blank" rel="noopener noreferrer" href="https://github.com/satoshi-Qore/ela/blob/main/docs/DEVELOPER-FEST.md" data-i18n="demo.pack">Submission text, checklist &amp; video script</a><span data-i18n="demo.pending">Prepared materials only. No video recording or final submission is claimed.</span></p>
+      </details>
 
       <div class="grid">
         <section id="logic" class="module module-logic" aria-labelledby="logic-heading">
