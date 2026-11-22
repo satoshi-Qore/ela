@@ -1,5 +1,4 @@
 import './web.css';
-import { ruleClassifier } from './agent/lexicon.ts';
 import { createSession } from './agent/session.ts';
 import type { CommandResult } from './agent/session.ts';
 import type { ExecutionResult, StepResult } from './agent/executor.ts';
@@ -103,11 +102,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-l
 // --- Agent session ----------------------------------------------------------------------------
 
 // In-memory only: a page reload starts a new session with no context.
-const session = createSession({classifier:{classify:async text=>{
-  // Only a missing optional runtime falls back here. Actual inference errors still clarify upstream.
-  const ai=await import('./ai/controller.ts').catch(()=>undefined);
-  return ai ? ai.classify(text) : ruleClassifier.classify(text);
-}}});
+const session = createSession({ optionalLocalModel: true });
 
 function showStatus(next: QueryState, ...detail: Part[]): void {
   state.dataset.state = next.toLowerCase();

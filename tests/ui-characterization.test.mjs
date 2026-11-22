@@ -1762,7 +1762,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-27: at load the page also fetches the ELA Core chunk, its drawing helpers, and the
     // default Karot view (index JS and CSS only before). The verifier panel still loads only when opened.
     // Changed in 7C-37: the Core chunk and its one visual, the original session trace (no drawing helpers).
-    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]{8}\.(js|css)$/, '.$1')).sort(), ['archive.js', 'controller.js', 'core.js', 'evidence.js', 'index.css', 'index.js', 'intelligence.js', 'trace.js', 'view.js'], atLoad.join(', '));
+    assert.deepEqual(atLoad.map(name => name.replace(/-[\w-]{8}\.(js|css)$/, '.$1')).sort(), ['archive.js', 'controller.js', 'core.js', 'evidence.js', 'get-evm-block-number.js', 'index.css', 'index.js', 'intelligence.js', 'preload-helper.js', 'trace.js', 'view.js'], atLoad.join(', '));
     assert.ok(atLoad.every(name => !name.startsWith('panel-')), 'no panel chunk before opening: ' + atLoad.join(', '));
     assert.deepEqual(opened, { hidden: false, expanded: 'true', label: 'Close verifier', form: true, loading: false });
     assert.equal(onOpen.length, 1, onOpen.join(', '));
@@ -1872,7 +1872,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     // Changed in 7C-32: also the token chunk, loaded only for a command with a 0x value and a token word.
     // Changed in 7C-36: the Core view chunks are karot, koherens and okta, plus the materials the last two share (quantum).
     // Changed in 7C-37: the Core chunk and the original session trace only; the later views are not bundled.
-    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]{8}\.js$/, '')).sort(), ['archive', 'balance', 'block', 'controller', 'core', 'evidence', 'gas', 'index', 'intelligence', 'keccak', 'panel', 'token', 'trace', 'transaction', 'verify', 'view'], scripts.join(', '));
+    assert.deepEqual(scripts.map(name => name.replace(/-[\w-]{8}\.js$/, '')).sort(), ['archive', 'balance', 'block', 'controller', 'core', 'evidence', 'gas', 'get-evm-block-number', 'index', 'intelligence', 'keccak', 'panel', 'preload-helper', 'token', 'trace', 'transaction', 'verify', 'view'], scripts.join(', '));
     assert.ok(panel, 'a separate panel chunk');
     for (const name of scripts.filter(n => /^(core|trace)-/.test(n))) {
       assert.ok(sizes[name].gzip <= 3 * 1024, `${name} gzip ${sizes[name].gzip} bytes exceeds the 3 KiB Core chunk budget`);
