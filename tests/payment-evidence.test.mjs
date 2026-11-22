@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { verifyPayments } from '../src/payment/verify.ts';
 import { keccak256 } from '../src/qorechain/keccak.ts';
+import { QoreChainReadError, readJson } from '../src/qorechain/read-client.ts';
+import { paymentFailure } from '../src/payment/errors.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 const evidence = read('../src/payment/evidence.json');
@@ -70,4 +72,33 @@ test('503 and CORS/network failures reject; archive remains unchanged',async()=>
 test('a later donation is reported as a current balance, without rewriting historical zero',async()=>{
   const r=await verifyPayments(fixture((r,m)=>{if(m==='eth_getBalance')r.result='0x1';}));
   assert.equal(r.balanceWei,'1');assert.equal(evidence.balanceWei,'0');
+});
+
+test('diagnostics distinguish observed transport codes without guessing CORS',async()=>{
+  for(const [code,key] of [['ENOTFOUND','dns'],['EAI_AGAIN','dns'],['CERT_HAS_EXPIRED','tls'],['ERR_TLS_CERT_ALTNAME_INVALID','tls'],['EACCES','connection_denied'],['EPERM','connection_denied'],['ECONNRESET','network_unknown']]) {
+    const error=await readJson(new URL('https://evm-testnet.qore.host/'),{fetch:async()=>{throw new TypeError('private transport detail',{cause:{code}});}}).catch(e=>e);
+    assert.equal(error.code,'network_error');assert.equal(paymentFailure(error).key,'pay.error.'+key);
+    assert.equal(JSON.stringify(paymentFailure(error)).includes('private'),false);
+  }
+  const browserError=await verifyPayments({fetch:async()=>{throw new TypeError('Failed to fetch');}}).catch(e=>e);
+  assert.equal(paymentFailure(browserError).key,'pay.error.network_unknown');
+  assert.equal(paymentFailure(new Error('unclassified')).key,'pay.error.unknown');
+});
+test('HTTP 503, timeout, malformed JSON and JSON-RPC errors have distinct diagnoses',async()=>{
+  const cases=[
+    [{fetch:async()=>new Response('',{status:503})},'http',{status:503}],
+    [{fetch:()=>new Promise(()=>{}),timeoutMs:5},'timeout',{}],
+    [{fetch:async()=>new Response('not JSON')},'invalid_response',{}],
+    [fixture((r,m)=>{if(m==='eth_chainId'){delete r.result;r.error={code:-32602,message:'private upstream detail',data:'private payload'};}}),'rpc',{code:-32602}],
+    [fixture((r,m)=>{if(m==='eth_chainId')r.error={code:-32602,message:'both result and error are invalid'};}),'invalid_response',{}],
+    [fixture((r,m)=>{if(m==='eth_getTransactionReceipt')r.result=null;}),'history_unavailable',{}],
+    [fixture((r,m)=>{if(m==='eth_getTransactionReceipt')r.result.status='0x0';}),'evidence_mismatch',{}],
+    [fixture((r,m)=>{if(m==='eth_chainId')r.result='0x2649';}),'chain_mismatch',{}],
+  ];
+  for(const [options,kind,vars] of cases){
+    const error=await verifyPayments(options).catch(e=>e);
+    assert.ok(error instanceof QoreChainReadError);
+    assert.deepEqual(paymentFailure(error),{key:'pay.error.'+kind,vars});
+    assert.equal(JSON.stringify(error).includes('private'),false);
+  }
 });

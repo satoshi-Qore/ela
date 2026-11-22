@@ -1,5 +1,6 @@
 import evidence from './evidence.json' with { type: 'json' };
 import type { Put, Format } from '../web.ts';
+import { paymentFailure } from './errors.ts';
 
 const explorer = 'https://explore.qore.network';
 const source = 'https://github.com/satoshi-Qore/ela/blob/21483883ea2d25e3aeef1f7a26f9843dc2d4c45f';
@@ -39,15 +40,17 @@ export function mountPayment(put: Put, F: Format) {
   const status = get('payment-current-status'); put(status, 'pay.unchecked');
   const button = get('payment-recheck') as HTMLButtonElement;
   button.addEventListener('click', async () => {
-    button.disabled = true; status.dataset.state = 'reading'; put(status, 'pay.checking');
+    button.disabled = true; status.dataset.state = 'reading'; delete status.dataset.error; put(status, 'pay.checking');
     try {
       const { verifyPayments } = await import('./verify.ts');
       const result = await verifyPayments();
       status.dataset.state = 'verified';
       put(status, () => F('pay.ok', {time:result.checkedAt, block:result.block, balance:result.balanceWei}));
-    } catch {
+    } catch (error) {
+      const failure = paymentFailure(error);
       const checkedAt = new Date().toISOString(); status.dataset.state = 'unavailable';
-      put(status, () => F('pay.failed', {time:checkedAt}));
+      status.dataset.error = failure.key;
+      put(status, () => F('pay.failed', {time:checkedAt}) + ' ' + F(failure.key, failure.vars));
     } finally { button.disabled = false; }
   });
 }

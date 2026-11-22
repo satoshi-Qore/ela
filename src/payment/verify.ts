@@ -1,12 +1,14 @@
 import evidence from './evidence.json' with { type: 'json' };
 import { createDianaPaymentReader, sha256Data } from '../qorechain/diana-payment-reader.ts';
 import { evmEndpoint } from '../qorechain/get-evm-block-number.ts';
-import { isRecord, readJson } from '../qorechain/read-client.ts';
+import { isRecord, readJson, rpcResult, QoreChainReadError } from '../qorechain/read-client.ts';
 import type { ReadOptions } from '../qorechain/read-client.ts';
 
 const same = (a: unknown, b: string): boolean => typeof a === 'string' && a.toLowerCase() === b.toLowerCase();
 const word = (s: string) => '0x' + BigInt(s).toString(16).padStart(64, '0');
-function requireMatch(ok: boolean): asserts ok { if (!ok) throw Error('Diana evidence mismatch or unavailable history'); }
+function requireMatch(ok: boolean): asserts ok {
+  if (!ok) throw new QoreChainReadError('evidence_mismatch', 'Diana evidence did not match the expected payment proof.');
+}
 
 /** Fixed public reads only. No signer, scheduler, wallet, key input or transaction submission. */
 export async function verifyPayments(options: ReadOptions = {}) {
@@ -14,9 +16,10 @@ export async function verifyPayments(options: ReadOptions = {}) {
   const rpc = async (method: 'eth_getTransactionReceipt' | 'eth_getBlockByNumber', params: unknown[]) => {
     const serial = ++id;
     const body = await readJson(new URL(evmEndpoint), options, JSON.stringify({jsonrpc:'2.0', id:serial, method, params}));
-    requireMatch(isRecord(body) && body.jsonrpc === '2.0' && body.id === serial && !('error' in body));
-    requireMatch(isRecord(body.result));
-    return body.result;
+    const result = rpcResult(body, serial);
+    if (result === null) throw new QoreChainReadError('history_unavailable', 'The node did not return the requested historical receipt or block.');
+    if (!isRecord(result)) throw new QoreChainReadError('invalid_response', 'The node returned malformed receipt or block data.');
+    return result;
   };
   const reader = await createDianaPaymentReader(options);
   const code = await reader.code(evidence.contract);

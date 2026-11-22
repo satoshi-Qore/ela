@@ -1,6 +1,6 @@
 import { dianaChainHex, evmEndpoint } from './get-evm-block-number.ts';
 import { checkAddress, keccak256 } from './keccak.ts';
-import { isRecord, QoreChainReadError, readJson } from './read-client.ts';
+import { isRecord, QoreChainReadError, readJson, rpcResult } from './read-client.ts';
 import type { ReadOptions } from './read-client.ts';
 
 const PQC_STATUS = '0x0000000000000000000000000000000000000a02';
@@ -46,8 +46,7 @@ export async function createDianaPaymentReader(options: ReadOptions = {}) {
   const rpc = async (method: Method, params: readonly unknown[]): Promise<unknown> => {
     const id = ++serial;
     const body = await readJson(new URL(evmEndpoint), options, JSON.stringify({jsonrpc:'2.0', id, method, params}));
-    if (!isRecord(body) || body.jsonrpc !== '2.0' || body.id !== id || !('result' in body) || 'error' in body) invalid('JSON-RPC envelope');
-    return body.result;
+    return rpcResult(body, id);
   };
   const chain = async () => {
     if (await rpc('eth_chainId', []) !== dianaChainHex) throw new QoreChainReadError('chain_mismatch', 'Expected Diana EVM chain ID 9800.');
