@@ -126,7 +126,21 @@ build. The test records per-language/group outcomes, load time, maximum inferenc
 latency and sampled extra JS heap. Sampling is not a guarantee of peak heap, and
 loopback timings are not mobile WAN measurements. Existing UI tests still cover TR/EN,
 three themes, mobile 200%, privacy, timeouts and fallback. Final Chrome/CI measurements
-are added after the actual run; they are not inferred from Node.
+are recorded in `evidence/ai-accuracy-06b/chrome-evaluation.json`; they are not inferred
+from Node.
+
+Actual validation: [CI #202](https://github.com/satoshi-Qore/ela/actions/runs/45048349652),
+Google Chrome 157.0.8103.78, Ubuntu, localhost. All Node accuracy counts above were
+reproduced in Chrome, including the failed quality gate. Both real models loaded and
+ran inference without fallback. Deployed model: 4 ms load, 0.8 ms maximum inference;
+candidate: 3 ms load, 0.4 ms maximum inference. Combined sampled extra JS heap for the
+study was 11,357,468 bytes (10.83 MiB), including evaluation allocations. Candidate
+size was 233,464 bytes versus the deployed 185,233. No runtime budget was raised.
+The pre-existing 13 KiB main-JS gzip reference remains unmet and unchanged.
+Full suite: 1,461 tests, 1,460 passed, zero failed, one intentionally skipped live
+Diana test. Production build passed, along with TR/EN, three themes, desktop and
+mobile 200% UI checks. Passing CI verifies the experiment and preserved behavior;
+it does not turn the rejected candidate into an accurate model.
 
 Decision: reject candidate, retain the deployed model and safe default. The remaining
 technical obstacle is generalization and confidence reliability of a small lexical
