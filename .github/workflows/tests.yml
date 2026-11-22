@@ -28,3 +28,5 @@ jobs:
         run: npm test
       - name: Build production site
         run: npm run build
+      - name: Observe existing Pages demo (read-only; report availability separately)
+        run: node scripts/observe-pages-demo.mjs

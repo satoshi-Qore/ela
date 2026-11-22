@@ -1391,3 +1391,15 @@ body { font-family: "Segoe UI", Arial, sans-serif; }
 #ai-panel-state { color:var(--ice); font-size:.85rem; line-height:1.6; margin-top:.8rem; }
 #ai-enable { max-width:100%; white-space:normal; font:inherit; color:var(--ice); background:var(--well); border:1px solid var(--border-strong); border-radius:.4rem; padding:.6rem .8rem; cursor:pointer; }
 #ai-intelligence, #ai-intelligence * { min-width:0; }
+/* Judge's reading guide only: no command, model, RPC or animation controls. */
+.guided-demo { margin:0 0 1.5rem; padding:1rem; border:1px solid var(--border-strong); border-radius:.6rem; background:var(--well); color:var(--muted); }
+.guided-demo summary { color:var(--ice); cursor:pointer; font-size:.9rem; line-height:1.6; font-weight:600; }
+.guided-intro { margin:.8rem 0; font-size:.8rem; line-height:1.65; }
+.guided-steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr)); gap:1.2rem 2rem; padding-inline-start:1.6rem; }
+.guided-steps li { min-width:0; padding:.5rem; }
+.guided-steps h2 { color:var(--platinum); font-size:.85rem; line-height:1.6; }
+.guided-steps p { font-size:.78rem; line-height:1.7; margin:.45rem 0; }
+.guided-demo a { color:var(--ice); font-size:.76rem; line-height:1.7; text-underline-offset:.2em; overflow-wrap:anywhere; }
+.guided-demo code { font:inherit; color:var(--platinum); overflow-wrap:anywhere; }
+.guided-footer { display:flex; flex-wrap:wrap; gap:.6rem 1rem; margin-top:1rem; font-size:.76rem; line-height:1.7; }
+.guided-demo:not([open]) > :not(summary) { display:none; }
