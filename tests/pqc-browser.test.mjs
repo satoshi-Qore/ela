@@ -72,7 +72,10 @@ test('demo page has a strict Content-Security-Policy and only public-value field
 // has its own verification panel (src/pqc/panel.ts, loaded on demand), but it still never links to
 // or loads this separate offline page, and the build config is unchanged.
 test('the demo is separate from the ELA interface and its production build', () => {
-  for (const file of ['index.html', 'src/web.ts', 'vite.config.ts']) assert.equal(/demo/i.test(read(file)), false, file);
+  // The new reading guide may say "demo"; the separate offline PQC entry/resources
+  // must still never be linked, imported or embedded by the production interface.
+  for (const file of ['index.html', 'src/web.ts', 'vite.config.ts']) assert.equal(/demo[\\/]pqc-verify|src[\\/]pqc[\\/]demo|pqc-verify[\\/]index\.html/i.test(read(file)), false, file);
+  for (const file of ['src/web.ts', 'vite.config.ts']) assert.equal(/demo/i.test(read(file)), false, file);
   assert.equal(/pqc/i.test(read('vite.config.ts')), false, 'vite.config.ts');
   assert.equal(/demo\/pqc-verify|src\/pqc\/demo\/main/.test(read('src/pqc/panel.ts')), false, 'the panel does not load the offline page');
 });

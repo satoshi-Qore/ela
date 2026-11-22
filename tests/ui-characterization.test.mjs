@@ -576,7 +576,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
         index: [...document.querySelectorAll('.modules a')].map(link => [link.getAttribute('href'), link.querySelector('.tag').dataset.tone]),
         paymentControls: section('payment').querySelectorAll('button, a, input, textarea, select, [tabindex]').length,
         paymentText: section('payment').textContent.replace(/\\s+/g, ' '),
-        // Nothing on the page links away or opens a window.
+        // Only public evidence links leave the page: eight payment and eight guide links.
         links: [...document.querySelectorAll('a')].map(link => [link.getAttribute('href'), link.target]).filter(([href, target]) => !href.startsWith('#') || target),
         readout: ['block-number', 'chain-id', 'evm-chain-id', 'last-read'].map(id => document.getElementById(id).textContent),
         endpoint: document.getElementById('endpoint').textContent,
@@ -596,7 +596,7 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.equal(page.paymentControls, 9, 'eight public evidence links and one read-only recheck');
     assert.match(page.paymentText, /Archived verification/);
     assert.match(page.paymentText, /No signing, wallet connection or payment execution/);
-    assert.equal(page.links.length, 8); assert.ok(page.links.every(([href,target]) => href.startsWith('https://') && target === '_blank'));
+    assert.equal(page.links.length, 16); assert.ok(page.links.every(([href,target]) => href.startsWith('https://') && target === '_blank'));
     // No value is shown before a query runs: no placeholder numbers and no assumed network state.
     assert.deepEqual(page.readout, ['—', '—', '—', '—']);
     assert.equal(page.endpoint, 'evm-testnet.qore.host');
