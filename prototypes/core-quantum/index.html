@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELA Core quantum concepts (synthetic records)</title>
+<link rel="stylesheet" href="/src/web.css">
+<style>
+  body { margin: 0; padding: 16px; }
+  .grid { display: grid; gap: 16px; }
+  .cell h2 { margin: 0 0 6px; font: 600 12px/1.2 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .mob .core-viz .core-d { display: none !important; }
+  .mob .core-viz .core-m { display: block !important; max-width: none; }
+  .desk .core-viz .core-m { display: none !important; }
+  .desk .core-viz .core-d { display: block !important; }
+  .note { font: 12px var(--mono); color: var(--muted); margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<p class="note">SYNTHETIC EXECUTION RECORDS — concept prototypes for visual review only. No session, no RPC, no network. Open with ?views=kademe,koherens,okta (or view=kademe|koherens|okta|karot|optik|gravur) &amp;theme=blue|light|dark &amp;mode=desktop|mobile.</p>
+<div class="grid" id="grid"></div>
+<script type="module">
+  const q = new URLSearchParams(location.search);
+  const theme = q.get('theme') ?? 'blue';
+  if (theme !== 'blue') document.documentElement.dataset.theme = theme;
+  const mode = q.get('mode') ?? 'desktop';
+  const view = q.get('view') ?? 'kademe';
+  const cols = Number(q.get('cols') ?? 2);
+  const only = q.get('only');
+  const html = await (await fetch('/index.html')).text();
+  const catalog = JSON.parse(new DOMParser().parseFromString(html, 'text/html').querySelector('#ela-i18n').textContent);
+  const t = (key, vars = {}) => (catalog.en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+  const NAMES = ['Command', 'Safety gate', 'Intent & scope', 'Network check', 'Data read', 'Result'];
+  const RPC = [undefined, undefined, undefined, 'eth_chainId', 'eth_blockNumber', undefined];
+  const rec = (title, outcome, states, values = {}) => ({ title, outcome, stages: states.map((status, i) => ({ n: String(i + 1).padStart(2, '0'), name: NAMES[i], short: NAMES[i].split(/\s/)[0], rpc: RPC[i], status, value: values[i] })) });
+  const SCENARIOS = {
+    idle: rec('Ready', 'ready', ['waiting', 'waiting', 'waiting', 'waiting', 'waiting', 'waiting']),
+    running: rec('Querying', 'querying', ['ok', 'ok', 'ok', 'running', 'waiting', 'waiting']),
+    success: rec('Success', 'success', ['ok', 'ok', 'ok', 'ok', 'ok', 'ok'], { 3: 'TEST-ID', 4: 'TEST-H' }),
+    refused: rec('Refused', 'refused', ['ok', 'blocked', 'skipped', 'skipped', 'skipped', 'blocked']),
+    partial: rec('Partial', 'partial', ['ok', 'ok', 'ok', 'ok', 'failed', 'failed'], { 3: 'TEST-ID' }),
+    unknown: rec('Unknown', 'unknown', ['ok', 'ok', 'unknown', 'skipped', 'skipped', 'unknown']),
+  };
+  // ?views=tumbler,nivo,drum shows several views side by side, one row per record, at 1:1 scale.
+  const CONCEPTS = ['kademe', 'koherens', 'okta'];
+  const views = (q.get('views') ?? view).split(',');
+  // A view written name@before renders from the folder given by ?before= (a local snapshot, for before/after shots).
+  const src = v => { const [n, tag] = v.split('@'); return tag ? `${q.get('before')}${n}.ts` : CONCEPTS.includes(n) ? `/src/core/quantum/${n}.ts` : `/src/core/${n}.ts`; };
+  const renders = await Promise.all(views.map(v => import(src(v)).then(m => m.render)));
+  const grid = document.getElementById('grid');
+  const width = mode === 'mobile' ? 300 : 800;
+  grid.style.gridTemplateColumns = `repeat(${q.get('views') ? views.length : cols}, ${width}px)`;
+  grid.className = 'grid ' + (mode === 'mobile' ? 'mob' : 'desk');
+  for (const [name, r] of Object.entries(SCENARIOS)) {
+    if (only && !only.split(',').includes(name)) continue;
+    views.forEach((v, k) => {
+      const cell = document.createElement('div'); cell.className = 'cell';
+      cell.innerHTML = `<h2>${v} · ${name} · ${theme}</h2><div class="core-viz"></div>`;
+      grid.append(cell);
+      renders[k](cell.querySelector('.core-viz'), r, t);
+    });
+  }
+  document.body.dataset.ready = 'true';
+</script>
+</body>
+</html>
