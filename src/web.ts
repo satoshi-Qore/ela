@@ -417,3 +417,4 @@ import('./core/core.ts');
 
 // The completed payment archive is independent of the command flow and CORE animation.
 import('./payment/archive.ts').then(panel => panel.mountPayment(put, F));
+import('./decision/view.ts').then(panel => panel.mountDecision(put, F));

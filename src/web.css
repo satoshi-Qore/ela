@@ -1366,3 +1366,20 @@ body { font-family: "Segoe UI", Arial, sans-serif; }
 .payment-proof { overflow-wrap:anywhere; }
 .payment-hash-part { display:block; }
 .payment-setup:not([open]) > :not(summary) { display:none; }
+/* 05 adds an evaluation card without changing existing modules. */
+.module-decision { grid-column:1 / -1; }
+.decision-title { margin:1rem 0 .5rem; color:var(--ice); font-size:.85rem; }
+.module-decision label { display:block; margin:.75rem 0 .3rem; color:var(--muted); font-size:.8rem; }
+.module-decision select { max-width:100%; padding:.6rem; color:var(--platinum); background:var(--well); border:1px solid var(--border-strong); border-radius:.4rem; font:inherit; }
+.decision-result { margin:1rem 0; padding:.85rem; background:var(--well); border:1px solid var(--border-strong); border-radius:.5rem; }
+#decision-outcome { color:var(--warn-fg); font:700 1rem/1.5 var(--mono); }
+#decision-reason { color:var(--platinum); font-size:.85rem; line-height:1.6; }
+.decision-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:.75rem; }
+.decision-facts dt { color:var(--muted); font-size:.75rem; }
+.decision-facts dd { margin:.25rem 0; color:var(--platinum); font:.7rem/1.6 var(--mono); overflow-wrap:anywhere; }
+.decision-checks { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr)); gap:.6rem; list-style:none; padding:0; margin:.7rem 0; }
+.decision-checks li { min-width:0; padding:.8rem; border:1px solid var(--border-soft); background:var(--well); border-radius:.4rem; }
+.decision-checks h4 { color:var(--ice); font-size:.8rem; }
+.decision-checks p { color:var(--muted); font-size:.75rem; line-height:1.6; margin-top:.3rem; overflow-wrap:anywhere; }
+.decision-check-state { display:block; color:var(--platinum); font:600 .7rem/1.6 var(--mono); }
+#decision, #decision * { min-width:0; }
