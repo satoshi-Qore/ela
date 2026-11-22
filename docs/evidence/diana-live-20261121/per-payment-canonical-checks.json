@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-11-21T03:49:44.298Z",
+  "checks": [
+    {
+      "index": 0,
+      "txHash": "0x93ad86e777f5afef32f607336586d927c3ecda4d198c3ce3405ae2e5e624569b",
+      "balanceWei": "2000000000000000",
+      "nextNonce": "1",
+      "totalSpent": "1000000000000000",
+      "status": "confirmed"
+    },
+    {
+      "index": 1,
+      "txHash": "0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9",
+      "balanceWei": "1000000000000000",
+      "nextNonce": "2",
+      "totalSpent": "2000000000000000",
+      "status": "confirmed"
+    },
+    {
+      "index": 2,
+      "txHash": "0xdc549e462e1946f129d3e8dc800b857a22808f588afc464149827dec8ecb1e4b",
+      "balanceWei": "0",
+      "nextNonce": "3",
+      "totalSpent": "3000000000000000",
+      "status": "confirmed"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "txHash": "0x478f47a7c713eb4cd54915f01ecfb59e6fc6b40d1d1aacab7908f1c77fffef7f",
+  "prepared": {
+    "mode": "prepare_funding",
+    "signed": false,
+    "broadcast": false,
+    "approvalSource": "Explicit user workflow approval, 2026-11-21: exactly 0.003 QOR to the verified new deployment only",
+    "from": "0x6a5d4D7B3357df968b2A3004071eCe98f015C794",
+    "tx": {
+      "type": "eip1559",
+      "chainId": 9800,
+      "nonce": 10,
+      "to": "0x127dd577174e8829a38AE6885bfe058855C04601",
+      "value": "3000000000000000",
+      "gas": "27000",
+      "maxFeePerGas": "150000000000",
+      "maxPriorityFeePerGas": "12500000000",
+      "data": "0x",
+      "accessList": []
+    },
+    "balanceBeforeWei": "0",
+    "senderBalanceWei": "99282406637500000000",
+    "classicalPublicKey": "0x02dd7dc82115f566c58b9d756d59cfba54f7b606a2334c63d13850e809195e6d6a",
+    "pqcSha256": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a",
+    "estimate": "21055",
+    "maxCostWei": "7050000000000000",
+    "codeSha256": "dde7b91ee1570fc0b22b323f956058d3cc35e182a176c45b837d549ca0478c19",
+    "window": {
+      "found": true,
+      "live": true,
+      "usedTxs": "0",
+      "usedValue": "0",
+      "maxValue": "256500"
+    },
+    "sequence": "10"
+  },
+  "attemptedAt": "2026-11-21T03:06:46.865Z",
+  "note": "Saved before the single attempt. Never automatically retry."
+}

@@ -1,0 +1,53 @@
+{
+  "mode": "broadcast",
+  "signed": true,
+  "broadcast": "ACCEPTED",
+  "windowOpened": false,
+  "deployed": false,
+  "chainId": "qorechain-diana",
+  "account": "qor1dfw567en2l0edze2xqzqw8kwnrcpt3u5m9n88r",
+  "accountNumber": "16046",
+  "sequence": "4",
+  "uqorBalance": "99651389",
+  "message": "/qorechain.pqc.v1.MsgOpenEVMWindow",
+  "window": {
+    "sender": "qor1dfw567en2l0edze2xqzqw8kwnrcpt3u5m9n88r",
+    "blocks": "400",
+    "maxTxs": "1",
+    "maxValue": "256500",
+    "nativeOnly": false,
+    "allowedTargets": [],
+    "validators": [],
+    "stakingValidators": [],
+    "ibcReceivers": []
+  },
+  "classicalPublicKey": "0x02dd7dc82115f566c58b9d756d59cfba54f7b606a2334c63d13850e809195e6d6a",
+  "pqcPublicKeySha256": "a3b2c32d6e5d35138c69c2154d36ba0ba1779658cd4f9bc1567b5e35831bab5a",
+  "formatCheck": "pass",
+  "b0Sha256": "c6b2e37b588652d031ecea9ab97268f558e6563070056e7d8ef6250b6fa4993b",
+  "authInfoSha256": "85a15a0cfc0127a195bb7e465d5b89e1c198e3706c0ec7dc217cdce2555dbf19",
+  "pqcSignBytesSha256": "5bf9eaf22e305586fd9ca4c3d17ea4994b976ae136a1c278e7ac484ef9d6a42a",
+  "gasLimit": 350000,
+  "gasPrice": "0.15",
+  "feeCeiling": "52500uqor",
+  "preparedEstimate": 226651,
+  "simulation": "ok",
+  "timeoutHeight": "10450412",
+  "txHash": "9588801C2F6C0B009733467BCCC4DDA5423CF17B66B695C97022619696F7B83E",
+  "expectedDeploymentNonce": "5",
+  "predictedContractAddress": "0xbB6D47035A831BB0C3571B4836c1C5Edb2F59723",
+  "gasUsed": 186701,
+  "exactHybridGas": 192436,
+  "verify": {
+    "command": "node .\\diana-window-open.mjs --verify 9588801C2F6C0B009733467BCCC4DDA5423CF17B66B695C97022619696F7B83E",
+    "lastIncludableHeight": "10450412",
+    "conditions": [
+      "GET /cosmos/tx/v1beta1/txs/9588801C2F6C0B009733467BCCC4DDA5423CF17B66B695C97022619696F7B83E: code 0; one /qorechain.pqc.v1.MsgOpenEVMWindow with sender qor1dfw567en2l0edze2xqzqw8kwnrcpt3u5m9n88r, blocks 400, max_txs 1, max_value 256500, native_only false, no targets or scope; fee 52500uqor, gas limit 350000",
+      "Account sequence 5 and EVM nonce 5 (before any deployment)",
+      "Registered ML-DSA-87 key unchanged (a3b2c32d6e5d...)",
+      "GET /qorechain/pqc/v1/evm_window/qor1dfw567en2l0edze2xqzqw8kwnrcpt3u5m9n88r: found and live, opened at the transaction height, expiry = opened + 400, max_txs 1, max_value 256500, used 0, native_only false, no targets",
+      "uqor balance lower than 99651389 by more than 0 and at most 52500"
+    ]
+  },
+  "code": 0
+}

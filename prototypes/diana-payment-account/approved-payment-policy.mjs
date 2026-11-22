@@ -1,10 +1,12 @@
 /** Explicit user approval from ELA 7I-3. Public policy only, never transaction authority. */
 export const APPROVED_PAYMENT_POLICY = Object.freeze({
-  version: 3,
+  version: 5,
   approvalStatus: 'approved',
   approvalSource: 'Explicit user instruction ELA 7I-3, 2026-11-20',
-  approvalScope: 'fixed policy; one-hour duration and start 15 minutes after planned deployment; exact schedule explicitly approved 2026-11-20',
+  approvalScope: 'fixed policy; one-hour duration and start 15 minutes after planned deployment; exact schedule explicitly approved 2026-11-21',
   executionAuthorized: false,
+  executionStatus: '2026-11-21 workflow complete: deployment, exact funding and all three payments verified; one-shot authority consumed; execution relocked',
+  executionApprovalSource: 'Explicit user 2026-11-21 workflow approval: new deployment, exactly 0.003 QOR funding, three 0.001 QOR scheduled payments; no other transactions',
   network: Object.freeze({chainId:'qorechain-diana',evmChainId:9800}),
   parameters: Object.freeze({
     executor: '0x6a5d4D7B3357df968b2A3004071eCe98f015C794',
@@ -20,10 +22,10 @@ export const APPROVED_PAYMENT_POLICY = Object.freeze({
     durationApprovalSource: 'Explicit user one-hour test policy decision, 2026-11-20; supersedes seven-day duration',
     timeZone: 'Europe/Istanbul',
     approvalStatus: 'approved',
-    approvalSource: 'Explicit user exact schedule approval, 2026-11-20, Europe/Istanbul (UTC+03:00); not execution authority',
+    approvalSource: 'Explicit user 2026-11-21 schedule approval, 06:15 deployment deadline, 06:30 start, 07:30 end Europe/Istanbul (UTC+03:00)',
     durationSeconds: 3600n,
-    plannedDeploymentAt: 1795199400n,
-    startsAt: 1795200300n,
-    endsAt: 1795203900n,
+    plannedDeploymentAt: 1795230900n,
+    startsAt: 1795231800n,
+    endsAt: 1795235400n,
   }),
 });

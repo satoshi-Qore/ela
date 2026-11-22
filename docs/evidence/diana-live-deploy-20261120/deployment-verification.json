@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-11-20T19:07:08.156Z",
+  "mode": "verify",
+  "txHash": "0xb13841710fac84cb1bbb286707387eca1ae7456a1f21864905cdfd734a7a4fc1",
+  "verified": true,
+  "failures": [],
+  "contractAddress": "0x8a278cf5b0d34cf844cf19c74116e9ddfb7aba9d",
+  "blockNumber": "10449464",
+  "gasUsed": "1365431",
+  "codeKeccak": "0xb8d62bd36bb26be3da3337d4dd08002ca65e9a604d3ea0acb2683b6056b39d90",
+  "runtimeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3"
+}

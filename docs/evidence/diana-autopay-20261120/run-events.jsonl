@@ -1,0 +1,7 @@
+{"observedAt":"2026-11-20T20:23:40.789Z","type":"window-phase","signed":false,"broadcast":false}
+{"observedAt":"2026-11-20T20:23:46.485Z","type":"window-phase","signed":true,"broadcast":false,"txHash":"E05CE8BB215A1F45BC9856A07AF017B5AB58F0C75F2346E992F39FE249B97D3F","feeCeiling":"52500uqor"}
+{"observedAt":"2026-11-20T20:23:50.149Z","type":"window-phase","signed":true,"broadcast":"ACCEPTED","txHash":"E05CE8BB215A1F45BC9856A07AF017B5AB58F0C75F2346E992F39FE249B97D3F","feeCeiling":"52500uqor"}
+{"observedAt":"2026-11-20T20:25:16.874Z","type":"blocked","reason":"Signed payment differs from bounded intent"}
+{"observedAt":"2026-11-20T20:25:16.874Z","type":"worker-finished","status":"blocked","reason":"Signed payment differs from bounded intent"}
+{"observedAt":"2026-11-20T20:26:51.397Z","type":"blocked","reason":"QoreChain endpoint returned HTTP 503."}
+{"observedAt":"2026-11-20T20:26:51.398Z","type":"worker-finished","status":"blocked","reason":"QoreChain endpoint returned HTTP 503."}

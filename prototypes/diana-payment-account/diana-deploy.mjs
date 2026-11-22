@@ -1,3 +1,4 @@
+import {withDianaReadRetries} from './diana-read-retry.mjs';
 // Diana Invoice Owner: deploy DianaPaymentAccount through the one-transaction EVM window that
 // diana-window-open.mjs (7C-23) opens. EVM lane only.
 //
@@ -41,7 +42,7 @@ import { classicalKeyHex, fetchLiveState } from './diana-hybrid-prepare.mjs';
 import { readParsedRecord } from './diana-hybrid-sign.mjs';
 import { withVerifiedAccount } from './diana-canonical-pqc.mjs';
 import { INVOICE_OWNER, RECORD_PATH, readRecordBytes } from './diana-verify-recovery.mjs';
-import { WINDOW_PLAN, fetchEvmState, loadArtifact } from './diana-window-prepare.mjs';
+import { WINDOW_PLAN, fetchEvmState, loadArtifact, verifiedBankBalance } from './diana-window-prepare.mjs';
 
 const GWEI = 10n ** 9n;
 const WEI_PER_UQOR = 10n ** 12n;
@@ -205,7 +206,7 @@ export function deployGuardedFetch(endpoints, { allowBroadcast = () => false, fe
 export function dianaDeployNetwork(fetchImpl = globalThis.fetch) {
   const { rest, evmRpc } = sdk.NETWORKS.testnet.endpoints;
   const allowBroadcast = { value: false };
-  return { rest, evmRpc, allowBroadcast, fetch: deployGuardedFetch({ rest, evmRpc }, { allowBroadcast: () => allowBroadcast.value, fetchImpl }) };
+  return { rest, evmRpc, allowBroadcast, fetch: deployGuardedFetch({ rest, evmRpc }, { allowBroadcast: () => allowBroadcast.value, fetchImpl:withDianaReadRetries(fetchImpl) }) };
 }
 
 async function rpc(network, method, params) {
@@ -339,6 +340,7 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
   const policyParams=params ?? (policyApproval ? approvedPartialParams() : null);
   const live = await fetchLiveState(plan.native, network);
   const evm = await fetchEvmState(plan, network);
+  const bankBalance=await verifiedBankBalance(network,plan,evm,live.uqor);
   const pending = await rpc(network, 'eth_getTransactionCount', [plan.evm, 'pending']);
   const limitsBody = await restJson(network, '/qorechain/pqc/v1/evm_limits');
   const txMaxGas = BigInt(limitsBody.body?.tx_max_gas ?? limitsBody.body?.limits?.tx_max_gas ?? sdk.EVM_TX_MAX_GAS_DEFAULT);
@@ -374,7 +376,7 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
     ['fee-cap', 'maxFeePerGas ' + plan.maxFeePerGasWei + ' wei >= live gas price and base fee; priority fee <= fee cap',
       evm.baseFeeWei !== undefined && plan.maxFeePerGasWei >= evm.gasPriceWei && plan.maxFeePerGasWei >= evm.baseFeeWei && plan.maxPriorityFeePerGasWei <= plan.maxFeePerGasWei],
     ['balance', 'Balance covers value + gas limit x fee cap', maxCostWei !== undefined && evm.balanceWei >= maxCostWei],
-    ['units', 'EVM denom uqor, 1 uqor = 10^12 wei (balances agree)', evm.evmDenom === 'uqor' && evm.balanceWei === BigInt(live.uqor) * WEI_PER_UQOR],
+    ['units', 'EVM denom uqor, 1 uqor = 10^12 wei (balances agree)', evm.evmDenom === 'uqor' && evm.balanceWei === bankBalance.wei],
     ['artifact', 'Artifact compiled from src/DianaPaymentAccount.sol (source hash ' + artifact.sourceKeccak.slice(0, 10) + '...)', typeof artifact.sourceKeccak === 'string' && artifact.immutables !== undefined],
     ['address-free', 'No code at the predicted contract address', addressCode.result === '0x'],
     ['constructor', 'Live constructor parameters chosen and every checklist item passes', checklist.ready],
@@ -395,6 +397,7 @@ export async function prepareDeployment({ network, plan = DEPLOY_PLAN, artifact,
     predictedContractAddress: predictedAddress,
     ...(window.found ? {} : { ifWindowOpensFirst: { nonce: (nonce + 1n).toString(), predictedContractAddress: getContractAddress({ from: plan.evm, nonce: nonce + 1n }) } }),
     live: {
+      fractionalBalanceWei:bankBalance.fractionWei,
       sequence: live.account?.sequence ?? null, evmNonce: nonce.toString(), pendingNonce: typeof pending.result === 'string' ? BigInt(pending.result).toString() : null,
       uqorBalance: live.uqor, gasPriceWei: evm.gasPriceWei.toString(), baseFeeWei: evm.baseFeeWei?.toString() ?? null, evmTxMaxGas: txMaxGas.toString(), height: evm.height.toString(),
       pqcPublicKeySha256: live.pqc?.publicKey instanceof Uint8Array ? createHash('sha256').update(live.pqc.publicKey).digest('hex') : null,

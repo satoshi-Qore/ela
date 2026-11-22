@@ -1,0 +1,37 @@
+✔ PREPARE builds the deployment window, simulates it with placeholders, and predicts the nonce and address (37.9079ms)
+✔ wrong network, changed sequence, missing PQC registration or low balance stops before the simulation (15.2766ms)
+✔ window-side problems stop before the simulation (11.8524ms)
+✔ invalid window parameters are refused (2.008ms)
+✔ a Cosmos estimate that does not fit the gas limit with headroom is refused (2.72ms)
+✔ units: wei to uqor rounds up, as the SDK does (0.1574ms)
+✔ the artifact must have been compiled from the contract source (1.5353ms)
+✔ the guard allows reads, the simulation route and read-only EVM methods, and nothing else (0.8709ms)
+✔ the tool cannot touch the vault, a key, or a broadcast route (0.4019ms)
+✔ autopay window is three transactions restricted to one contract without raising monetary ceiling (3.6808ms)
+✔ invoice digest is bound to unique invoice, nonce, contract and validity (2.571ms)
+✔ signed payment envelope cannot change target, value, chain, calldata or gas budget (0.3154ms)
+✔ receipt event must prove exact nonce, invoice, recipient and amount (2.4979ms)
+✔ durable journal survives stale state file and exclusive lock rejects a second worker (15.7962ms)
+✔ indexing lag only permits bounded read-only reconciliation, never a resend (0.2023ms)
+✔ three-use window needs explicit bounded limits and cannot inherit the one-use default (0.6192ms)
+✔ restart preserves a torn journal tail and can durably continue without corruption (49.9092ms)
+✔ creates exactly three stable unique invoices sixty seconds apart (3.9354ms)
+✔ executes only at targets and restart never resends confirmed payments (3.3268ms)
+✔ crash after durable checkpoint reconciles without sending twice (1.3739ms)
+✔ unknown reconciliation blocks later payments (0.6141ms)
+✔ failed reconciliation blocks later payments (0.4422ms)
+✔ expiry and unexpected nonce prevent send (0.5389ms)
+✔ pending confirmation delays next payment without losing sequential order (1.3654ms)
+✔ restart audits confirmed history before any new send (0.3805ms)
+✔ durable uncertain intent is reconciled without rebroadcast (0.3681ms)
+✔ failed durable write prevents broadcast (0.8516ms)
+✔ invalid schedule mutation is rejected before any adapter call (0.3211ms)
+✔ persisted invoice and identity changes cannot silently alter approved plan (0.6471ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1815.626

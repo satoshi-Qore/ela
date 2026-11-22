@@ -1,0 +1,47 @@
+✔ one frozen policy records the explicitly approved fields without authorizing execution (3.315ms)
+✔ default constructor remains disabled despite recorded date approval (2.0645ms)
+✔ null constructor produces no live runtime pin even with approved dates (12.0028ms)
+✔ approved exact one-hour dates pass and incorrect intervals fail (5.9762ms)
+✔ policy approval and even fixture dates cannot unlock the default live constructor or execute effects (1.1843ms)
+✔ default PREPARE reports approved dates and expired schedule without activating constructor (37.469ms)
+✔ another network or an unrelated supplied policy cannot inherit the Diana approval (0.3004ms)
+✔ caller reviewed flags cannot substitute different dates for the recorded approval (11.2979ms)
+✔ future-start requirement rejects matching windows already begun (0.3644ms)
+✔ one-hour policy can be prepared 15 minutes before start but rejects begun or expired windows (0.6544ms)
+✔ approved exact schedule produces public package data without live execution authority (14.6197ms)
+✔ autopay window is three transactions restricted to one contract without raising monetary ceiling (4.0877ms)
+✔ invoice digest is bound to unique invoice, nonce, contract and validity (3.586ms)
+✔ signed payment envelope cannot change target, value, chain, calldata or gas budget (0.4481ms)
+✔ receipt event must prove exact nonce, invoice, recipient and amount (2.6929ms)
+✔ durable journal survives stale state file and exclusive lock rejects a second worker (17.4947ms)
+✔ indexing lag only permits bounded read-only reconciliation, never a resend (0.3035ms)
+✔ three-use window needs explicit bounded limits and cannot inherit the one-use default (1.0227ms)
+✔ restart preserves a torn journal tail and can durably continue without corruption (14.6879ms)
+✔ canonical zero-value EIP1559 decoding omits value and remains a zero-value call (1.4457ms)
+✔ funding is restricted to the exact contract, value, network, nonce, empty call and fee bounds (1.0647ms)
+✔ integer uqor plus independently read aqor fraction must exactly equal EVM wei (0.303ms)
+✔ 503 read retries are bounded; read success proceeds; no write is retried (19.9604ms)
+✔ JSON RPC read retries do not apply to unknown methods or validation errors (4.0559ms)
+✔ explicit window sequence remains a checked constructor input, not a nonce bypass (1.3844ms)
+✔ creates exactly three stable unique invoices sixty seconds apart (5.6422ms)
+✔ executes only at targets and restart never resends confirmed payments (4.6216ms)
+✔ crash after durable checkpoint reconciles without sending twice (1.6554ms)
+✔ unknown reconciliation blocks later payments (0.8779ms)
+✔ failed reconciliation blocks later payments (0.541ms)
+✔ expiry and unexpected nonce prevent send (0.5985ms)
+✔ pending confirmation delays next payment without losing sequential order (1.7266ms)
+✔ restart audits confirmed history before any new send (0.4428ms)
+✔ durable uncertain intent is reconciled without rebroadcast (0.4254ms)
+✔ failed durable write prevents broadcast (1.3211ms)
+✔ invalid schedule mutation is rejected before any adapter call (0.5498ms)
+✔ persisted invoice and identity changes cannot silently alter approved plan (1.1252ms)
+✔ late initial preparation cannot compress subsequent sends below sixty seconds (1.1718ms)
+✔ insufficient remaining lifetime for all sixty-second intervals blocks before sending (0.3459ms)
+ℹ tests 39
+ℹ suites 0
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1975.3594

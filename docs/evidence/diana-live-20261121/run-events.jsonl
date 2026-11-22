@@ -1,0 +1,12 @@
+{"observedAt":"2026-11-21T03:38:40.762Z","type":"window-phase","signed":false,"broadcast":false}
+{"observedAt":"2026-11-21T03:38:45.963Z","type":"window-phase","signed":true,"broadcast":false,"txHash":"CC4CFE64C82E6B0BC1A99DF70DB336642406E75B9B58DBA427B4A356A72162B7","feeCeiling":"52500uqor"}
+{"observedAt":"2026-11-21T03:38:49.324Z","type":"window-phase","signed":true,"broadcast":"ACCEPTED","txHash":"CC4CFE64C82E6B0BC1A99DF70DB336642406E75B9B58DBA427B4A356A72162B7","feeCeiling":"52500uqor"}
+{"observedAt":"2026-11-21T03:40:21.809Z","type":"payment-submission","index":0,"targetAt":1795232400,"sentAt":1795232421,"latenessSeconds":21,"txHash":"0x93ad86e777f5afef32f607336586d927c3ecda4d198c3ce3405ae2e5e624569b"}
+{"observedAt":"2026-11-21T03:40:21.999Z","type":"payment-broadcast-result","index":0,"txHash":"0x93ad86e777f5afef32f607336586d927c3ecda4d198c3ce3405ae2e5e624569b","outcome":"ACCEPTED"}
+{"observedAt":"2026-11-21T03:41:42.351Z","type":"payment-submission","index":1,"targetAt":1795232460,"sentAt":1795232502,"latenessSeconds":42,"txHash":"0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9"}
+{"observedAt":"2026-11-21T03:41:42.528Z","type":"payment-broadcast-result","index":1,"txHash":"0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9","outcome":"ACCEPTED"}
+{"observedAt":"2026-11-21T03:41:43.770Z","type":"blocked","reason":"Payment receipt identity mismatch"}
+{"observedAt":"2026-11-21T03:41:43.771Z","type":"worker-finished","status":"blocked","reason":"Payment receipt identity mismatch"}
+{"observedAt":"2026-11-21T03:44:58.644Z","type":"payment-submission","index":2,"targetAt":1795232520,"sentAt":1795232698,"latenessSeconds":178,"txHash":"0xdc549e462e1946f129d3e8dc800b857a22808f588afc464149827dec8ecb1e4b"}
+{"observedAt":"2026-11-21T03:44:58.816Z","type":"payment-broadcast-result","index":2,"txHash":"0xdc549e462e1946f129d3e8dc800b857a22808f588afc464149827dec8ecb1e4b","outcome":"ACCEPTED"}
+{"observedAt":"2026-11-21T03:45:02.349Z","type":"worker-finished","status":"complete"}

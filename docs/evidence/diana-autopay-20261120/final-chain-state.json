@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-11-20T20:30:59.552Z",
+  "snapshot": {
+    "number": "10453040",
+    "hash": "0x9cc76213fe5accc9d20fab09d4e891a9f58645924dab0ec0aad1b2a33f2a34e9",
+    "timestamp": "1795206653"
+  },
+  "contract": "0x8a278Cf5B0D34cF844cF19C74116e9DdfB7Aba9d",
+  "policy": {
+    "executor": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "recipient": "0xc9ab55fec7c1fee27f3afc5df99e6a09b4b2d875",
+    "invoiceIssuer": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "maxPerPayment": "1000000000000000",
+    "spendingLimit": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795203000",
+    "endsAt": "1795206600",
+    "totalSpent": "0",
+    "nextNonce": "0"
+  },
+  "balanceWei": "3000000000000000",
+  "runtimeSha256": "fd2c83f0c014afdd28868a7e170d1d3f61b7851549689807d345d8d92540fcd3",
+  "status": "EXPIRED",
+  "readErrors": []
+}

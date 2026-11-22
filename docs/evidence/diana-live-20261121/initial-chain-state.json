@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-11-21T03:15:12.534Z",
+  "contract": "0x127dd577174e8829a38AE6885bfe058855C04601",
+  "deploymentHash": "0x3a2722d545b635e92023e1740897d414d3ccf1ba1e56865db97137e30c1e91e4",
+  "deploymentAt": 1795230229,
+  "fundingHash": "0x478f47a7c713eb4cd54915f01ecfb59e6fc6b40d1d1aacab7908f1c77fffef7f",
+  "fundingAt": 1795230405,
+  "snapshot": {
+    "number": "10469994",
+    "hash": "0x8655040edb36d34802bee5a7b4dda54b255d991b6791045cac0155120cb48c74",
+    "timestamp": "1795230907"
+  },
+  "policy": {
+    "executor": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "recipient": "0xc9ab55fec7c1fee27f3afc5df99e6a09b4b2d875",
+    "invoiceIssuer": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "maxPerPayment": "1000000000000000",
+    "spendingLimit": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795231800",
+    "endsAt": "1795235400",
+    "totalSpent": "0",
+    "nextNonce": "0"
+  },
+  "balanceWei": "3000000000000000",
+  "runtimeSha256": "dde7b91ee1570fc0b22b323f956058d3cc35e182a176c45b837d549ca0478c19",
+  "targets": [
+    1795232400,
+    1795232460,
+    1795232520
+  ],
+  "scope": "read_only_initial_chain_evidence"
+}

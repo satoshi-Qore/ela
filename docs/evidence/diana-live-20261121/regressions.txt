@@ -1,0 +1,98 @@
+✔ PREPARE builds the deployment window, simulates it with placeholders, and predicts the nonce and address (34.7837ms)
+✔ wrong network, changed sequence, missing PQC registration or low balance stops before the simulation (15.883ms)
+✔ window-side problems stop before the simulation (9.0643ms)
+✔ invalid window parameters are refused (3.118ms)
+✔ a Cosmos estimate that does not fit the gas limit with headroom is refused (3.9389ms)
+✔ units: wei to uqor rounds up, as the SDK does (0.2247ms)
+✔ the artifact must have been compiled from the contract source (2.5383ms)
+✔ the guard allows reads, the simulation route and read-only EVM methods, and nothing else (1.4131ms)
+✖ the tool cannot touch the vault, a key, or a broadcast route (2.0657ms)
+✔ one frozen policy records the explicitly approved fields without authorizing execution (4.3927ms)
+✔ default constructor remains disabled despite recorded date approval (3.2247ms)
+✔ null constructor produces no live runtime pin even with approved dates (18.4437ms)
+✔ approved exact one-hour dates pass and incorrect intervals fail (9.2194ms)
+✔ policy approval and even fixture dates cannot unlock the default live constructor or execute effects (1.1796ms)
+✔ default PREPARE reports approved dates and expired schedule without activating constructor (46.0969ms)
+✔ another network or an unrelated supplied policy cannot inherit the Diana approval (0.307ms)
+✔ caller reviewed flags cannot substitute different dates for the recorded approval (10.8279ms)
+✔ future-start requirement rejects matching windows already begun (0.4539ms)
+✔ one-hour policy can be prepared 15 minutes before start but rejects begun or expired windows (0.9546ms)
+✔ approved exact schedule produces public package data without live execution authority (14.0622ms)
+✔ autopay window is three transactions restricted to one contract without raising monetary ceiling (6.1121ms)
+✔ invoice digest is bound to unique invoice, nonce, contract and validity (3.8896ms)
+✔ signed payment envelope cannot change target, value, chain, calldata or gas budget (0.3302ms)
+✔ receipt event must prove exact nonce, invoice, recipient and amount (4.3675ms)
+✔ durable journal survives stale state file and exclusive lock rejects a second worker (17.4153ms)
+✔ indexing lag only permits bounded read-only reconciliation, never a resend (0.1938ms)
+✔ three-use window needs explicit bounded limits and cannot inherit the one-use default (0.6857ms)
+✔ restart preserves a torn journal tail and can durably continue without corruption (11.977ms)
+✔ canonical zero-value EIP1559 decoding omits value and remains a zero-value call (2.0964ms)
+✔ artifact compiler, target, constructor ABI and immutable slot provenance fail closed (68.1966ms)
+✔ public package binds all eight arguments to runtime SHA256 and 7I1 policy without an execution permit (15.9954ms)
+✔ missing, test-only or unreviewed constructor parameters cannot produce a live runtime pin (13.058ms)
+✔ existing deployment CLI retains null and interactive gates without reading records or calling effects (3471.6407ms)
+✔ PREPARE with no approved policy reads current nonce/fees/window but never estimates placeholder deployment (35.8077ms)
+✔ reviewed fixture PREPARE retains all deployment window, gas, fee and policy guards (46.6365ms)
+✔ post-deployment verifier rejects wrong network before receipt/code reads (1.1534ms)
+✔ existing VERIFY CLI parses a retained public PREPARE report and dispatches only read verification (0.3159ms)
+✔ post-deployment VERIFY binds transaction hash, fees, access list and receipt inclusion to the prepared intent (23.8211ms)
+✔ CLI reporter saves one public JSON expectation with exclusive creation and usable VERIFY argv (0.4362ms)
+✔ funding is restricted to the exact contract, value, network, nonce, empty call and fee bounds (1.5243ms)
+✔ integer uqor plus independently read aqor fraction must exactly equal EVM wei (0.4422ms)
+✔ 503 read retries are bounded; read success proceeds; no write is retried (28.948ms)
+✔ JSON RPC read retries do not apply to unknown methods or validation errors (1.7102ms)
+✔ explicit window sequence remains a checked constructor input, not a nonce bypass (1.2497ms)
+✔ Cosmos broadcast and lost write response are never replayed by the read retry layer (0.5001ms)
+✔ creates exactly three stable unique invoices sixty seconds apart (6.0864ms)
+✔ executes only at targets and restart never resends confirmed payments (4.8809ms)
+✔ crash after durable checkpoint reconciles without sending twice (1.9798ms)
+✔ unknown reconciliation blocks later payments (0.7631ms)
+✔ failed reconciliation blocks later payments (0.7902ms)
+✔ expiry and unexpected nonce prevent send (0.9102ms)
+✔ pending confirmation delays next payment without losing sequential order (2.0445ms)
+✔ restart audits confirmed history before any new send (0.463ms)
+✔ durable uncertain intent is reconciled without rebroadcast (0.4379ms)
+✔ failed durable write prevents broadcast (1.092ms)
+✔ invalid schedule mutation is rejected before any adapter call (0.5636ms)
+✔ persisted invoice and identity changes cannot silently alter approved plan (0.7827ms)
+✔ late initial preparation cannot compress subsequent sends below sixty seconds (1.029ms)
+✔ insufficient remaining lifetime for all sixty-second intervals blocks before sending (0.5227ms)
+ℹ tests 59
+ℹ suites 0
+ℹ pass 58
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5754.5836
+
+✖ failing tests:
+
+test at prototypes\diana-payment-account\test\diana-window-prepare.test.mjs:221:1
+✖ the tool cannot touch the vault, a key, or a broadcast route (2.0657ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      './diana-hybrid-prepare.mjs',
+  +   './diana-read-retry.mjs',
+      '@qorechain/sdk',
+      'node:crypto',
+      'node:fs',
+      'node:path',
+      'node:url',
+  
+      at TestContext.<anonymous> (file:///C:/Users/Murat/.codex/worktrees/ela-diana-deploy-prep-7i2/ela-core-original/prototypes/diana-payment-account/test/diana-window-prepare.test.mjs:226:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ './diana-hybrid-prepare.mjs', './diana-read-retry.mjs', '@qorechain/sdk', 'node:crypto', 'node:fs', 'node:path', 'node:url', 'viem' ],
+    expected: [ './diana-hybrid-prepare.mjs', '@qorechain/sdk', 'node:crypto', 'node:fs', 'node:path', 'node:url', 'viem' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

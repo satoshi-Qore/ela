@@ -1,0 +1,110 @@
+{
+  "verified": true,
+  "checkedAt": "2026-11-21T03:46:25.715Z",
+  "contract": "0x127dd577174e8829a38AE6885bfe058855C04601",
+  "runId": "cfd7d693-7ac2-4f0f-9188-7cfc51602865",
+  "status": "complete",
+  "snapshot": {
+    "number": "10471302",
+    "hash": "0xaebd194ccd286cee92d843552d02cf4532b4ffc7934add93f9a969bd98396942",
+    "timestamp": "1795232779"
+  },
+  "policy": {
+    "executor": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "recipient": "0xc9ab55fec7c1fee27f3afc5df99e6a09b4b2d875",
+    "invoiceIssuer": "0x6a5d4d7b3357df968b2a3004071ece98f015c794",
+    "maxPerPayment": "1000000000000000",
+    "spendingLimit": "3000000000000000",
+    "maxPayments": "3",
+    "startsAt": "1795231800",
+    "endsAt": "1795235400",
+    "totalSpent": "3000000000000000",
+    "nextNonce": "3"
+  },
+  "balanceWei": "0",
+  "executorNonce": "15",
+  "windowUsedTxs": "3",
+  "payments": [
+    {
+      "index": 0,
+      "txHash": "0x93ad86e777f5afef32f607336586d927c3ecda4d198c3ce3405ae2e5e624569b",
+      "invoiceId": "0x56d0f484240ec532f98142a7d48a84e7e502c7caab1b99bb820308c415ceda80",
+      "targetAt": 1795232400,
+      "sentAt": 1795232421,
+      "confirmedAt": 1795232421,
+      "latenessSeconds": 21,
+      "receiptStatus": "0x1",
+      "blockNumber": "10471053",
+      "blockHash": "0x5dc18cb18a32b2f38617061b393140fc15d05f53c5558b3eabf2f62eff93ee7a",
+      "gasUsed": "338115",
+      "gasLimit": "450000",
+      "effectiveGasPriceWei": "112500000000",
+      "feeWei": "38037937500000000",
+      "balanceWei": "2000000000000000",
+      "nextNonce": "1",
+      "totalSpent": "1000000000000000",
+      "event": {
+        "nonce": "0",
+        "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+        "invoiceId": "0x56d0f484240ec532f98142a7d48a84e7e502c7caab1b99bb820308c415ceda80",
+        "amount": "1000000000000000"
+      }
+    },
+    {
+      "index": 1,
+      "txHash": "0x2ddba43246a070ab6a969ef6ca64d77be1755f4d0f2edc1b1d097ed71854d4a9",
+      "invoiceId": "0xfe1efccec4274e9ca8af48de23ca13a35f4950b8546b2d75a1c418a8a4f592d4",
+      "targetAt": 1795232460,
+      "sentAt": 1795232502,
+      "confirmedAt": 1795232501,
+      "latenessSeconds": 42,
+      "receiptStatus": "0x1",
+      "blockNumber": "10471109",
+      "blockHash": "0x8abd82ddb82202dffbad78c62406d2fe70eb94854a0e0a83efc77151b1965b44",
+      "gasUsed": "278831",
+      "gasLimit": "380000",
+      "effectiveGasPriceWei": "112500000000",
+      "feeWei": "31368487500000000",
+      "balanceWei": "1000000000000000",
+      "nextNonce": "2",
+      "totalSpent": "2000000000000000",
+      "event": {
+        "nonce": "1",
+        "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+        "invoiceId": "0xfe1efccec4274e9ca8af48de23ca13a35f4950b8546b2d75a1c418a8a4f592d4",
+        "amount": "1000000000000000"
+      }
+    },
+    {
+      "index": 2,
+      "txHash": "0xdc549e462e1946f129d3e8dc800b857a22808f588afc464149827dec8ecb1e4b",
+      "invoiceId": "0x2d42f624d3e366de57092269116e9955f52d633e8ae8972417455262a1f9b720",
+      "targetAt": 1795232520,
+      "sentAt": 1795232698,
+      "confirmedAt": 1795232698,
+      "latenessSeconds": 178,
+      "receiptStatus": "0x1",
+      "blockNumber": "10471247",
+      "blockHash": "0xe8add7ab7dd2beba66dcde1f9c378ce69730d026cb441cca8de4b47b6f80d9d6",
+      "gasUsed": "278783",
+      "gasLimit": "380000",
+      "effectiveGasPriceWei": "112500000000",
+      "feeWei": "31363087500000000",
+      "balanceWei": "0",
+      "nextNonce": "3",
+      "totalSpent": "3000000000000000",
+      "event": {
+        "nonce": "2",
+        "recipient": "0xc9Ab55FeC7c1fEe27F3AFc5DF99E6A09b4B2D875",
+        "invoiceId": "0x2d42f624d3e366de57092269116e9955f52d633e8ae8972417455262a1f9b720",
+        "amount": "1000000000000000"
+      }
+    }
+  ],
+  "submissionIntervalsSeconds": [
+    81,
+    196
+  ],
+  "paymentResubmissions": 0,
+  "workerLockExists": false
+}

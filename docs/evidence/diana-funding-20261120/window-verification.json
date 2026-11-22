@@ -1,0 +1,20 @@
+{
+  "mode": "verify",
+  "txHash": "9588801C2F6C0B009733467BCCC4DDA5423CF17B66B695C97022619696F7B83E",
+  "height": "10450124",
+  "verified": true,
+  "failures": [],
+  "window": {
+    "found": true,
+    "live": true,
+    "openedHeight": "10450124",
+    "expiryHeight": "10450524",
+    "maxTxs": "1",
+    "maxValue": "256500",
+    "usedTxs": "0",
+    "usedValue": "0"
+  },
+  "sequence": "5",
+  "evmNonce": "5",
+  "uqorBalance": "99598889"
+}
