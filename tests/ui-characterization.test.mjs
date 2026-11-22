@@ -720,6 +720,62 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     assert.equal(await evaluate(`document.querySelectorAll('.payment-proof').length`),3);
   });
 
+  uiTest('payment live recheck separates HTTP, JSON-RPC and unknown browser failures in both languages', async () => {
+    await openPage();
+    const archived=await evaluate(`document.querySelector('.payment-archive').textContent`);
+    for (const [mode,kind] of [['http','http'],['rpc','rpc'],['network','network_unknown']]) {
+      await evaluate(`window.fetch=async(_,init)=>{
+        const q=JSON.parse(init.body);
+        if ('${mode}'==='http')return new Response('',{status:503});
+        if ('${mode}'==='rpc')return Response.json({jsonrpc:'2.0',id:q.id,error:{code:-32602,message:'DO_NOT_DISPLAY_UPSTREAM_TEXT'}});
+        throw new TypeError('Failed to fetch');
+      };document.getElementById('payment-recheck').click();`);
+      await evaluate(`(async()=>{while(document.getElementById('payment-recheck').disabled)await new Promise(r=>setTimeout(r,10));})()`);
+      assert.deepEqual(await evaluate(`[document.getElementById('payment-current-status').dataset.state,document.getElementById('payment-current-status').dataset.error]`),['unavailable','pay.error.'+kind]);
+      const english=await evaluate(`document.getElementById('payment-current-status').textContent`);
+      assert.match(english,/Archived proof above is unchanged/);
+      assert.equal(english.includes('DO_NOT_DISPLAY'),false);
+      if(mode==='http')assert.match(english,/HTTP 503/);
+      if(mode==='rpc')assert.match(english,/JSON-RPC error -32602/);
+      if(mode==='network')assert.match(english,/cannot be distinguished/);
+      await evaluate(`document.querySelector('[data-lang="tr"]').click()`);
+      assert.match(await evaluate(`document.getElementById('payment-current-status').textContent`),/arşiv kanıtı değişmedi/);
+      await evaluate(`document.querySelector('[data-lang="en"]').click()`);
+    }
+    assert.equal(await evaluate(`document.querySelector('.payment-archive').textContent`),archived);
+    assert.equal(await evaluate(`document.querySelectorAll('.payment-proof').length`),3);
+  });
+
+  uiTest('payment live recheck validates complete fixture proof before success and clears stale success on failure', async () => {
+    await openPage();
+    const evidence=JSON.parse(readFileSync(join(ROOT,'src/payment/evidence.json'),'utf8'));
+    const receipts=[0,1,2].map(i=>JSON.parse(readFileSync(join(ROOT,'docs/evidence/diana-live-20261121/payment-'+i+'-verification-final.json'),'utf8')).receipt);
+    const runtime=readFileSync(join(ROOT,'docs/evidence/diana-live-20261121/verified-runtime.hex'),'utf8').trim();
+    const {keccak256}=await import('../src/qorechain/keccak.ts');
+    const selectors=Object.fromEntries(Object.keys(evidence.policy).map(k=>['0x'+keccak256(new TextEncoder().encode(k+'()')).slice(0,8),k]));
+    await evaluate(`window.fetch=async(_,init)=>{
+      const e=${JSON.stringify(evidence)},rs=${JSON.stringify(receipts)},selectors=${JSON.stringify(selectors)};
+      const {method,params,id}=JSON.parse(init.body);let result;
+      if(method==='eth_chainId')result='0x2648';
+      else if(method==='eth_getCode')result=${JSON.stringify(runtime)};
+      else if(method==='eth_getBalance')result='0x0';
+      else if(method==='eth_call')result='0x'+BigInt(e.policy[selectors[params[0].data]]).toString(16).padStart(64,'0');
+      else if(method==='eth_getTransactionReceipt')result=rs.find(r=>r.transactionHash===params[0]);
+      else if(method==='eth_getBlockByNumber'){
+        const p=e.payments.find(p=>'0x'+BigInt(p.blockNumber).toString(16)===params[0]);
+        result=p?{number:params[0],hash:p.blockHash,timestamp:'0x'+p.confirmedAt.toString(16)}:{number:'0x'+BigInt(e.snapshot.number).toString(16),hash:e.snapshot.hash,timestamp:'0x'+BigInt(e.snapshot.timestamp).toString(16)};
+      }else throw Error('Unexpected method '+method);
+      return Response.json({jsonrpc:'2.0',id,result});
+    };document.getElementById('payment-recheck').click();`);
+    await evaluate(`(async()=>{while(document.getElementById('payment-recheck').disabled)await new Promise(r=>setTimeout(r,10));})()`);
+    assert.equal(await evaluate(`document.getElementById('payment-current-status').dataset.state`),'verified');
+    assert.match(await evaluate(`document.getElementById('payment-current-status').textContent`),/block 10471302/);
+    await evaluate(`window.fetch=async()=>new Response('',{status:503});document.getElementById('payment-recheck').click();`);
+    await evaluate(`(async()=>{while(document.getElementById('payment-recheck').disabled)await new Promise(r=>setTimeout(r,10));})()`);
+    assert.equal(await evaluate(`document.getElementById('payment-current-status').dataset.state`),'unavailable');
+    assert.equal(await evaluate(`document.getElementById('payment-current-status').textContent.includes('Fresh RPC verification passed')`),false);
+  });
+
   uiTest('language switch: Turkish interface text, English restored exactly, no request, session unchanged', async t => {
     await openPage();
     await submit('Send 10 QOR.');
@@ -1844,9 +1900,9 @@ describe('live interface today (mocked RPC, real Chrome)', () => {
     const tokenChunk = scripts.find(name => name.startsWith('token-'));
     assert.ok(sizes[tokenChunk].gzip <= 3 * 1024, `${tokenChunk} gzip ${sizes[tokenChunk].gzip} bytes exceeds the 3 KiB budget`);
     for (const marker of ['eth_sendRawTransaction', 'eth_estimateGas', '0x095ea7b3', '0xa9059cbb', '0x23b872dd']) assert.equal(readFileSync(join(env.outDir, 'assets', tokenChunk), 'utf8').includes(marker), false, marker);
-    // Payment archive uses separate chunks; only its lazy mount adds to the main budget.
-    assert.ok(sizes[main].gzip <= 14.9 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 14.9 KiB budget`);
-    assert.ok(sizes[main].bytes <= 40.25 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 40.25 KiB budget`);
+    // Payment archive uses separate chunks; main also carries bounded transport/HTTP diagnostics.
+    assert.ok(sizes[main].gzip <= 15.1 * 1024, `main JS gzip ${sizes[main].gzip} bytes exceeds the 15.1 KiB budget`);
+    assert.ok(sizes[main].bytes <= 41 * 1024, `main JS ${sizes[main].bytes} bytes exceeds the 41 KiB budget`);
     assert.equal(/modulepreload|panel-/.test(html), false, 'index.html does not preload the panel');
     const vectorStart = 'f96bc953da4e941be8354a22';
     assert.equal(mainCode.includes(vectorStart), false, 'the test vector is not in the main chunk');

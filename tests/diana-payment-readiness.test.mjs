@@ -139,5 +139,5 @@ test('hash-bound reads fail closed if the RPC cannot honor EIP-1898',async()=>{
   }
   return f.fetch(u,i);
  };
- const report=await inspectDianaPaymentAccount(config(),{fetch,nowSeconds:()=>1000});assert.equal(report.status,'blocked');assert.equal(report.error.code,'invalid_response');
+ const report=await inspectDianaPaymentAccount(config(),{fetch,nowSeconds:()=>1000});assert.equal(report.status,'blocked');assert.equal(report.error.code,'rpc_error');
 });

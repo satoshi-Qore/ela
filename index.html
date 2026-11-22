@@ -208,12 +208,24 @@
     "pay.check": "Recheck on Diana",
     "pay.checking": "Reading Diana RPC…",
     "pay.ok": "Fresh RPC verification passed at {time}, block {block}. Receipts, events, runtime and counters match; current balance: {balance} wei.",
-    "pay.failed": "Current RPC verification could not be completed at {time}. Network access, unavailable history or mismatched evidence may be the cause. Archived proof above is unchanged; no current success is claimed.",
+    "pay.failed": "Live verification failed at {time}. Archived proof above is unchanged; no fresh success is claimed.",
     "pay.deployment": "Deployment",
     "pay.funding": "Funding · 0.003 QOR",
     "pay.timezone": "21 November 2026 · Europe/Istanbul (UTC+03:00)",
     "pay.readonly": "Read-only evidence. No signing, wallet connection or payment execution in this page.",
-    "pay.explorer": "Explorer: select Testnet. EVM hashes may not be indexed; use the archived receipt evidence or RPC recheck."
+    "pay.explorer": "Explorer: select Testnet. EVM hashes may not be indexed; use the archived receipt evidence or RPC recheck.",
+    "pay.error.dns": "DNS lookup failed according to the transport. The RPC host could not be resolved.",
+    "pay.error.tls": "The transport reported a TLS certificate validation failure.",
+    "pay.error.connection_denied": "The local environment denied the connection. This does not establish an RPC outage or a CORS failure.",
+    "pay.error.network_unknown": "The browser or transport did not expose the cause. DNS, TLS, connectivity or CORS cannot be distinguished from this failure alone.",
+    "pay.error.timeout": "The read exceeded its time limit. No complete live result was obtained.",
+    "pay.error.http": "The RPC endpoint returned HTTP {status}.",
+    "pay.error.rpc": "The endpoint returned JSON-RPC error {code}. An HTTP response was received, but the requested RPC read failed.",
+    "pay.error.chain_mismatch": "The endpoint did not report Diana chain ID 9800. Verification stopped.",
+    "pay.error.invalid_response": "The endpoint returned malformed JSON or unexpected response data.",
+    "pay.error.history_unavailable": "The node returned no receipt or block for a required historical read. Explorer indexing is a separate service.",
+    "pay.error.evidence_mismatch": "The returned chain data did not match the pinned contract, policy, receipts, events or canonical snapshot. Verification stopped.",
+    "pay.error.unknown": "Verification did not complete. No specific transport or protocol cause could be established."
   },
   "tr": {
     "result.boundary": "Sınırları belirli yürütme ortamı",
@@ -496,12 +508,24 @@
     "pay.check": "Diana üzerinden yeniden kontrol et",
     "pay.checking": "Diana RPC okunuyor…",
     "pay.ok": "Yeni RPC doğrulaması {time} tarihinde, {block} numaralı blokta geçti. Receipt, olay, sözleşme kodu ve sayaçlar eşleşti; güncel bakiye: {balance} wei.",
-    "pay.failed": "Güncel RPC doğrulaması {time} tarihinde tamamlanamadı. Ağ erişimi, erişilemeyen geçmiş veya kanıt uyuşmazlığı olabilir. Yukarıdaki arşiv kanıtı değişmedi; güncel başarı bildirilmiyor.",
+    "pay.failed": "Canlı doğrulama {time} tarihinde başarısız oldu. Yukarıdaki arşiv kanıtı değişmedi; yeni doğrulanmış başarı bildirilmiyor.",
     "pay.deployment": "Sözleşme kurulumu",
     "pay.funding": "Fonlama · 0,003 QOR",
     "pay.timezone": "21 Kasım 2026 · Europe/Istanbul (UTC+03:00)",
     "pay.readonly": "Salt okunur kanıtlar. Bu sayfada imzalama, cüzdan bağlantısı veya ödeme yürütme yoktur.",
-    "pay.explorer": "Explorer: Testnet seçin. EVM hash’leri indekslenmemiş olabilir; arşiv receipt kanıtını veya RPC kontrolünü kullanın."
+    "pay.explorer": "Explorer: Testnet seçin. EVM hash’leri indekslenmemiş olabilir; arşiv receipt kanıtını veya RPC kontrolünü kullanın.",
+    "pay.error.dns": "Bağlantı katmanı DNS çözümleme hatası bildirdi. RPC sunucusunun adı çözülemedi.",
+    "pay.error.tls": "Bağlantı katmanı TLS sertifikası doğrulama hatası bildirdi.",
+    "pay.error.connection_denied": "Yerel ortam bağlantıya izin vermedi. Bu sonuç RPC kesintisini veya CORS hatasını kanıtlamaz.",
+    "pay.error.network_unknown": "Tarayıcı veya bağlantı katmanı nedeni açıklamadı. Bu hatadan tek başına DNS, TLS, bağlantı veya CORS ayrımı yapılamaz.",
+    "pay.error.timeout": "Okuma zaman sınırını aştı. Eksiksiz bir canlı sonuç alınamadı.",
+    "pay.error.http": "RPC uç noktası HTTP {status} döndürdü.",
+    "pay.error.rpc": "Uç nokta JSON-RPC {code} hatası döndürdü. HTTP yanıtı alındı, ancak istenen RPC okuması başarısız oldu.",
+    "pay.error.chain_mismatch": "Uç nokta Diana zincir kimliği 9800 bildirmedi. Doğrulama durduruldu.",
+    "pay.error.invalid_response": "Uç nokta bozuk JSON veya beklenmeyen yanıt verisi döndürdü.",
+    "pay.error.history_unavailable": "Düğüm, gerekli geçmiş okumasında receipt veya blok döndürmedi. Explorer indekslemesi ayrı bir hizmettir.",
+    "pay.error.evidence_mismatch": "Dönen zincir verisi sabitlenmiş sözleşme, politika, receipt, olay veya kanonik kayıtla eşleşmedi. Doğrulama durduruldu.",
+    "pay.error.unknown": "Doğrulama tamamlanamadı. Belirli bir bağlantı veya protokol hatası nedeni saptanamadı."
   }
 }
   </script>
