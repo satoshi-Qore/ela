@@ -414,3 +414,6 @@ pqcToggle.addEventListener('click', () => {
 
 // ELA Core (themes, Core views) is its own chunk. It only reads what this file renders.
 import('./core/core.ts');
+
+// The completed payment archive is independent of the command flow and CORE animation.
+import('./payment/archive.ts').then(panel => panel.mountPayment(put, F));

@@ -273,7 +273,7 @@ test('the module is verification-only and isolated from the agent and the interf
   assert.equal(/verifyMlDsa87|verify-ml-dsa-87|@qorechain\/pqc/.test(web), false);
   assert.equal(/^import\s+(?!type\b)[^;]*pqc/m.test(web), false, 'no static PQC import');
   // Changed in 7C-27: web.ts also loads the ELA Core chunk, which never imports the verifier.
-  assert.deepEqual([...web.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts']);
+  assert.deepEqual([...web.matchAll(/import\('([^']+)'\)/g)].map(match => match[1]), ['./pqc/panel.ts', './core/core.ts', './payment/archive.ts']);
   for (const file of ['core.ts', 'draw.ts', 'karot.ts', 'optik.ts', 'gravur.ts', 'koherens.ts', 'okta.ts', 'quantum.ts', 'trace.ts']) {
     assert.equal(/pqc|ml-?dsa|verifyMlDsa87/i.test(readFileSync(new URL('../src/core/' + file, import.meta.url), 'utf8')), false, file);
   }

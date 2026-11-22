@@ -699,7 +699,7 @@ textarea::placeholder { color: #9fb6d6; opacity: 1; }
 
 /* --- 04 Payment Account: planned architecture, preparation only ----------------------------------- */
 
-.module-payment { border-style: dashed; border-color: rgba(255, 224, 162, 0.32); }
+.module-payment { border-style: solid; border-color: var(--border-strong); }
 .module-payment::after { background: linear-gradient(90deg, transparent, rgba(255, 224, 162, 0.6), transparent); }
 
 .schema {
@@ -1338,3 +1338,31 @@ body { font-family: "Segoe UI", Arial, sans-serif; }
   .stage-card .stage-optic svg { width: 48px; height: 48px; }
   .stage-card .stage-info { border: 0; padding: 0; margin-block: auto; }
 }
+/* Completed Diana evidence: static archive, separate current read state. */
+.payment-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr)); gap:.8rem; margin:1rem 0; }
+.payment-summary > div, .payment-times > div { min-width:0; }
+.payment-summary dt, .payment-times dt { color:var(--muted); font-size:.72rem; line-height:1.5; }
+.payment-summary dd { color:var(--platinum); font:600 .9rem/1.6 var(--mono); margin:0; }
+.payment-address, .payment-current, .payment-history > li { padding:.85rem; background:var(--well); border:1px solid var(--border-soft); border-radius:.5rem; }
+.payment-address h3, .payment-heading, .payment-current h3, .payment-setup h3 { font-size:.8rem; color:var(--ice); margin-bottom:.5rem; }
+.payment-heading { margin-top:1.2rem; }
+.module-payment a { color:var(--ice); overflow-wrap:anywhere; word-break:normal; font:.7rem/1.6 var(--mono); }
+.payment-history { display:grid; gap:.65rem; list-style:none; padding:0; margin:.7rem 0; }
+.payment-history h4 { font:600 .85rem/1.5 var(--mono); color:var(--platinum); }
+.payment-proof { color:var(--ice); font-size:.72rem; line-height:1.6; margin:.25rem 0; }
+.payment-times { display:flex; flex-wrap:wrap; gap:.4rem 1rem; margin:.5rem 0; }
+.payment-times dd { margin:0; color:var(--platinum); font:.75rem/1.6 var(--mono); }
+.payment-archive { font-size:.72rem; line-height:1.6; color:var(--muted); }
+.payment-sources { display:flex; flex-wrap:wrap; gap:.25rem 1rem; margin:.5rem 0; }
+.payment-setup { margin:.7rem 0; font-size:.78rem; }
+.payment-setup summary { cursor:pointer; color:var(--ice); padding:.3rem 0; }
+.payment-setup h3 { margin-top:.6rem; }
+.payment-current { margin-top:.8rem; }
+.payment-current p { font-size:.78rem; line-height:1.6; color:var(--muted); overflow-wrap:anywhere; }
+.payment-current button { margin-top:.6rem; max-width:100%; white-space:normal; font:inherit; color:var(--ice); background:var(--well); border:1px solid var(--border-strong); border-radius:.3rem; padding:.5rem .7rem; cursor:pointer; }
+.payment-current button:disabled { opacity:.6; cursor:wait; }
+#payment, #payment * { min-width:0; }
+.tag[data-tone="ok"] { color:var(--ok-fg); background:var(--ok-bg); border-color:var(--border-strong); }
+.payment-proof { overflow-wrap:anywhere; }
+.payment-hash-part { display:block; }
+.payment-setup:not([open]) > :not(summary) { display:none; }
